@@ -1,0 +1,160 @@
+{
+    "title": "Go File I/O Cheatsheet",
+    "description": "A comprehensive quick reference for File I/O operations in the Go programming language, covering everything from basic operations to advanced techniques.",
+    "categories": [{
+        "title": "Opening, Creating, and Closing Files",
+        "description": "Primary functions from the 'os' package for file handling. It is best practice to 'defer' closing the file immediately after a successful open.",
+        "items": [{
+            "title": "File Functions",
+            "description": null,
+            "table": {
+                "headers": ["Function", "Description"],
+                "rows": [
+                    ["os.Create(path)", "Creates a new file for writing. If the file already exists, its contents are truncated."],
+                    ["os.Open(path)", "Opens an existing file for read-only access."],
+                    ["os.OpenFile(path, flags, perm)", "A general-purpose function for opening files with specific flags and permissions."],
+                    ["file.Close()", "Closes the file. This should be deferred right after opening."]
+                ]
+            },
+            "example": "// Create a new file, or truncate it if it exists\nfile, err := os.Create(\"my_file.txt\")\nif err != nil {\n    log.Fatal(err)\n}\ndefer file.Close()\n\n// Open a file for appending, creating it if it doesn't exist\nfile, err := os.OpenFile(\"my_file.txt\", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)\nif err != nil {\n    log.Fatal(err)\n}\ndefer file.Close()"
+        }, {
+            "title": "OpenFile Flags",
+            "description": "Flags used with os.OpenFile to control the file access mode.",
+            "table": {
+                "headers": ["Flag", "Description"],
+                "rows": [
+                    ["os.O_RDONLY", "Open the file for reading only."],
+                    ["os.O_WRONLY", "Open the file for writing only."],
+                    ["os.O_RDWR", "Open the file for both reading and writing."],
+                    ["os.O_APPEND", "Append new data to the end of the file."],
+                    ["os.O_CREATE", "Create the file if it doesn't already exist."],
+                    ["os.O_TRUNC", "Truncate (empty) the file if it already exists."],
+                    ["os.O_EXCL", "Used with O_CREATE, this flag causes the operation to fail if the file already exists."],
+                    ["os.O_SYNC", "Opens the file for synchronous I/O, ensuring writes are committed to stable storage immediately."]
+                ]
+            },
+            "example": null
+        }]
+    }, {
+        "title": "Reading and Writing Files",
+        "description": null,
+        "items": [{
+            "title": "Reading from a File",
+            "description": "Go offers multiple ways to read files, either all at once, in chunks, or line by line.",
+            "table": {
+                "headers": ["Method/Function", "Description"],
+                "rows": [
+                    ["os.ReadFile(path)", "Reads the entire contents of a file into a byte slice. Best for smaller files."],
+                    ["file.Read(buffer)", "Reads up to len(buffer) bytes into the buffer from the file."],
+                    ["bufio.NewScanner(file)", "Provides a convenient interface for reading data such as a file of text line-by-line."],
+                    ["io.ReadAll(reader)", "Reads everything from a reader (like a file) until an error or EOF and returns it as a byte slice."]
+                ]
+            },
+            "example": "// Reading a file line by line with a scanner\nfile, err := os.Open(\"my_document.txt\")\nif err != nil {\n    log.Fatal(err)\n}\ndefer file.Close()\n\nscanner := bufio.NewScanner(file)\nfor scanner.Scan() {\n    fmt.Println(scanner.Text())\n}\n\nif err := scanner.Err(); err != nil {\n    log.Fatal(err)\n}"
+        }, {
+            "title": "Writing and Appending to Files",
+            "description": "Functions for writing or appending strings or byte slices to a file.",
+            "table": {
+                "headers": ["Method/Function", "Description"],
+                "rows": [
+                    ["file.WriteString(text)", "Writes a string to the file."],
+                    ["file.Write(data)", "Writes a byte slice to the file."],
+                    ["os.WriteFile(path, data, perm)", "A convenient function that handles opening, writing a byte slice, and closing a file."]
+                ]
+            },
+            "example": "// Appending to a file using OpenFile\nfile, err := os.OpenFile(\"my_log.txt\", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)\nif err != nil {\n    log.Fatal(err)\n}\ndefer file.Close()\n\nif _, err := file.WriteString(\"new log entry\\n\"); err != nil {\n    log.Fatal(err)\n}"
+        }]
+    }, {
+        "title": "Directory and File Management",
+        "description": null,
+        "items": [{
+            "title": "The 'os' Package",
+            "description": "The 'os' package also provides essential functions for managing the file system itself.",
+            "table": {
+                "headers": ["Function", "Description"],
+                "rows": [
+                    ["os.Mkdir(path, perm)", "Creates a new directory with the specified name and permissions."],
+                    ["os.MkdirAll(path, perm)", "Creates a directory named path, along with any necessary parents."],
+                    ["os.Remove(path)", "Deletes the specified file or empty directory."],
+                    ["os.RemoveAll(path)", "Deletes a path and any children it contains. Use with caution!"],
+                    ["os.Rename(oldPath, newPath)", "Renames or moves a file from an old path to a new path."]
+                ]
+            },
+            "example": null
+        }, {
+            "title": "The 'filepath' Package",
+            "description": "Always use the 'path/filepath' package instead of manually manipulating path strings to ensure your code is cross-platform compatible.",
+            "table": {
+                "headers": ["Function", "Description"],
+                "rows": [
+                    ["filepath.Join(elem ...string)", "Intelligently joins path elements with the correct OS-specific separator."],
+                    ["filepath.Abs(path)", "Returns an absolute representation of a path."],
+                    ["filepath.Base(path)", "Returns the last element of a path (the filename)."],
+                    ["filepath.Dir(path)", "Returns all but the last element of a path (the directory)."],
+                    ["filepath.Ext(path)", "Returns the file extension."]
+                ]
+            },
+            "example": "// Correct, platform-agnostic way to create a path\nconfigPath := filepath.Join(\"conf\", \"app\", \"settings.json\") \n// On Linux/macOS: \"conf/app/settings.json\"\n// On Windows: \"conf\\app\\settings.json\""
+        }, {
+            "title": "File Information and Permissions",
+            "description": "Functions to retrieve metadata about files, such as size, modification time, and permissions.",
+            "table": {
+                "headers": ["Function/Method", "Description"],
+                "rows": [
+                    ["os.Stat(path)", "Returns a FileInfo interface containing file metadata."],
+                    ["fileInfo.Size()", "Returns the size of the file in bytes."],
+                    ["fileInfo.Mode()", "Returns the file's mode and permission bits."],
+                    ["fileInfo.ModTime()", "Returns the file's last modification time."],
+                    ["os.IsNotExist(err)", "Checks if an error is the result of a file or directory not existing."]
+                ]
+            },
+            "example": "// Get file stats and check for existence\nfileInfo, err := os.Stat(\"my_file.txt\")\nif err != nil {\n    if os.IsNotExist(err) {\n        log.Fatal(\"File does not exist.\")\n    }\n    log.Fatal(err)\n}\n\n// Check if the file is readable by the owner\nif fileInfo.Mode().Perm()&0400 != 0 {\n    fmt.Println(\"File is readable\")\n}"
+        }]
+    }, {
+        "title": "Advanced File Operations",
+        "description": "Covers more advanced techniques like truncating a file to a specific size and seeking to a specific position within a file.",
+        "items": [{
+            "title": "Truncating a File",
+            "description": "The 'os.Truncate()' function changes a file's size. If the new size is smaller, the file is truncated; if larger, it's padded with null bytes.",
+            "table": null,
+            "example": "// Truncate a file to exactly 1024 bytes (1KB)\nerr := os.Truncate(\"my_large_file.log\", 1024)\nif err != nil {\n    log.Fatal(err)\n}"
+        }, {
+            "title": "Seeking in a File",
+            "description": "The 'Seek' method allows you to move the read/write pointer to a specific location within an open file.",
+            "table": {
+                "headers": ["Whence", "Description"],
+                "rows": [
+                    ["io.SeekStart", "Seek relative to the beginning of the file."],
+                    ["io.SeekCurrent", "Seek relative to the current offset."],
+                    ["io.SeekEnd", "Seek relative to the end of the file."]
+                ]
+            },
+            "example": "file, err := os.Open(\"my_file.txt\")\nif err != nil {\n    log.Fatal(err)\n}\ndefer file.Close()\n\n// Seek to the 10th byte from the beginning of the file\n_, err = file.Seek(10, io.SeekStart)\nif err != nil {\n    log.Fatal(err)\n}"
+        }, {
+            "title": "Temporary Files and Directories",
+            "description": "Create unique temporary files and directories for intermediate data processing without cluttering the main file system.",
+            "table": {
+                "headers": ["Function", "Description"],
+                "rows": [
+                    ["os.CreateTemp(dir, pattern)", "Creates a new temporary file in the specified directory. An empty 'dir' uses the default temp directory."],
+                    ["os.MkdirTemp(dir, pattern)", "Creates a new temporary directory."]
+                ]
+            },
+            "example": "tempFile, err := os.CreateTemp(\"\", \"my-temp-file-*.txt\")\nif err != nil {\n    log.Fatal(err)\n}\ndefer os.Remove(tempFile.Name()) // Clean up the file afterwards!\n\nfmt.Println(\"Created temporary file:\", tempFile.Name())"
+        }]
+    }, {
+        "title": "JSON Marshalling and Unmarshalling",
+        "description": "The 'encoding/json' package is used to encode Go data structures to JSON and decode JSON from a file into Go types like structs or maps.",
+        "items": [{
+            "title": "JSON to Struct",
+            "description": "Unmarshal JSON data into a Go struct when the JSON structure is known beforehand.",
+            "table": null,
+            "example": "// Assume user.json contains: {\"name\": \"Alice\", \"age\": 30}\ntype User struct {\n    Name string `json:\"name\"`\n    Age  int    `json:\"age\"`\n}\n\nfileBytes, err := os.ReadFile(\"user.json\")\nif err != nil {\n    log.Fatal(err)\n}\n\nvar user User\nerr = json.Unmarshal(fileBytes, &user)\nif err != nil {\n    log.Fatal(err)\n}\n\nfmt.Printf(\"User: %+v\\n\", user)"
+        }, {
+            "title": "JSON to Map",
+            "description": "Unmarshal JSON data into a map[string]interface{} when the structure is unknown or dynamic.",
+            "table": null,
+            "example": "// Assume unknown.json contains any valid JSON object\nfileBytes, err := os.ReadFile(\"unknown.json\")\nif err != nil {\n    log.Fatal(err)\n}\n\nvar result map[string]interface{}\nerr = json.Unmarshal(fileBytes, &result)\nif err != nil {\n    log.Fatal(err)\n}\n\nfmt.Println(result)"
+        }]
+    }]
+}

@@ -1,0 +1,187 @@
+{
+    "title": "Python File I/O Cheatsheet",
+    "description": "A comprehensive quick reference for File I/O operations in the Python programming language, covering everything from basic operations to advanced techniques.",
+    "categories": [
+        {
+            "title": "Opening, Reading, and Writing Files",
+            "description": "The idiomatic way to handle files in Python is using the `with` statement, which ensures files are automatically closed.",
+            "items": [
+                {
+                    "title": "File Open Modes",
+                    "description": "The mode argument in the `open()` function determines how the file will be handled.",
+                    "table": {
+                        "headers": ["Mode", "Description"],
+                        "rows": [
+                            ["'r'", "Read (default). Opens a file for reading, raises an error if the file does not exist."],
+                            ["'w'", "Write. Opens a file for writing, creates the file if it does not exist or truncates it if it does."],
+                            ["'a'", "Append. Opens for writing, creates the file if it does not exist, appends to the end of the file."],
+                            ["'x'", "Create. Creates the specified file, returns an error if the file exists."],
+                            ["'b'", "Binary. Use for binary files like images or executables (e.g., 'rb', 'wb')."],
+                            ["'+'", "Update. Opens a file for both reading and writing (e.g., 'r+', 'w+')."]
+                        ]
+                    },
+                    "example": null
+                },
+                {
+                    "title": "Reading Files",
+                    "description": "Methods to read content from a file object.",
+                    "table": {
+                        "headers": ["Method", "Description"],
+                        "rows": [
+                            ["file.read()", "Reads the entire content of the file as a single string."],
+                            ["file.readline()", "Reads a single line from the file, including the newline character."],
+                            ["file.readlines()", "Reads all lines and returns them as a list of strings."],
+                            ["for line in file:", "The most memory-efficient way to iterate over the lines of a file."]
+                        ]
+                    },
+                    "example": "# Reading a file line-by-line (recommended)\nwith open('my_file.txt', 'r') as f:\n    for line in f:\n        print(line.strip())"
+                },
+                {
+                    "title": "Writing Files",
+                    "description": "Methods to write content to a file.",
+                     "table": {
+                        "headers": ["Method", "Description"],
+                        "rows": [
+                            ["file.write(string)", "Writes a string to the file."],
+                            ["file.writelines(list_of_strings)", "Writes each string from a list to the file."]
+                        ]
+                    },
+                    "example": "lines_to_write = ['First line\\n', 'Second line\\n']\n\n# Write to a new file\nwith open('new_file.txt', 'w') as f:\n    f.write('A single line.\\n')\n    f.writelines(lines_to_write)"
+                }
+            ]
+        },
+        {
+            "title": "File and Directory Management (Legacy)",
+            "description": "The `os` and `os.path` modules provide extensive, string-based tools for interacting with the file system. For modern Python, `pathlib` is often preferred.",
+            "items": [
+                {
+                    "title": "The 'os' Module",
+                    "description": "Core functions for file system operations like renaming, removing, or creating directories.",
+                    "table": {
+                        "headers": ["Function", "Description"],
+                        "rows": [
+                            ["os.remove(path)", "Deletes a file at the specified path."],
+                            ["os.rename(src, dst)", "Renames or moves a file from 'src' to 'dst'."],
+                            ["os.mkdir(path)", "Creates a single directory; fails if the parent directory doesn't exist."],
+                            ["os.makedirs(path)", "Creates all directories in a path recursively."],
+                            ["os.rmdir(path)", "Removes an empty directory."]
+                        ]
+                    },
+                    "example": "import os\n\n# Create a directory\nif not os.path.exists('my_folder'):\n    os.mkdir('my_folder')\n\n# Rename a file\nif os.path.exists('old_name.txt'):\n    os.rename('old_name.txt', 'new_name.txt')"
+                },
+                {
+                    "title": "The 'os.path' Module",
+                    "description": "Platform-independent functions for path manipulations and status checks.",
+                     "table": {
+                        "headers": ["Function", "Description"],
+                        "rows": [
+                            ["os.path.join(a, b)", "Intelligently joins path components with the correct separator ('/' or '\\\\')."],
+                            ["os.path.exists(path)", "Returns True if the path exists (either a file or a directory)."],
+                            ["os.path.isfile(path)", "Returns True if the path is an existing regular file."],
+                            ["os.path.isdir(path)", "Returns True if the path is an existing directory."],
+                            ["os.path.getsize(path)", "Returns the size of a file in bytes."]
+                        ]
+                    },
+                    "example": "import os\n\n# Create a platform-agnostic path\nfile_path = os.path.join('data', 'images', 'photo.jpg')\n\n# Check if a file exists before processing\nif os.path.exists(file_path) and os.path.isfile(file_path):\n    print(f\"File size: {os.path.getsize(file_path)} bytes\")"
+                }
+            ]
+        },
+        {
+            "title": "The 'pathlib' Module (Modern Approach)",
+            "description": "Introduced in Python 3.4, `pathlib` offers an object-oriented interface for file system paths, which is often more intuitive and readable than using the `os.path` string-based functions.",
+            "items": [
+                {
+                    "title": "Creating Paths and Accessing Parts",
+                    "description": "The `Path` object is the core of `pathlib`. It represents a file system path and has methods and properties to access its components.",
+                    "table": {
+                        "headers": ["Attribute/Method", "Description"],
+                        "rows": [
+                            ["Path('path/to/file.txt')", "Creates a Path object."],
+                            ["p.name", "The final path component, including the extension (e.g., 'file.txt')."],
+                            ["p.stem", "The final path component without the extension (e.g., 'file')."],
+                            ["p.suffix", "The file extension of the final component (e.g., '.txt')."],
+                            ["p.parent", "The logical parent of the path."],
+                            ["'/' operator", "Used to join paths in a clean, object-oriented way."]
+                        ]
+                    },
+                    "example": "from pathlib import Path\n\nhome = Path.home() # Gets the user's home directory\n\n# Join paths using the / operator\ndata_file = home / 'documents' / 'data.csv'\n\nprint(f\"Full path: {data_file}\")\nprint(f\"Parent dir: {data_file.parent}\")\nprint(f\"File name: {data_file.name}\")\nprint(f\"File extension: {data_file.suffix}\")"
+                },
+                {
+                    "title": "File Operations with Path Objects",
+                    "description": "Path objects have methods to directly read, write, or delete the file they represent.",
+                    "table": {
+                        "headers": ["Method", "Description"],
+                        "rows": [
+                            ["p.read_text()", "Reads the content of the file as a string."],
+                            ["p.write_text('content')", "Writes a string to the file, overwriting existing content."],
+                            ["p.read_bytes()", "Reads the content of the file as a byte string."],
+                            ["p.write_bytes(b'content')", "Writes a byte string to the file."],
+                            ["p.unlink(missing_ok=False)", "Deletes the file. Raises an error if it doesn't exist unless missing_ok=True."],
+                            ["p.rename('new/path/name.txt')", "Renames or moves the file."]
+                        ]
+                    },
+                    "example": "from pathlib import Path\n\n# Create a Path object for a new file\nmy_path = Path('greeting.txt')\n\n# Write text to the file\nmy_path.write_text('Hello from pathlib!')\n\n# Read the text back\ncontent = my_path.read_text()\nprint(content)\n\n# Delete the file\nmy_path.unlink()"
+                },
+                {
+                    "title": "Directory Operations and Traversal",
+                    "description": "Creating directories and finding files using glob patterns is straightforward with `pathlib`.",
+                    "table": {
+                        "headers": ["Method", "Description"],
+                        "rows": [
+                            ["p.exists()", "Returns True if the path exists."],
+                            ["p.is_file()", "Returns True if the path is an existing regular file."],
+                            ["p.is_dir()", "Returns True if the path is an existing directory."],
+                            ["p.mkdir(parents=False, exist_ok=False)", "Creates a directory. `parents=True` creates parent dirs, `exist_ok=True` suppresses errors if it exists."],
+                            ["p.glob('*.txt')", "Returns a generator for all items matching the glob pattern in the directory."],
+                            ["p.rglob('*.txt')", "Recursively glob; finds all matching items in the directory and all subdirectories."]
+                        ]
+                    },
+                    "example": "from pathlib import Path\n\ndata_dir = Path('project_data')\n\n# Create a directory including parents, ignore if it exists\ndata_dir.mkdir(parents=True, exist_ok=True)\n\n# Create some dummy files\n(data_dir / 'log1.txt').touch()\n(data_dir / 'report.pdf').touch()\n(data_dir / 'sub').mkdir(exist_ok=True)\n(data_dir / 'sub' / 'log2.txt').touch()\n\n# Find all .txt files recursively\nfor txt_file in data_dir.rglob('*.txt'):\n    print(f\"Found recursively: {txt_file}\")"
+                }
+            ]
+        },
+        {
+            "title": "Advanced File Operations",
+            "description": "Techniques for controlling the file pointer's position and changing file size.",
+            "items": [
+                 {
+                    "title": "Seeking in a File",
+                    "description": "The `seek()` method allows you to move the read/write pointer to a specific location within a file.",
+                    "table": {
+                        "headers": ["Whence", "Description"],
+                        "rows": [
+                            ["0 (os.SEEK_SET)", "Seek relative to the beginning of the file (default)."],
+                            ["1 (os.SEEK_CUR)", "Seek relative to the current position."],
+                            ["2 (os.SEEK_END)", "Seek relative to the end of the file."]
+                        ]
+                    },
+                    "example": "with open('data.bin', 'rb') as f:\n    # Move to the 10th byte from the beginning\n    f.seek(10)\n    \n    # Move 5 bytes forward from the current position\n    f.seek(5, 1)\n\n    # Go to the 3rd to last byte\n    f.seek(-3, 2)\n    \n    chunk = f.read(2)"
+                },
+                {
+                    "title": "Truncating a File",
+                    "description": "The `truncate()` method resizes the file. If a size is specified, it truncates to that size; otherwise, it truncates at the current position.",
+                    "table": null,
+                    "example": "with open('app.log', 'w') as f:\n    f.write('This is some log data that is very long.')\n    \n    # Truncate the file to the first 10 bytes\n    f.truncate(10)"
+                }
+            ]
+        },
+        {
+            "title": "JSON Serialization",
+            "description": "The `json` module is used to work with JSON data, allowing for easy encoding and decoding to and from file streams.",
+            "items": [
+                {
+                    "title": "Reading JSON from a file",
+                    "description": "Use `json.load()` to parse a JSON file and convert it into a Python dictionary or list.",
+                    "table": null,
+                    "example": "import json\n\ntry:\n    with open('config.json', 'r') as f:\n        config_data = json.load(f)\n        print(config_data['username'])\nexcept FileNotFoundError:\n    print('Config file not found!')"
+                },
+                {
+                    "title": "Writing JSON to a file",
+                    "description": "Use `json.dump()` to serialize a Python dictionary or list and write it to a file in JSON format.",
+                    "table": null,
+                    "example": "import json\n\nuser_settings = {\n    'theme': 'dark',\n    'notifications': True,\n    'username': 'alpha'\n}\n\nwith open('settings.json', 'w') as f:\n    # indent=4 makes the JSON file human-readable\n    json.dump(user_settings, f, indent=4)"
+                }
+            ]
+        }
+    ]
+}
