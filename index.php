@@ -42,13 +42,12 @@
         <div class="container-fluid">
             <a class="navbar-brand" id="sticky-title" href="#"></a>
             <div class="ms-auto d-flex align-items-center">
-                <div>
+                <div class="me-3">
                     <select
                         id="sheet-select"
                         class="form-select"
                         aria-label="Select Reference Sheet"
-                        onchange="window.location.href = '/?sheet=' + this.value;">
-                        <option selected>Select Reference Sheet</option>
+                        >
                         <?php
 
                         $dataDir = __DIR__ . '/data';
@@ -112,25 +111,53 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script>
-        window.data = {};
         const grid = document.getElementById('masonry-grid');
 
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
-        const sheet = urlParams.get('sheet')
+        const sheet = urlParams.get('sheet');
+        const defaultSheet = 'go_file.json';
 
-        fetch('./data/' + (sheet ? sheet : 'go_file.json'))
+        const selectElement = document.getElementById('sheet-select');
+        const optionExists = (select, value) => {
+            if (!select || !value) return false;
+            return [...select.options].some(option => option.value === value);
+        };
+
+        if (selectElement) {
+            selectElement.addEventListener('change', (event) => {
+                const selectedValue = event.target.value;
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('sheet', selectedValue);
+                window.location.href = nextUrl.toString();
+            });
+        }
+
+        const getFirstOptionValue = (select) => {
+            if (!select || !select.options || select.options.length === 0) return null;
+            return select.options[0].value;
+        };
+
+        const activeSheet = optionExists(selectElement, sheet)
+            ? sheet
+            : (optionExists(selectElement, defaultSheet) ? defaultSheet : getFirstOptionValue(selectElement));
+
+        if (selectElement && activeSheet) {
+            selectElement.value = activeSheet;
+        }
+
+        if (!activeSheet) {
+            console.error('No sheet options available; cannot load data.');
+        } else {
+        fetch('./data/' + activeSheet)
             .then(response => response.json()) // parses the JSON response into a JS object
             .then(d => {
-                console.log(d)
-                window.data = d
-            })
-            .then(d => {
-                document.getElementById('page-title').textContent = window.data.title;
-                document.getElementById('sticky-title').textContent = window.data.title;
-                document.getElementById('page-description').textContent = window.data.description;
+                const data = d;
+                document.getElementById('page-title').textContent = data.title;
+                document.getElementById('sticky-title').textContent = data.title;
+                document.getElementById('page-description').textContent = data.description;
 
-                window.data.categories.forEach(category => {
+                data.categories.forEach(category => {
                     const col = document.createElement('div');
                     col.className = 'col-md-6 col-lg-4 mb-4';
 
@@ -154,7 +181,7 @@
                         let exampleHtml = '';
                         if (item.example) {
                             exampleHtml = `
-                            <pre class="mt-2"><code class="language-go">${item.example.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+                            <pre class="mt-2"><code class="language-${data.language}">${item.example.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
                         `;
                         }
 
@@ -182,13 +209,14 @@
 
                     grid.appendChild(col);
                 });
+
+                Prism.highlightAll();
+
             })
             .catch(error => console.error('Error fetching data:', error)); // Handle any errors
+        }
 
         window.onload = () => {
-            Prism.highlightAll();
-
-            const selectElement = document.getElementById("sheet-select");
             if (!selectElement) return;
 
             // Preserve the currently selected value

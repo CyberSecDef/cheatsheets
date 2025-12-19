@@ -1,6 +1,7 @@
 {
     "title": "Git Command Cheatsheet",
     "description": "A comprehensive guide to essential Git commands for version control, from installation and setup to advanced history manipulation.",
+    "language": "shell",
     "categories": [
         {
             "title": "Installation and Initial Setup",

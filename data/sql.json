@@ -1,6 +1,7 @@
 {
     "title": "SQL Command Cheatsheet",
     "description": "A comprehensive guide to the SQL language, covering data querying, manipulation, definition, joins, functions, and advanced concepts.",
+    "language": "sql",
     "categories": [
         {
             "title": "Data Query and Manipulation (DML/DQL)",
