@@ -1,0 +1,735 @@
+{
+	"title": "PyTorch Cheatsheet",
+	"description": "A practical PyTorch quick reference covering tensors, autograd, nn modules, optimization, data loading, CUDA, distributed training, export/compile, and profiling.",
+	"language": "python",
+	"categories": [
+		{
+			"title": "Installation and Environment",
+			"description": "Install PyTorch and verify CUDA/MPS availability.",
+			"items": [
+				{
+					"title": "Install and verify",
+					"description": "Prefer installing from https://pytorch.org/get-started/ to match your CUDA version.",
+					"table": {
+						"headers": ["Task", "Command / Code"],
+						"rows": [
+							["Install (pip)", "python -m pip install torch torchvision torchaudio"],
+							["Install (conda)", "conda install pytorch torchvision torchaudio -c pytorch"],
+							["Version", "import torch; print(torch.__version__)"],
+							["CUDA available?", "torch.cuda.is_available()"],
+							["CUDA version", "torch.version.cuda"],
+							["GPU name", "torch.cuda.get_device_name(0)"],
+							["MPS available? (macOS)", "torch.backends.mps.is_available()" ]
+						]
+					},
+					"example": "import torch\nprint('torch', torch.__version__)\nprint('cuda', torch.cuda.is_available(), torch.version.cuda)\nprint('mps', torch.backends.mps.is_available())"
+				},
+				{
+					"title": "Determinism (reproducibility)",
+					"description": "Deterministic runs can be slower; some ops remain nondeterministic on GPU.",
+					"table": {
+						"headers": ["Setting", "Code"],
+						"rows": [
+							["Seed", "torch.manual_seed(0)"],
+							["Seed CUDA", "torch.cuda.manual_seed_all(0)"],
+							["Deterministic algorithms", "torch.use_deterministic_algorithms(True)"],
+							["cuDNN benchmark", "torch.backends.cudnn.benchmark = False"],
+							["cuDNN deterministic", "torch.backends.cudnn.deterministic = True" ]
+						]
+					},
+					"example": "import torch\ntorch.manual_seed(0)\nif torch.cuda.is_available():\n    torch.cuda.manual_seed_all(0)\ntorch.use_deterministic_algorithms(True)"
+				}
+			]
+		},
+		{
+			"title": "Tensor Creation",
+			"description": "Create tensors from Python/NumPy, and with common initializers.",
+			"items": [
+				{
+					"title": "Common constructors",
+					"description": "Use dtype/device to control precision and placement.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["torch.tensor(data)", "From Python data (copies by default)."],
+							["torch.as_tensor(data)", "Avoid copy if possible (shares memory when safe)."],
+							["torch.from_numpy(arr)", "Shares memory with NumPy array (CPU only)."],
+							["torch.zeros(shape)", "All zeros."],
+							["torch.ones(shape)", "All ones."],
+							["torch.empty(shape)", "Uninitialized memory."],
+							["torch.full(shape, fill_value)", "Constant fill."],
+							["torch.arange(start, end, step)", "Range (int/float)."],
+							["torch.linspace(start, end, steps)", "Linearly spaced values."],
+							["torch.eye(n)", "Identity matrix." ]
+						]
+					},
+					"example": "import torch\nx = torch.tensor([[1, 2], [3, 4]], dtype=torch.float32)\ny = torch.zeros((2, 3), dtype=torch.float32)\nz = torch.arange(0, 10, 2)\nprint(x.shape, y.shape, z)"
+				},
+				{
+					"title": "Random tensors",
+					"description": "Sampling utilities for initial weights and synthetic data.",
+					"table": {
+						"headers": ["Function", "Distribution"],
+						"rows": [
+							["torch.rand(shape)", "Uniform [0, 1)."],
+							["torch.randn(shape)", "Standard normal N(0, 1)."],
+							["torch.randint(low, high, shape)", "Uniform ints in [low, high)."],
+							["torch.normal(mean, std)", "Normal with mean/std."],
+							["torch.bernoulli(probs)", "Bernoulli samples (0/1)." ]
+						]
+					},
+					"example": "import torch\ntorch.manual_seed(0)\na = torch.rand((2, 2))\nb = torch.randn((2, 2))\nc = torch.randint(0, 10, (2, 3))\nprint(a, b, c, sep='\n')"
+				}
+			]
+		},
+		{
+			"title": "Tensor Basics and Properties",
+			"description": "Inspect and change shape, dtype, device, and views.",
+			"items": [
+				{
+					"title": "Shape and views",
+					"description": "reshape/view creates a view when possible; call contiguous() after permute/transpose if needed.",
+					"table": {
+						"headers": ["Operation", "Code"],
+						"rows": [
+							["Shape", "x.shape"],
+							["Rank", "x.ndim"],
+							["Num elements", "x.numel()"],
+							["Reshape", "x.reshape(2, -1)"],
+							["View", "x.view(2, -1)"],
+							["Flatten", "x.flatten(start_dim=1)"],
+							["Transpose", "x.transpose(0, 1)"],
+							["Permute", "x.permute(0, 2, 3, 1)"],
+							["Contiguous", "x.contiguous()" ]
+						]
+					},
+					"example": "import torch\nx = torch.arange(0, 12).reshape(3, 4)\ny = x.t()\nprint(x.shape, y.shape)\nprint(y.is_contiguous())\ny2 = y.contiguous().view(2, 6)\nprint(y2.shape)"
+				},
+				{
+					"title": "dtype and device",
+					"description": "Move tensors between CPU/GPU and change dtype with .to().",
+					"table": {
+						"headers": ["Task", "Code"],
+						"rows": [
+							["Set dtype", "x.to(torch.float16)"],
+							["Set device", "x.to('cuda')"],
+							["Both", "x.to(device='cuda', dtype=torch.float16)"],
+							["In-place dtype cast", "x = x.float(); x = x.long()"],
+							["Device object", "device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')" ]
+						]
+					},
+					"example": "import torch\ndevice = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\nx = torch.randn((2, 3), device=device, dtype=torch.float32)\nprint(x.device, x.dtype)\nprint(x.to(dtype=torch.float16).dtype)"
+				},
+				{
+					"title": "Copying, cloning, detaching",
+					"description": "clone() copies data; detach() breaks autograd history; requires_grad_ toggles grad tracking.",
+					"table": {
+						"headers": ["Operation", "Notes"],
+						"rows": [
+							["x.clone()", "Copies data and preserves grad history."],
+							["x.detach()", "View without grad history."],
+							["x.detach().clone()", "Copy without grad history."],
+							["x.requires_grad_(True)", "Enable grad tracking in-place."],
+							["x.item()", "Convert a single-element tensor to Python number." ]
+						]
+					},
+					"example": "import torch\nx = torch.tensor([1.0, 2.0], requires_grad=True)\ny = (x * 2).sum()\ny.backward()\nprint(x.grad)\nz = x.detach().clone()\nprint(z.requires_grad)"
+				}
+			]
+		},
+		{
+			"title": "Indexing, Masking, and Advanced Ops",
+			"description": "Slice tensors, gather/scatter, and use boolean masks.",
+			"items": [
+				{
+					"title": "Indexing and slicing",
+					"description": "PyTorch indexing mirrors NumPy for most cases.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Slice", "x[:, :3]"],
+							["Integer index", "x[0]"],
+							["Ellipsis", "x[..., 0]"],
+							["Boolean mask", "x[x > 0]"],
+							["Where", "torch.where(mask, a, b)"],
+							["Nonzero indices", "torch.nonzero(mask)" ]
+						]
+					},
+					"example": "import torch\nx = torch.tensor([[1, -2, 3], [0, 5, -6]])\nmask = x > 0\nprint(x[mask])\nprint(torch.where(mask, x, torch.zeros_like(x)))"
+				},
+				{
+					"title": "Gather and scatter",
+					"description": "Use gather to pick elements by index; scatter to write into a tensor by index.",
+					"table": {
+						"headers": ["Op", "Code"],
+						"rows": [
+							["Gather", "torch.gather(x, dim=1, index=idx)"],
+							["Scatter", "out.scatter_(dim=1, index=idx, src=src)"],
+							["Scatter add", "out.scatter_add_(dim=1, index=idx, src=src)" ]
+						]
+					},
+					"example": "import torch\nx = torch.tensor([[10, 20, 30], [40, 50, 60]])\nidx = torch.tensor([[2, 0], [1, 1]])\nprint(torch.gather(x, 1, idx))\nout = torch.zeros((2, 3), dtype=torch.int64)\nout.scatter_(1, idx, torch.tensor([[1, 2], [3, 4]]))\nprint(out)"
+				}
+			]
+		},
+		{
+			"title": "Math, Broadcasting, and Reductions",
+			"description": "Elementwise ops, reductions, comparisons, and common activations.",
+			"items": [
+				{
+					"title": "Elementwise math",
+					"description": "Most ops broadcast like NumPy.",
+					"table": {
+						"headers": ["Operation", "Function"],
+						"rows": [
+							["Add/sub/mul/div", "x + y, x - y, x * y, x / y"],
+							["Pow", "torch.pow(x, 2) or x**2"],
+							["Exp/log", "torch.exp(x), torch.log(x)"],
+							["Sqrt", "torch.sqrt(x)"],
+							["Abs", "torch.abs(x)"],
+							["Clamp", "torch.clamp(x, min=0, max=1)"],
+							["Compare", "x > 0, torch.eq(x, y)" ]
+						]
+					},
+					"example": "import torch\nx = torch.tensor([-1.0, 0.5, 2.0])\nprint(torch.clamp(x, 0.0, 1.0))\nprint(torch.exp(x))"
+				},
+				{
+					"title": "Reductions and statistics",
+					"description": "Use dim=... to reduce along an axis; keepdim preserves reduced dimension.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["torch.sum(x, dim=...) / x.sum(...) ", "Sum"],
+							["torch.mean(x, dim=...)", "Mean"],
+							["torch.std(x, dim=...)", "Std dev"],
+							["torch.var(x, dim=...)", "Variance"],
+							["torch.max(x, dim=...)", "Max values + indices"],
+							["torch.argmax(x, dim=...)", "Argmax"],
+							["torch.norm(x)", "Vector/matrix norm" ]
+						]
+					},
+					"example": "import torch\nx = torch.randn((2, 3))\nprint(x.mean(dim=1))\nvals, idx = x.max(dim=1)\nprint(vals, idx)"
+				},
+				{
+					"title": "Common activations",
+					"description": "Available as torch functions, nn modules, and nn.functional.",
+					"table": {
+						"headers": ["Activation", "Function"],
+						"rows": [
+							["ReLU", "torch.relu(x) / torch.nn.functional.relu(x)"],
+							["GELU", "torch.nn.functional.gelu(x)"],
+							["Sigmoid", "torch.sigmoid(x)"],
+							["Tanh", "torch.tanh(x)"],
+							["Softmax", "torch.softmax(x, dim=-1)"],
+							["LogSoftmax", "torch.log_softmax(x, dim=-1)" ]
+						]
+					},
+					"example": "import torch\nx = torch.randn((2, 4))\nprint(torch.softmax(x, dim=1))"
+				}
+			]
+		},
+		{
+			"title": "Linear Algebra",
+			"description": "Matrix multiplication, decompositions, and solve operations.",
+			"items": [
+				{
+					"title": "Multiplication",
+					"description": "Use @ for matmul; choose mm/bmm for explicit 2D/batched 3D.",
+					"table": {
+						"headers": ["Op", "Code"],
+						"rows": [
+							["Matmul", "C = A @ B  (torch.matmul)"],
+							["2D matmul", "torch.mm(A, B)"],
+							["Batched matmul", "torch.bmm(A, B)"],
+							["Einstein sum", "torch.einsum('bij,bjk->bik', A, B)" ]
+						]
+					},
+					"example": "import torch\nA = torch.randn((2, 3))\nB = torch.randn((3, 4))\nC = A @ B\nprint(C.shape)"
+				},
+				{
+					"title": "Decompositions and solves",
+					"description": "Some APIs live under torch.linalg in modern PyTorch.",
+					"table": {
+						"headers": ["Function", "Description"],
+						"rows": [
+							["torch.linalg.norm", "Norms"],
+							["torch.linalg.svd", "SVD"],
+							["torch.linalg.qr", "QR"],
+							["torch.linalg.solve", "Solve AX = B"],
+							["torch.linalg.inv", "Inverse (avoid when solve works)"],
+							["torch.linalg.det", "Determinant"],
+							["torch.linalg.cholesky", "Cholesky" ]
+						]
+					},
+					"example": "import torch\nA = torch.randn((3, 3))\nA = A @ A.t() + 1e-3 * torch.eye(3)\nL = torch.linalg.cholesky(A)\nprint(L.shape)"
+				}
+			]
+		},
+		{
+			"title": "Autograd",
+			"description": "Automatic differentiation: gradients, contexts, and debugging.",
+			"items": [
+				{
+					"title": "Core concepts",
+					"description": "Gradients flow through a dynamic computation graph built during the forward pass.",
+					"table": {
+						"headers": ["Concept", "Code"],
+						"rows": [
+							["Track grads", "x = torch.tensor(..., requires_grad=True)"],
+							["Backward", "loss.backward()"],
+							["Access grads", "x.grad"],
+							["Zero grads", "optimizer.zero_grad(set_to_none=True)"],
+							["Stop tracking", "with torch.no_grad(): ..."],
+							["Inference", "with torch.inference_mode(): ..."],
+							["Manual grad", "torch.autograd.grad(loss, params)" ]
+						]
+					},
+					"example": "import torch\nx = torch.tensor([2.0, 3.0], requires_grad=True)\ny = (x * x).sum()\ny.backward()\nprint(x.grad)"
+				},
+				{
+					"title": "Grad debugging",
+					"description": "Detect NaNs/Infs and track problematic operations.",
+					"table": {
+						"headers": ["Tool", "What it does"],
+						"rows": [
+							["torch.autograd.set_detect_anomaly(True)", "Trace backward errors (slow)."],
+							["torch.isfinite(t).all()", "Check for NaN/Inf."],
+							["register_hook", "Inspect/modify gradients."],
+							["gradcheck", "Numerically validate gradients (double precision)." ]
+						]
+					},
+					"example": "import torch\ntorch.autograd.set_detect_anomaly(True)\nx = torch.randn((2, 2), requires_grad=True)\ny = (x / 0).sum()\ntry:\n    y.backward()\nexcept RuntimeError as e:\n    print('backward failed:', e)"
+				}
+			]
+		},
+		{
+			"title": "torch.nn (Modules and Layers)",
+			"description": "Build models with nn.Module, common layers, and state_dict.",
+			"items": [
+				{
+					"title": "Module basics",
+					"description": "Subclass nn.Module, define layers in __init__, and implement forward().",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["model.parameters()", "Iterator over parameters."],
+							["model.named_parameters()", "Parameters with names."],
+							["model.buffers()", "Non-parameter buffers (e.g., BatchNorm running stats)."],
+							["model.train()", "Enable training mode."],
+							["model.eval()", "Enable eval mode (affects dropout/bn)."],
+							["model.state_dict()", "Serialize weights/buffers."],
+							["model.load_state_dict(sd)", "Load weights/buffers." ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nclass MLP(nn.Module):\n    def __init__(self, d_in: int, d_hidden: int, d_out: int):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.Linear(d_in, d_hidden),\n            nn.ReLU(),\n            nn.Linear(d_hidden, d_out),\n        )\n\n    def forward(self, x):\n        return self.net(x)\n\nmodel = MLP(10, 32, 2)\nprint(sum(p.numel() for p in model.parameters()))"
+				},
+				{
+					"title": "Common layers",
+					"description": "High-usage building blocks.",
+					"table": {
+						"headers": ["Layer", "Constructor"],
+						"rows": [
+							["Linear", "nn.Linear(in_features, out_features, bias=True)"],
+							["Conv2d", "nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=0)"],
+							["BatchNorm2d", "nn.BatchNorm2d(num_features)"],
+							["LayerNorm", "nn.LayerNorm(normalized_shape)"],
+							["Dropout", "nn.Dropout(p=0.5)"],
+							["Embedding", "nn.Embedding(num_embeddings, embedding_dim)"],
+							["LSTM", "nn.LSTM(input_size, hidden_size, num_layers=1, batch_first=False)"],
+							["TransformerEncoderLayer", "nn.TransformerEncoderLayer(d_model, nhead)" ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nconv = nn.Conv2d(3, 16, kernel_size=3, padding=1)\nx = torch.randn((8, 3, 32, 32))\ny = conv(x)\nprint(y.shape)"
+				},
+				{
+					"title": "Initialization",
+					"description": "Use torch.nn.init for explicit parameter initialization.",
+					"table": {
+						"headers": ["Init", "Example"],
+						"rows": [
+							["Xavier/Glorot", "nn.init.xavier_uniform_(w)"],
+							["Kaiming/He", "nn.init.kaiming_normal_(w, nonlinearity='relu')"],
+							["Normal", "nn.init.normal_(w, mean=0.0, std=0.02)"],
+							["Constant", "nn.init.constant_(b, 0.0)" ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\nfrom torch.nn import init\n\nlayer = nn.Linear(10, 4)\ninit.kaiming_normal_(layer.weight, nonlinearity='relu')\ninit.constant_(layer.bias, 0.0)"
+				}
+			]
+		},
+		{
+			"title": "torch.nn.functional and Losses",
+			"description": "Functional ops, losses, and helpers commonly used in forward passes.",
+			"items": [
+				{
+					"title": "Functional API",
+					"description": "Prefer modules for stateful layers; use functional for stateless ops.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["torch.nn.functional.relu", "Activation"],
+							["torch.nn.functional.gelu", "Activation"],
+							["torch.nn.functional.dropout", "Dropout (uses training flag)."],
+							["torch.nn.functional.softmax", "Softmax"],
+							["torch.nn.functional.log_softmax", "Log-softmax"],
+							["torch.nn.functional.pad", "Padding"],
+							["torch.nn.functional.one_hot", "One-hot encoding" ]
+						]
+					},
+					"example": "import torch\nimport torch.nn.functional as F\n\nx = torch.randn((2, 5))\nprobs = F.softmax(x, dim=1)\nprint(probs.sum(dim=1))"
+				},
+				{
+					"title": "Common losses",
+					"description": "Many losses exist as both modules (nn.*Loss) and functional versions (F.*).",
+					"table": {
+						"headers": ["Loss", "Function / Module"],
+						"rows": [
+							["Classification", "F.cross_entropy(logits, target) / nn.CrossEntropyLoss"],
+							["Binary classification", "F.binary_cross_entropy_with_logits(logits, target)"],
+							["Regression", "F.mse_loss(pred, target) / nn.MSELoss"],
+							["MAE", "F.l1_loss(pred, target) / nn.L1Loss"],
+							["Huber", "F.smooth_l1_loss(pred, target)"],
+							["KL divergence", "F.kl_div(log_probs, probs, reduction='batchmean')"],
+							["CTC", "F.ctc_loss(log_probs, targets, input_lengths, target_lengths)" ]
+						]
+					},
+					"example": "import torch\nimport torch.nn.functional as F\n\nlogits = torch.randn((4, 10))\ntarget = torch.tensor([1, 2, 3, 4])\nloss = F.cross_entropy(logits, target)\nprint(loss.item())"
+				}
+			]
+		},
+		{
+			"title": "Optimization and Schedulers",
+			"description": "Optimizers update parameters; schedulers update the learning rate.",
+			"items": [
+				{
+					"title": "Optimizers",
+					"description": "Typical workflow: zero_grad → forward → loss.backward → step.",
+					"table": {
+						"headers": ["Optimizer", "Constructor"],
+						"rows": [
+							["SGD", "torch.optim.SGD(params, lr, momentum=0.0, weight_decay=0.0)"],
+							["Adam", "torch.optim.Adam(params, lr, betas=(0.9, 0.999), weight_decay=0.0)"],
+							["AdamW", "torch.optim.AdamW(params, lr, weight_decay=0.01)"],
+							["RMSprop", "torch.optim.RMSprop(params, lr)"],
+							["Adagrad", "torch.optim.Adagrad(params, lr)" ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nmodel = nn.Linear(10, 1)\nopt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.01)\n\nx = torch.randn((16, 10))\ny = torch.randn((16, 1))\n\nopt.zero_grad(set_to_none=True)\nloss = ((model(x) - y) ** 2).mean()\nloss.backward()\nopt.step()"
+				},
+				{
+					"title": "Learning-rate schedulers",
+					"description": "Call scheduler.step() per-epoch or per-step depending on the scheduler.",
+					"table": {
+						"headers": ["Scheduler", "Notes"],
+						"rows": [
+							["StepLR", "Step down every N epochs."],
+							["MultiStepLR", "Step at specified milestones."],
+							["CosineAnnealingLR", "Cosine schedule."],
+							["ReduceLROnPlateau", "Step when a metric stops improving."],
+							["OneCycleLR", "One-cycle policy (often per-step)." ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nmodel = nn.Linear(10, 1)\nopt = torch.optim.SGD(model.parameters(), lr=0.1)\nsched = torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.1)\n\nfor epoch in range(3):\n    # train ...\n    sched.step()\n    print('lr', opt.param_groups[0]['lr'])"
+				},
+				{
+					"title": "Gradient clipping",
+					"description": "Clip gradients to stabilize training (common for RNNs/Transformers).",
+					"table": {
+						"headers": ["Utility", "Code"],
+						"rows": [
+							["Clip norm", "torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)"],
+							["Clip value", "torch.nn.utils.clip_grad_value_(model.parameters(), clip_value=0.5)" ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nmodel = nn.Linear(10, 1)\n# ... after loss.backward():\ntorch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)"
+				}
+			]
+		},
+		{
+			"title": "Data Loading (torch.utils.data)",
+			"description": "Datasets, DataLoaders, shuffling, and multiprocessing.",
+			"items": [
+				{
+					"title": "Dataset and DataLoader",
+					"description": "Implement Dataset for map-style data; IterableDataset for streaming.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Dataset", "Implement __len__ and __getitem__."],
+							["IterableDataset", "Implement __iter__ for streaming/online sources."],
+							["DataLoader", "Batching, shuffling, multiprocessing."],
+							["collate_fn", "Customize how a batch is formed."],
+							["num_workers", "Parallelize data loading."],
+							["pin_memory", "Faster host→GPU copies (often beneficial)."],
+							["persistent_workers", "Keep workers alive between epochs." ]
+						]
+					},
+					"example": "import torch\nfrom torch.utils.data import Dataset, DataLoader\n\nclass Toy(Dataset):\n    def __len__(self):\n        return 100\n    def __getitem__(self, i):\n        x = torch.tensor([i], dtype=torch.float32)\n        y = x * 2\n        return x, y\n\ndl = DataLoader(Toy(), batch_size=16, shuffle=True, num_workers=0)\nxb, yb = next(iter(dl))\nprint(xb.shape, yb.shape)"
+				},
+				{
+					"title": "Samplers and splitting",
+					"description": "Control how indices are drawn and split datasets.",
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["torch.utils.data.random_split", "Split dataset into subsets."],
+							["SequentialSampler", "Iterate in order."],
+							["RandomSampler", "Random indices."],
+							["WeightedRandomSampler", "Sample with weights (imbalanced data)."],
+							["DistributedSampler", "Split across processes for DDP." ]
+						]
+					},
+					"example": "import torch\nfrom torch.utils.data import random_split\n\nxs = torch.arange(0, 100)\ntrain, val = random_split(xs, lengths=[80, 20])\nprint(len(train), len(val))"
+				}
+			]
+		},
+		{
+			"title": "Training and Inference Patterns",
+			"description": "Standard training loop, evaluation, and common gotchas.",
+			"items": [
+				{
+					"title": "Train/eval mode and no_grad",
+					"description": "model.train() enables training behaviors; model.eval() disables dropout and uses running stats for batch norm.",
+					"table": {
+						"headers": ["Pattern", "Code"],
+						"rows": [
+							["Training", "model.train()"],
+							["Evaluation", "model.eval()"],
+							["Disable grads", "with torch.no_grad(): ..."],
+							["Faster inference", "with torch.inference_mode(): ..." ]
+						]
+					},
+					"example": "# During evaluation:\nmodel.eval()\nwith torch.inference_mode():\n    out = model(x)"
+				},
+				{
+					"title": "Typical training step",
+					"description": "A minimal but correct training step (handles grads and mode).",
+					"table": {
+						"headers": ["Step", "Notes"],
+						"rows": [
+							["opt.zero_grad", "Reset gradients"],
+							["forward", "Compute predictions"],
+							["loss", "Compute scalar loss"],
+							["loss.backward", "Backprop"],
+							["opt.step", "Update parameters" ]
+						]
+					},
+					"example": "model.train()\nopt.zero_grad(set_to_none=True)\npred = model(xb)\nloss = loss_fn(pred, yb)\nloss.backward()\nopt.step()"
+				}
+			]
+		},
+		{
+			"title": "Saving and Loading",
+			"description": "Checkpoints, state_dict, and device mapping.",
+			"items": [
+				{
+					"title": "state_dict basics",
+					"description": "Save model weights (and optimizer state) to resume training.",
+					"table": {
+						"headers": ["Task", "Code"],
+						"rows": [
+							["Save weights", "torch.save(model.state_dict(), 'model.pt')"],
+							["Load weights", "model.load_state_dict(torch.load('model.pt', map_location='cpu'))"],
+							["Save checkpoint", "torch.save({'model': model.state_dict(), 'opt': opt.state_dict()}, 'ckpt.pt')"],
+							["Load checkpoint", "ckpt = torch.load('ckpt.pt', map_location='cpu')" ]
+						]
+					},
+					"example": "import torch\n\n# Save\ntorch.save({'model': model.state_dict(), 'opt': opt.state_dict(), 'epoch': 3}, 'ckpt.pt')\n\n# Load\nckpt = torch.load('ckpt.pt', map_location='cpu')\nmodel.load_state_dict(ckpt['model'])\nopt.load_state_dict(ckpt['opt'])\nstart_epoch = ckpt['epoch'] + 1"
+				},
+				{
+					"title": "Strict vs non-strict loading",
+					"description": "Use strict=False for fine-tuning or partially compatible checkpoints.",
+					"table": {
+						"headers": ["Option", "Meaning"],
+						"rows": [
+							["strict=True", "All keys must match."],
+							["strict=False", "Allow missing/unexpected keys." ]
+						]
+					},
+					"example": "missing, unexpected = model.load_state_dict(sd, strict=False)\nprint('missing', missing)\nprint('unexpected', unexpected)"
+				}
+			]
+		},
+		{
+			"title": "CUDA, Memory, and Performance",
+			"description": "Move compute to GPU, inspect memory, and tune performance.",
+			"items": [
+				{
+					"title": "CUDA basics",
+					"description": "Check availability and move tensors/modules to GPU.",
+					"table": {
+						"headers": ["Task", "Code"],
+						"rows": [
+							["Check", "torch.cuda.is_available()"],
+							["Set device", "device = torch.device('cuda')"],
+							["Move model", "model.to(device)"],
+							["Move tensor", "x = x.to(device)"],
+							["Synchronize", "torch.cuda.synchronize()" ],
+							["Empty cache", "torch.cuda.empty_cache()" ]
+						]
+					},
+					"example": "import torch\nif torch.cuda.is_available():\n    x = torch.randn((1024, 1024), device='cuda')\n    y = x @ x\n    torch.cuda.synchronize()\n    print('ok', y.shape)"
+				},
+				{
+					"title": "Memory inspection",
+					"description": "Useful for diagnosing OOMs and leaks.",
+					"table": {
+						"headers": ["Function", "Description"],
+						"rows": [
+							["torch.cuda.memory_allocated()", "Bytes currently allocated."],
+							["torch.cuda.max_memory_allocated()", "Peak allocated."],
+							["torch.cuda.memory_reserved()", "Bytes reserved by caching allocator."],
+							["torch.cuda.reset_peak_memory_stats()", "Reset peak stats." ]
+						]
+					},
+					"example": "import torch\nif torch.cuda.is_available():\n    torch.cuda.reset_peak_memory_stats()\n    x = torch.randn((2048, 2048), device='cuda')\n    y = x @ x\n    torch.cuda.synchronize()\n    print('peak', torch.cuda.max_memory_allocated())"
+				},
+				{
+					"title": "Speed knobs",
+					"description": "These can impact numerical behavior; test carefully.",
+					"table": {
+						"headers": ["Setting", "Effect"],
+						"rows": [
+							["torch.backends.cudnn.benchmark = True", "Auto-tune conv algorithms for fixed sizes."],
+							["torch.set_float32_matmul_precision('high')", "May improve matmul perf on supported GPUs."],
+							["pin_memory=True (DataLoader)", "Faster host→device copies."],
+							["non_blocking=True", "Overlap copies when source is pinned." ]
+						]
+					},
+					"example": "import torch\n# matmul precision options: 'highest', 'high', 'medium'\ntorch.set_float32_matmul_precision('high')"
+				}
+			]
+		},
+		{
+			"title": "Mixed Precision (AMP)",
+			"description": "Automatic Mixed Precision reduces memory and often speeds up training on GPUs.",
+			"items": [
+				{
+					"title": "autocast + GradScaler",
+					"description": "Use autocast for forward; scale loss before backward to avoid underflow.",
+					"table": {
+						"headers": ["API", "Usage"],
+						"rows": [
+							["torch.cuda.amp.autocast", "Context manager for mixed-precision forward."],
+							["torch.cuda.amp.GradScaler", "Scales loss and manages unscale/step." ]
+						]
+					},
+					"example": "import torch\nscaler = torch.cuda.amp.GradScaler(enabled=torch.cuda.is_available())\n\nopt.zero_grad(set_to_none=True)\nwith torch.cuda.amp.autocast(enabled=torch.cuda.is_available()):\n    pred = model(xb)\n    loss = loss_fn(pred, yb)\nscaler.scale(loss).backward()\nscaler.step(opt)\nscaler.update()"
+				}
+			]
+		},
+		{
+			"title": "Compilation and Export (PyTorch 2.x)",
+			"description": "Speed up models with torch.compile and export graphs for deployment.",
+			"items": [
+				{
+					"title": "torch.compile",
+					"description": "Compiles a model/function for optimized execution (backend-dependent).",
+					"table": {
+						"headers": ["Call", "Notes"],
+						"rows": [
+							["torch.compile(model)", "Wrap a module for compilation."],
+							["torch.compile(fn)", "Compile a function."],
+							["mode=...", "Common: 'default', 'reduce-overhead', 'max-autotune'"],
+							["fullgraph=True", "Require full graph capture." ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nmodel = nn.Sequential(nn.Linear(128, 128), nn.ReLU(), nn.Linear(128, 10))\nif hasattr(torch, 'compile'):\n    model = torch.compile(model, mode='default')\n\nx = torch.randn((32, 128))\nprint(model(x).shape)"
+				},
+				{
+					"title": "TorchScript (jit) quick reference",
+					"description": "TorchScript is still used in some deployments; new projects may prefer export/compile flows.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["torch.jit.trace", "Trace with example inputs (control-flow limitations)."],
+							["torch.jit.script", "Script a module/function (better for control flow)."],
+							["scripted.save(path)", "Save scripted module."],
+							["torch.jit.load(path)", "Load scripted module." ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nmodel = nn.Linear(4, 3)\nexample = torch.randn((1, 4))\ntraced = torch.jit.trace(model, example)\ntraced.save('model_ts.pt')\nloaded = torch.jit.load('model_ts.pt')\nprint(loaded(example))"
+				},
+				{
+					"title": "ONNX export",
+					"description": "Export a model to ONNX for interoperability. Opset/support varies.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["torch.onnx.export", "Export module/function to ONNX."],
+							["opset_version", "Choose based on runtime support."],
+							["dynamic_axes", "Mark variable batch/sequence axes." ]
+						]
+					},
+					"example": "import torch\nimport torch.nn as nn\n\nmodel = nn.Linear(4, 3).eval()\nx = torch.randn((2, 4))\ntorch.onnx.export(model, x, 'model.onnx', opset_version=17, input_names=['x'], output_names=['y'])"
+				}
+			]
+		},
+		{
+			"title": "Distributed Training (torch.distributed)",
+			"description": "Scale training across multiple GPUs/machines with DDP and collective ops.",
+			"items": [
+				{
+					"title": "Launching with torchrun",
+					"description": "torchrun is the recommended launcher for many DDP setups.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["torchrun --nproc_per_node=8 train.py", "8 processes (one per GPU)."],
+							["torchrun --nnodes=2 --nproc_per_node=8 --node_rank=0 --master_addr=... --master_port=... train.py", "Multi-node example." ]
+						]
+					},
+					"example": "# Single node (4 GPUs):\n# torchrun --nproc_per_node=4 train.py"
+				},
+				{
+					"title": "DDP essentials",
+					"description": "Initialize process group, set device per rank, wrap model with DistributedDataParallel.",
+					"table": {
+						"headers": ["API", "Role"],
+						"rows": [
+							["torch.distributed.init_process_group", "Set up communication backend."],
+							["torch.nn.parallel.DistributedDataParallel", "Synchronize gradients across ranks."],
+							["torch.distributed.all_reduce", "Sum/avg tensors across ranks."],
+							["torch.distributed.barrier", "Synchronize processes."],
+							["DistributedSampler", "Shard dataset per rank." ]
+						]
+					},
+					"example": "# Sketch only (details depend on launcher/env):\n# import os, torch, torch.distributed as dist\n# rank = int(os.environ['RANK'])\n# local_rank = int(os.environ['LOCAL_RANK'])\n# torch.cuda.set_device(local_rank)\n# dist.init_process_group(backend='nccl')\n# model = torch.nn.parallel.DistributedDataParallel(model.to(local_rank), device_ids=[local_rank])"
+				}
+			]
+		},
+		{
+			"title": "Profiling and Debugging",
+			"description": "Measure performance and catch common issues.",
+			"items": [
+				{
+					"title": "torch.profiler",
+					"description": "Profile CPU/GPU time and visualize in TensorBoard.",
+					"table": {
+						"headers": ["Tool", "Notes"],
+						"rows": [
+							["torch.profiler.profile", "Collect traces."],
+							["torch.profiler.schedule", "Warmup/active schedule."],
+							["tensorboard_trace_handler", "Write traces for TensorBoard." ]
+						]
+					},
+					"example": "import torch\nfrom torch.profiler import profile, ProfilerActivity\n\nx = torch.randn((1024, 1024))\nwith profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:\n    y = x @ x\nprint(prof.key_averages().table(sort_by='cpu_time_total', row_limit=5))"
+				},
+				{
+					"title": "Tensor checks",
+					"description": "Sanity-check shapes and numerical health.",
+					"table": {
+						"headers": ["Check", "Code"],
+						"rows": [
+							["Shape", "assert x.shape == (B, C, H, W)"],
+							["Finite", "assert torch.isfinite(x).all()"],
+							["Min/max", "x.min(), x.max()"],
+							["Gradient norm", "torch.linalg.norm(p.grad)" ]
+						]
+					},
+					"example": "import torch\nx = torch.randn((3, 4))\nassert torch.isfinite(x).all()\nprint('min/max', x.min().item(), x.max().item())"
+				}
+			]
+		}
+	]
+}

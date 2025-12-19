@@ -1,0 +1,597 @@
+{
+	"title": "OpenCV (cv2) Cheatsheet",
+	"description": "A practical OpenCV quick reference for Python (cv2): image/video I/O, colorspaces, drawing, geometric transforms, filtering, morphology, feature detection, calibration, tracking, DNN, and performance tips.",
+	"language": "python",
+	"categories": [
+		{
+			"title": "Installation and Setup",
+			"description": "Install OpenCV and validate that the cv2 module is available.",
+			"items": [
+				{
+					"title": "Install packages",
+					"description": "opencv-python includes the main modules; opencv-contrib-python adds extra algorithms (SIFT in older builds, ArUco, etc.).",
+					"table": {
+						"headers": ["Package", "Command"],
+						"rows": [
+							["Core", "python -m pip install opencv-python"],
+							["Contrib", "python -m pip install opencv-contrib-python"],
+							["Headless (servers)", "python -m pip install opencv-python-headless"],
+							["Verify", "python -c \"import cv2; print(cv2.__version__)\"" ]
+						]
+					},
+					"example": "import cv2\nprint('cv2', cv2.__version__)"
+				},
+				{
+					"title": "Basic conventions",
+					"description": "Images are NumPy arrays with shape (H, W, C). OpenCV uses BGR ordering by default.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Color order", "BGR (not RGB)"],
+							["Coordinate system", "(x, y) = (col, row)"],
+							["Dtype", "Commonly uint8 (0..255), or float32 (0..1)"],
+							["Channels", "Grayscale: (H, W); Color: (H, W, 3)" ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\nimg = np.zeros((480, 640, 3), dtype=np.uint8)\nprint(img.shape, img.dtype)"
+				}
+			]
+		},
+		{
+			"title": "Image I/O and Display",
+			"description": "Read/write images and display windows (GUI availability depends on build/OS).",
+			"items": [
+				{
+					"title": "Read and write images",
+					"description": "imread returns None on failure; always check before using.",
+					"table": {
+						"headers": ["Function", "Description"],
+						"rows": [
+							["cv2.imread(path)", "Read image (BGR)."],
+							["cv2.imread(path, cv2.IMREAD_GRAYSCALE)", "Read as grayscale."],
+							["cv2.imwrite(path, img)", "Write image."],
+							["cv2.imdecode(buf, flags)", "Decode from memory buffer."],
+							["cv2.imencode(ext, img)", "Encode to memory (returns ok, buf)." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\nif img is None:\n    raise RuntimeError('failed to read input.jpg')\ncv2.imwrite('out.png', img)"
+				},
+				{
+					"title": "Display windows (HighGUI)",
+					"description": "If using a headless build, imshow/waitKey will not work.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["cv2.imshow(name, img)", "Show image in a window."],
+							["cv2.waitKey(delay_ms)", "Process events; returns pressed key code."],
+							["cv2.destroyAllWindows()", "Close windows."],
+							["cv2.namedWindow(name, flags)", "Configure window."],
+							["cv2.resizeWindow(name, w, h)", "Resize window." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\ncv2.imshow('img', img)\ncv2.waitKey(0)\ncv2.destroyAllWindows()"
+				}
+			]
+		},
+		{
+			"title": "Video I/O",
+			"description": "Capture from camera/files and write video outputs.",
+			"items": [
+				{
+					"title": "Capture frames",
+					"description": "VideoCapture(0) opens default camera; check isOpened() before reading.",
+					"table": {
+						"headers": ["API", "Description"],
+						"rows": [
+							["cap = cv2.VideoCapture(0)", "Open camera."],
+							["cap = cv2.VideoCapture('file.mp4')", "Open video file."],
+							["cap.isOpened()", "Check open succeeded."],
+							["ok, frame = cap.read()", "Read next frame."],
+							["cap.release()", "Release capture."],
+							["cap.get(prop) / cap.set(prop, value)", "Get/set properties." ]
+						]
+					},
+					"example": "import cv2\ncap = cv2.VideoCapture(0)\nif not cap.isOpened():\n    raise RuntimeError('camera not available')\n\nwhile True:\n    ok, frame = cap.read()\n    if not ok:\n        break\n    cv2.imshow('cam', frame)\n    if cv2.waitKey(1) & 0xFF == ord('q'):\n        break\n\ncap.release()\ncv2.destroyAllWindows()"
+				},
+				{
+					"title": "Write video",
+					"description": "Choose a codec compatible with your system; frame size must match exactly.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["fourcc = cv2.VideoWriter_fourcc(*'mp4v')", "Codec identifier."],
+							["cv2.VideoWriter(path, fourcc, fps, (w,h))", "Create writer."],
+							["writer.write(frame)", "Write a frame."],
+							["writer.release()", "Close file." ]
+						]
+					},
+					"example": "import cv2\ncap = cv2.VideoCapture('in.mp4')\nok, frame = cap.read()\nif not ok:\n    raise RuntimeError('no frames')\nh, w = frame.shape[:2]\nwriter = cv2.VideoWriter('out.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30.0, (w, h))\nwriter.write(frame)\n\nwhile True:\n    ok, frame = cap.read()\n    if not ok:\n        break\n    writer.write(frame)\n\ncap.release()\nwriter.release()"
+				}
+			]
+		},
+		{
+			"title": "Color Spaces and Channel Ops",
+			"description": "Convert between BGR/RGB/GRAY/HSV and operate per-channel.",
+			"items": [
+				{
+					"title": "Color conversion",
+					"description": "cvtColor is the workhorse for colorspace conversion.",
+					"table": {
+						"headers": ["Conversion", "Code"],
+						"rows": [
+							["BGR → RGB", "cv2.cvtColor(img, cv2.COLOR_BGR2RGB)"],
+							["BGR → GRAY", "cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)"],
+							["BGR → HSV", "cv2.cvtColor(img, cv2.COLOR_BGR2HSV)"],
+							["HSV → BGR", "cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)"],
+							["BGR → LAB", "cv2.cvtColor(img, cv2.COLOR_BGR2LAB)" ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\ngray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\nhsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)"
+				},
+				{
+					"title": "Split/merge channels",
+					"description": "Split returns copies; direct slicing may create views depending on NumPy.",
+					"table": {
+						"headers": ["Operation", "Code"],
+						"rows": [
+							["Split", "b, g, r = cv2.split(img)"],
+							["Merge", "img = cv2.merge([b, g, r])"],
+							["Access channel", "b = img[:, :, 0]"],
+							["Convert dtype", "img_f = img.astype('float32') / 255.0" ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\nb, g, r = cv2.split(img)\nimg2 = cv2.merge([b, g, r])\nprint(img2.shape)"
+				}
+			]
+		},
+		{
+			"title": "Drawing and Annotation",
+			"description": "Draw primitives, text, and overlay UI-like elements.",
+			"items": [
+				{
+					"title": "Common drawing functions",
+					"description": "Colors are BGR tuples (B, G, R). Coordinates are integer pixels.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["cv2.line", "cv2.line(img, (x1,y1), (x2,y2), color, thickness)"],
+							["cv2.rectangle", "cv2.rectangle(img, (x1,y1), (x2,y2), color, thickness)"],
+							["cv2.circle", "cv2.circle(img, (x,y), radius, color, thickness)"],
+							["cv2.polylines", "cv2.polylines(img, [pts], isClosed, color, thickness)"],
+							["cv2.putText", "cv2.putText(img, text, org, fontFace, fontScale, color, thickness)" ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nimg = np.zeros((300, 400, 3), dtype=np.uint8)\ncv2.rectangle(img, (50, 50), (350, 250), (0, 255, 0), 2)\ncv2.putText(img, 'OpenCV', (60, 45), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)"
+				},
+				{
+					"title": "Alpha blending / overlays",
+					"description": "Blend two images with weights or overlay shapes with transparency.",
+					"table": {
+						"headers": ["Method", "Code"],
+						"rows": [
+							["Weighted sum", "cv2.addWeighted(a, alpha, b, beta, gamma)"],
+							["Masked overlay", "roi[mask] = overlay[mask]" ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nbase = np.zeros((200, 200, 3), dtype=np.uint8)\nover = base.copy()\ncv2.circle(over, (100, 100), 60, (0, 0, 255), -1)\nblended = cv2.addWeighted(base, 0.7, over, 0.3, 0.0)"
+				}
+			]
+		},
+		{
+			"title": "Geometric Transforms",
+			"description": "Resize, crop, rotate, warp, and perspective transforms.",
+			"items": [
+				{
+					"title": "Resize and basic warp",
+					"description": "Choose interpolation: INTER_AREA for shrinking, INTER_LINEAR for general use.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["cv2.resize", "Resize to (w,h) or scale fx/fy."],
+							["cv2.getRotationMatrix2D", "Affine rotation matrix."],
+							["cv2.warpAffine", "Apply 2x3 affine transform."],
+							["cv2.warpPerspective", "Apply 3x3 homography." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\nsmall = cv2.resize(img, (320, 240), interpolation=cv2.INTER_AREA)\nM = cv2.getRotationMatrix2D((160, 120), 15.0, 1.0)\nrot = cv2.warpAffine(small, M, (320, 240))"
+				},
+				{
+					"title": "Perspective transform",
+					"description": "Use four point correspondences (src→dst) to rectify a planar region.",
+					"table": {
+						"headers": ["Step", "API"],
+						"rows": [
+							["Compute H", "H = cv2.getPerspectiveTransform(src_pts, dst_pts)"],
+							["Warp", "out = cv2.warpPerspective(img, H, (w, h))" ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nimg = cv2.imread('input.jpg')\nsrc = np.float32([[10, 10], [300, 20], [20, 200], [320, 220]])\ndst = np.float32([[0, 0], [400, 0], [0, 300], [400, 300]])\nH = cv2.getPerspectiveTransform(src, dst)\nwarped = cv2.warpPerspective(img, H, (400, 300))"
+				}
+			]
+		},
+		{
+			"title": "Filtering and Convolution",
+			"description": "Blur, denoise, edge detection, and custom kernels.",
+			"items": [
+				{
+					"title": "Smoothing / denoising",
+					"description": "Use GaussianBlur for general smoothing, medianBlur for salt-and-pepper noise.",
+					"table": {
+						"headers": ["Function", "Typical use"],
+						"rows": [
+							["cv2.blur", "Box blur."],
+							["cv2.GaussianBlur", "Gaussian smoothing."],
+							["cv2.medianBlur", "Remove impulse noise."],
+							["cv2.bilateralFilter", "Edge-preserving smoothing."],
+							["cv2.fastNlMeansDenoising", "Non-local means (grayscale)."],
+							["cv2.fastNlMeansDenoisingColored", "Non-local means (color)." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\nblur = cv2.GaussianBlur(img, (5, 5), 0)\nmed = cv2.medianBlur(img, 5)"
+				},
+				{
+					"title": "Edge detection",
+					"description": "Canny expects single-channel (grayscale) input.",
+					"table": {
+						"headers": ["Method", "Code"],
+						"rows": [
+							["Sobel", "cv2.Sobel(gray, ddepth, dx, dy, ksize=3)"],
+							["Laplacian", "cv2.Laplacian(gray, ddepth)"],
+							["Canny", "cv2.Canny(gray, threshold1, threshold2)" ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\ngray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\nedges = cv2.Canny(gray, 50, 150)"
+				},
+				{
+					"title": "Custom kernels",
+					"description": "filter2D applies an arbitrary convolution kernel.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["cv2.filter2D", "General convolution."],
+							["cv2.sepFilter2D", "Separable filters."],
+							["cv2.Scharr", "High-accuracy derivative." ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nimg = cv2.imread('input.jpg')\nk = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32)\nsharpen = cv2.filter2D(img, -1, k)"
+				}
+			]
+		},
+		{
+			"title": "Thresholding and Segmentation",
+			"description": "Binarize images, segment regions, and compute distance transforms.",
+			"items": [
+				{
+					"title": "Global and adaptive threshold",
+					"description": "Thresholding typically operates on grayscale images.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["cv2.threshold", "Global threshold (returns ret, dst)."],
+							["cv2.adaptiveThreshold", "Adaptive thresholding (local)."],
+							["cv2.THRESH_OTSU", "Otsu's method flag."],
+							["cv2.THRESH_TRIANGLE", "Triangle method flag." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\ngray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\n_, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)"
+				},
+				{
+					"title": "Connected components",
+					"description": "Label connected regions in a binary image.",
+					"table": {
+						"headers": ["API", "Returns"],
+						"rows": [
+							["cv2.connectedComponents", "num_labels, labels"],
+							["cv2.connectedComponentsWithStats", "num_labels, labels, stats, centroids" ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nbw = cv2.imread('mask.png', cv2.IMREAD_GRAYSCALE)\nnum, labels, stats, centroids = cv2.connectedComponentsWithStats((bw > 0).astype(np.uint8), connectivity=8)\nprint('labels', num)"
+				},
+				{
+					"title": "Watershed (marker-based segmentation)",
+					"description": "Use markers (int32) and run cv2.watershed on a 3-channel image.",
+					"table": {
+						"headers": ["Step", "Hint"],
+						"rows": [
+							["Create markers", "Foreground/background labels (int32)."],
+							["Run", "cv2.watershed(img_bgr, markers)"],
+							["Result", "Boundary pixels become -1 in markers." ]
+						]
+					},
+					"example": "# Watershed setup is application-specific; typical pipeline:\n# 1) threshold -> sure_fg\n# 2) dilate -> sure_bg\n# 3) unknown = bg - fg\n# 4) connectedComponents(fg) -> markers\n# 5) markers[unknown==1] = 0\n# 6) cv2.watershed(img, markers)"
+				}
+			]
+		},
+		{
+			"title": "Morphological Operations",
+			"description": "Erosion/dilation/opening/closing for binary and grayscale images.",
+			"items": [
+				{
+					"title": "Core morphology ops",
+					"description": "Use cv2.getStructuringElement to define kernels.",
+					"table": {
+						"headers": ["Operation", "Function"],
+						"rows": [
+							["Erode", "cv2.erode(img, kernel, iterations=1)"],
+							["Dilate", "cv2.dilate(img, kernel, iterations=1)"],
+							["Open", "cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)"],
+							["Close", "cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)"],
+							["Gradient", "cv2.morphologyEx(img, cv2.MORPH_GRADIENT, kernel)"],
+							["Tophat", "cv2.morphologyEx(img, cv2.MORPH_TOPHAT, kernel)"],
+							["Blackhat", "cv2.morphologyEx(img, cv2.MORPH_BLACKHAT, kernel)" ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nmask = cv2.imread('mask.png', cv2.IMREAD_GRAYSCALE)\nk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))\nopened = cv2.morphologyEx(mask, cv2.MORPH_OPEN, k)"
+				}
+			]
+		},
+		{
+			"title": "Contours and Shape Analysis",
+			"description": "Extract contours, compute areas/perimeters, and fit shapes.",
+			"items": [
+				{
+					"title": "Find and draw contours",
+					"description": "Typically run on a binary image; API returns contours + hierarchy.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["cv2.findContours", "Contours from binary mask."],
+							["cv2.drawContours", "Render contours."],
+							["cv2.contourArea", "Area."],
+							["cv2.arcLength", "Perimeter."],
+							["cv2.approxPolyDP", "Polygon approximation." ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nimg = cv2.imread('input.jpg')\ngray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\n_, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)\ncontours, hierarchy = cv2.findContours(bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\nprint('contours', len(contours))\nout = img.copy()\ncv2.drawContours(out, contours, -1, (0, 255, 0), 2)"
+				},
+				{
+					"title": "Bounding boxes and moments",
+					"description": "Compute bounding boxes, rotated boxes, and centers.",
+					"table": {
+						"headers": ["Tool", "Code"],
+						"rows": [
+							["Axis-aligned bbox", "x, y, w, h = cv2.boundingRect(cnt)"],
+							["Rotated rect", "rect = cv2.minAreaRect(cnt)"],
+							["Box points", "box = cv2.boxPoints(rect)"],
+							["Moments", "M = cv2.moments(cnt)"],
+							["Centroid", "cx = M['m10']/M['m00'], cy = M['m01']/M['m00']" ]
+						]
+					},
+					"example": "# After you have a contour 'cnt':\n# x, y, w, h = cv2.boundingRect(cnt)\n# rect = cv2.minAreaRect(cnt)\n# box = cv2.boxPoints(rect).astype('int32')"
+				}
+			]
+		},
+		{
+			"title": "Features and Matching",
+			"description": "Keypoints/descriptors and feature matching pipelines.",
+			"items": [
+				{
+					"title": "Detectors and descriptors",
+					"description": "Availability can differ between core and contrib builds; ORB is widely available.",
+					"table": {
+						"headers": ["Algorithm", "API"],
+						"rows": [
+							["ORB", "cv2.ORB_create(nfeatures=500)"],
+							["SIFT (often contrib)", "cv2.SIFT_create()"],
+							["BRISK", "cv2.BRISK_create()"],
+							["AKAZE", "cv2.AKAZE_create()"],
+							["Detect+compute", "kps, desc = detector.detectAndCompute(gray, None)" ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\ngray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\norb = cv2.ORB_create(nfeatures=1000)\nkps, desc = orb.detectAndCompute(gray, None)\nprint(len(kps), desc.shape if desc is not None else None)"
+				},
+				{
+					"title": "Matchers",
+					"description": "Use BFMatcher for simplicity; FLANN for larger problems (requires correct index params per descriptor type).",
+					"table": {
+						"headers": ["Matcher", "Notes"],
+						"rows": [
+							["cv2.BFMatcher", "Brute-force matcher; choose norm (NORM_HAMMING for ORB)."],
+							["match", "matches = bf.match(desc1, desc2)"],
+							["knnMatch", "matches = bf.knnMatch(desc1, desc2, k=2)"],
+							["Ratio test", "Keep m if m.distance < 0.75 * n.distance"],
+							["cv2.drawMatches", "Visualize matches" ]
+						]
+					},
+					"example": "import cv2\n\n# Assuming desc1/desc2 computed with ORB\nbf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)\npairs = bf.knnMatch(desc1, desc2, k=2)\ngood = [m for m, n in pairs if m.distance < 0.75 * n.distance]\nprint('good', len(good))"
+				}
+			]
+		},
+		{
+			"title": "Camera Calibration and Pose",
+			"description": "Estimate camera intrinsics/distortion and compute pose from correspondences.",
+			"items": [
+				{
+					"title": "Calibration primitives",
+					"description": "Most calibration pipelines require careful data collection (chessboards, Charuco, etc.).",
+					"table": {
+						"headers": ["API", "Purpose"],
+						"rows": [
+							["cv2.findChessboardCorners", "Detect chessboard corners."],
+							["cv2.cornerSubPix", "Refine corner locations."],
+							["cv2.calibrateCamera", "Compute intrinsics + distortion."],
+							["cv2.undistort", "Undistort image."],
+							["cv2.getOptimalNewCameraMatrix", "Crop/adjust after undistort." ]
+						]
+					},
+					"example": "# Calibration is multi-step; typical output:\n# ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (w,h), None, None)\n# undist = cv2.undistort(img, K, dist)"
+				},
+				{
+					"title": "PnP (pose estimation)",
+					"description": "Estimate object pose given 3D points and 2D image projections.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["cv2.solvePnP", "Estimate rvec/tvec from correspondences."],
+							["cv2.projectPoints", "Project 3D points to image plane."],
+							["cv2.Rodrigues", "Convert rvec ↔ rotation matrix." ]
+						]
+					},
+					"example": "# rvec, tvec = cv2.solvePnP(obj_pts, img_pts, K, dist)[1:3]\n# img_pts2, _ = cv2.projectPoints(axis_pts, rvec, tvec, K, dist)"
+				}
+			]
+		},
+		{
+			"title": "Tracking and Motion",
+			"description": "Optical flow, tracking APIs, and background subtraction.",
+			"items": [
+				{
+					"title": "Optical flow",
+					"description": "Sparse (Lucas-Kanade) for points; dense (Farneback) for full field.",
+					"table": {
+						"headers": ["Method", "API"],
+						"rows": [
+							["Sparse LK", "cv2.calcOpticalFlowPyrLK(prev_gray, gray, prev_pts, None, **params)"],
+							["Dense Farneback", "cv2.calcOpticalFlowFarneback(prev_gray, gray, None, **params)" ]
+						]
+					},
+					"example": "# Sparse optical flow outline:\n# 1) detect goodFeaturesToTrack on prev_gray\n# 2) calcOpticalFlowPyrLK(prev_gray, gray, prev_pts, None)\n# 3) use status mask to keep good points"
+				},
+				{
+					"title": "Background subtraction",
+					"description": "Useful for simple motion segmentation.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["cv2.createBackgroundSubtractorMOG2", "Adaptive Gaussian mixture model."],
+							["cv2.createBackgroundSubtractorKNN", "KNN-based background model."],
+							["fgmask = subtractor.apply(frame)", "Get foreground mask." ]
+						]
+					},
+					"example": "import cv2\ncap = cv2.VideoCapture('in.mp4')\nbg = cv2.createBackgroundSubtractorMOG2()\nwhile True:\n    ok, frame = cap.read()\n    if not ok:\n        break\n    fg = bg.apply(frame)\n    # optionally threshold/clean fg with morphology"
+				}
+			]
+		},
+		{
+			"title": "DNN Module (Deep Learning Inference)",
+			"description": "Run inference with pre-trained models (ONNX/Caffe/TensorFlow etc.) using cv2.dnn.",
+			"items": [
+				{
+					"title": "Core dnn workflow",
+					"description": "Create a blob, set input, forward, and post-process.",
+					"table": {
+						"headers": ["Step", "API"],
+						"rows": [
+							["Load model", "net = cv2.dnn.readNetFromONNX('model.onnx')"],
+							["Create blob", "blob = cv2.dnn.blobFromImage(img, scalefactor, size, mean, swapRB=True, crop=False)"],
+							["Set input", "net.setInput(blob)"],
+							["Forward", "out = net.forward()"],
+							["Backend/target", "net.setPreferableBackend(...); net.setPreferableTarget(...)" ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\nnet = cv2.dnn.readNetFromONNX('model.onnx')\nblob = cv2.dnn.blobFromImage(img, scalefactor=1/255.0, size=(224, 224), mean=(0, 0, 0), swapRB=True)\nnet.setInput(blob)\nout = net.forward()\nprint(out.shape)"
+				},
+				{
+					"title": "Non-max suppression (NMS)",
+					"description": "Post-processing helper for detection boxes.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["cv2.dnn.NMSBoxes", "Classic NMS for boxes + scores."],
+							["cv2.dnn.NMSBoxesRotated", "NMS for rotated rectangles." ]
+						]
+					},
+					"example": "import cv2\nboxes = [[10, 10, 100, 80], [12, 12, 98, 78]]\nscores = [0.9, 0.8]\nidx = cv2.dnn.NMSBoxes(boxes, scores, score_threshold=0.5, nms_threshold=0.4)\nprint(idx)"
+				}
+			]
+		},
+		{
+			"title": "Classic Detection and Recognition",
+			"description": "Traditional CV methods: Haar cascades, HOG, template matching.",
+			"items": [
+				{
+					"title": "Template matching",
+					"description": "Slide a template across an image; best for controlled settings.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["cv2.matchTemplate", "Compute match map."],
+							["cv2.minMaxLoc", "Find best match location."],
+							["Methods", "TM_CCOEFF_NORMED, TM_SQDIFF_NORMED, ..." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('scene.png', cv2.IMREAD_GRAYSCALE)\ntpl = cv2.imread('template.png', cv2.IMREAD_GRAYSCALE)\nres = cv2.matchTemplate(img, tpl, cv2.TM_CCOEFF_NORMED)\n_, maxv, _, maxloc = cv2.minMaxLoc(res)\nprint('score', maxv, 'loc', maxloc)"
+				},
+				{
+					"title": "HOG person detector",
+					"description": "Built-in HOG-based pedestrian detector (older but simple).",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["cv2.HOGDescriptor()", "Create HOG descriptor."],
+							["hog.setSVMDetector( cv2.HOGDescriptor_getDefaultPeopleDetector() )", "Set default detector."],
+							["hog.detectMultiScale", "Detect people; returns boxes, weights." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('input.jpg')\nhog = cv2.HOGDescriptor()\nhog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())\nrects, weights = hog.detectMultiScale(img, winStride=(8, 8), padding=(8, 8), scale=1.05)\nprint(len(rects))"
+				}
+			]
+		},
+		{
+			"title": "ArUco, QR Codes, and Markers",
+			"description": "Fiducials and codes for tracking and calibration (requires contrib for ArUco).",
+			"items": [
+				{
+					"title": "QR code detection",
+					"description": "Detect and decode QR codes.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["cv2.QRCodeDetector()", "Create detector."],
+							["detectAndDecode", "Returns data, points, straight_qrcode."],
+							["detectAndDecodeMulti", "Decode multiple QR codes." ]
+						]
+					},
+					"example": "import cv2\nimg = cv2.imread('qr.png')\nd = cv2.QRCodeDetector()\ndata, pts, _ = d.detectAndDecode(img)\nprint('data', data)"
+				},
+				{
+					"title": "ArUco (contrib)",
+					"description": "Common functions live under cv2.aruco when built with contrib modules.",
+					"table": {
+						"headers": ["API", "Purpose"],
+						"rows": [
+							["cv2.aruco.getPredefinedDictionary", "Pick marker dictionary."],
+							["cv2.aruco.DetectorParameters", "Detection parameters."],
+							["cv2.aruco.detectMarkers", "Detect marker corners + ids."],
+							["cv2.aruco.drawDetectedMarkers", "Visualize detections."],
+							["cv2.aruco.estimatePoseSingleMarkers", "Pose from known marker size + intrinsics." ]
+						]
+					},
+					"example": "# Requires opencv-contrib-python\n# import cv2\n# dict_ = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)\n# corners, ids, rejected = cv2.aruco.detectMarkers(gray, dict_)"
+				}
+			]
+		},
+		{
+			"title": "Utilities and Performance",
+			"description": "Timing, optimization flags, and helper utilities.",
+			"items": [
+				{
+					"title": "Timing",
+					"description": "Use getTickCount/getTickFrequency for high-resolution timing.",
+					"table": {
+						"headers": ["API", "Usage"],
+						"rows": [
+							["cv2.getTickCount()", "Read current tick counter."],
+							["cv2.getTickFrequency()", "Ticks per second." ]
+						]
+					},
+					"example": "import cv2\nimport numpy as np\n\nimg = np.zeros((1024, 1024), dtype=np.uint8)\nt0 = cv2.getTickCount()\n_ = cv2.GaussianBlur(img, (9, 9), 0)\ndt = (cv2.getTickCount() - t0) / cv2.getTickFrequency()\nprint('seconds', dt)"
+				},
+				{
+					"title": "Optimizations and threading",
+					"description": "OpenCV may use multithreading internally; sometimes you want to control it.",
+					"table": {
+						"headers": ["API", "Effect"],
+						"rows": [
+							["cv2.setUseOptimized(True/False)", "Enable/disable optimized code paths."],
+							["cv2.useOptimized()", "Query optimization state."],
+							["cv2.setNumThreads(n)", "Set internal thread count (0 may mean default)."],
+							["cv2.getNumThreads()", "Get current thread count." ]
+						]
+					},
+					"example": "import cv2\ncv2.setUseOptimized(True)\ncv2.setNumThreads(0)\nprint('optimized', cv2.useOptimized(), 'threads', cv2.getNumThreads())"
+				}
+			]
+		}
+	]
+}

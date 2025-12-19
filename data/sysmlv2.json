@@ -1,0 +1,390 @@
+{
+	"title": "SysML v2 Cheatsheet",
+	"description": "A practical SysML v2 quick reference: core concepts, structure, behavior, requirements, constraints/parametrics, allocations/traceability, views/viewpoints, and common modeling patterns. Examples use a simplified textual style; exact syntax varies by tool and the evolving spec.",
+	"language": "text",
+	"categories": [
+		{
+			"title": "Getting Started",
+			"description": "High-level orientation: what SysML v2 is and how to think about models.",
+			"items": [
+				{
+					"title": "What SysML v2 emphasizes",
+					"description": "Compared to SysML v1, SysML v2 focuses on a precise metamodel, a textual notation, API-based model access, and stronger semantics for analysis and integration.",
+					"table": {
+						"headers": ["Concept", "Practical meaning"],
+						"rows": [
+							["Model as a graph", "Elements and relationships form a queryable, versionable model."],
+							["Textual + graphical", "Text is authoritative/parseable; diagrams are views of the same model."],
+							["Separation of concerns", "Structure, behavior, requirements, and constraints can be linked but kept modular."],
+							["Traceability", "Links connect needs → design → verification → evidence."],
+							["Reuse", "Define libraries and patterns; import and specialize." ]
+						]
+					},
+					"example": "Think in packages:\n- a library package (types, units, interfaces)\n- a system package (parts/structure)\n- behavior packages (activities/interactions)\n- requirements + verification packages\nTie them together with trace/allocate/satisfy/verify relationships."
+				},
+				{
+					"title": "Recommended model organization",
+					"description": "A folder/package layout that scales.",
+					"table": {
+						"headers": ["Package", "Contents"],
+						"rows": [
+							["00-Glossary", "Definitions, abbreviations, domain terms."],
+							["10-Libraries", "Units, quantities, types, reusable interfaces."],
+							["20-Requirements", "Stakeholder/system requirements, derived reqs."],
+							["30-Structure", "System decomposition: parts, interfaces, ports."],
+							["40-Behavior", "Use cases, activities, interactions, state machines."],
+							["50-Analysis", "Constraints/parametrics, budgets, trade studies."],
+							["60-Verification", "Test cases, verification procedures, evidence."],
+							["90-Views", "Viewpoints, views, stakeholder-specific slices." ]
+						]
+					},
+					"example": "Keep requirements separate from design; connect via satisfy/trace.\nKeep constraints separate from structure; bind parameters explicitly.\nKeep views separate; they should reference the model, not duplicate it."
+				}
+			]
+		},
+		{
+			"title": "Core Elements and Relationships",
+			"description": "Fundamental building blocks and how they connect.",
+			"items": [
+				{
+					"title": "Element categories (mental model)",
+					"description": "Most SysML v2 content falls into these buckets.",
+					"table": {
+						"headers": ["Bucket", "Examples"],
+						"rows": [
+							["Structural", "part, port, interface, connection, item/flow"],
+							["Behavioral", "action, activity, interaction, state, transition"],
+							["Requirements", "requirement, rationale, assumption, constraint"],
+							["Analysis", "parametric/constraints, budgets, measures"],
+							["Allocation/Trace", "allocate, satisfy, verify, refine, trace"],
+							["Views", "viewpoint, view, concern, stakeholder" ]
+						]
+					},
+					"example": "Rule of thumb:\n- Use structure to define what exists (parts) and how they connect (ports/flows).\n- Use behavior to define what happens (actions/states).\n- Use requirements to define why (needs) and how to prove it (verification)."
+				},
+				{
+					"title": "Common relationship intents",
+					"description": "Different relationships answer different questions.",
+					"table": {
+						"headers": ["Relationship intent", "Question it answers"],
+						"rows": [
+							["Containment (packages/ownership)", "Where does this element live?"],
+							["Specialization/generalization", "What is it a kind of?"],
+							["Usage/typing", "What type does this instance use?"],
+							["Composition/aggregation", "Is it a part-of relationship?"],
+							["Connection/interface", "What interacts with what?"],
+							["Allocation", "Which design element realizes this function?"],
+							["Trace/satisfy/verify", "How does this relate to requirements and evidence?" ]
+						]
+					},
+					"example": "Prefer explicit relationship types for traceability:\n- requirement R is satisfied by design element D\n- requirement R is verified by test case T\n- function/behavior B is allocated to part P"
+				}
+			]
+		},
+		{
+			"title": "Packages, Namespaces, and Reuse",
+			"description": "Organize models, manage names, and build reusable libraries.",
+			"items": [
+				{
+					"title": "Packages and imports",
+					"description": "Use packages to scope names and manage modularity. Use imports/usages to reference libraries.",
+					"table": {
+						"headers": ["Concept", "Why it matters"],
+						"rows": [
+							["Package", "Namespace and ownership container."],
+							["Import / use", "Bring names into scope without copy/paste."],
+							["Qualified name", "Disambiguate same-named elements."],
+							["Library package", "Reusable types/units/interfaces shared across projects." ]
+						]
+					},
+					"example": "Example organization (pseudo):\npackage Libraries {\n  package Units { ... }\n  package Interfaces { ... }\n}\n\npackage SystemModel {\n  import Libraries::Units::*\n  import Libraries::Interfaces::*\n}"
+				},
+				{
+					"title": "Specialization and variation",
+					"description": "Reuse by specializing types and overriding properties where appropriate.",
+					"table": {
+						"headers": ["Reuse technique", "Use when"],
+						"rows": [
+							["Specialize a part/type", "You need a more specific kind with extra constraints/attributes."],
+							["Parameterize a pattern", "You want a template for repeated structures (e.g., N sensors)."],
+							["Compose packages", "Large systems with separate teams/domains."],
+							["Variant packages", "Multiple configurations / product-line engineering." ]
+						]
+					},
+					"example": "Prefer:\n- one base interface type\n- specialized interfaces for constraints/performance\n- concrete part definitions in product packages"
+				}
+			]
+		},
+		{
+			"title": "Structure Modeling",
+			"description": "Define system composition, properties, interfaces, and connections.",
+			"items": [
+				{
+					"title": "Parts and attributes",
+					"description": "Model decomposition with parts; model properties with attributes/values.",
+					"table": {
+						"headers": ["Modeling need", "Typical element"],
+						"rows": [
+							["System decomposition", "part definitions and part usages"],
+							["Configuration", "attributes (mass, power, rate, capacity)"],
+							["Constraints", "value types + constraints"],
+							["Multiplicity", "arrays/collections or repeated part usages" ]
+						]
+					},
+					"example": "Pseudo-structure:\npart System {\n  part controller: Controller\n  part sensor: Sensor [1..N]\n  attribute mass: Mass\n}"
+				},
+				{
+					"title": "Ports, interfaces, and flows",
+					"description": "Ports define interaction points; interfaces define contracts; flows describe what moves across connections.",
+					"table": {
+						"headers": ["Concept", "Practical tip"],
+						"rows": [
+							["Port", "Expose what a part can provide/require."],
+							["Interface", "Specify signals, data, services, or physical interactions."],
+							["Flow/item", "Define the thing that flows (data packet, voltage, force, fluid)."],
+							["Connection", "Connect compatible ports and define direction/typing." ]
+						]
+					},
+					"example": "Pseudo-interfaces:\ninterface Telemetry {\n  flow data: TelemetryFrame\n}\npart Sensor {\n  port out: Telemetry\n}\npart Controller {\n  port in: Telemetry\n}\nconnect Sensor.out -> Controller.in"
+				},
+				{
+					"title": "Units and quantities (modeling values)",
+					"description": "Define value types/quantities and keep units explicit to avoid mismatches.",
+					"table": {
+						"headers": ["Item", "Why"],
+						"rows": [
+							["Value types", "Constrain ranges and allowed units."],
+							["Units library", "Common base/derived units for the project."],
+							["Dimensions", "Catch invalid operations (e.g., adding meters to seconds)."],
+							["Conversions", "Standardize to a canonical unit internally." ]
+						]
+					},
+					"example": "Example approach:\n- define Speed, Voltage, Power as value types\n- require explicit units for each numeric attribute\n- derive budgets (e.g., total power) via constraints"
+				}
+			]
+		},
+		{
+			"title": "Behavior Modeling",
+			"description": "Describe what the system does over time: actions/activities, interactions, and state.",
+			"items": [
+				{
+					"title": "Activities and actions",
+					"description": "Use activities for workflows; actions for atomic steps; parameters for inputs/outputs.",
+					"table": {
+						"headers": ["Concept", "Use for"],
+						"rows": [
+							["Activity", "Multi-step behavior with control/data flow."],
+							["Action", "Operation invocation, calculation, send/receive, etc."],
+							["Parameters", "Inputs/outputs to activities/actions."],
+							["Guards", "Conditional branching (if/else)."],
+							["Fork/join", "Parallel behavior." ]
+						]
+					},
+					"example": "Pseudo-activity:\nactivity AcquireTelemetry(in sensorId, out frame) {\n  action ReadSensor\n  action EncodeFrame\n  flow ReadSensor -> EncodeFrame\n}"
+				},
+				{
+					"title": "Interactions (sequence-like behavior)",
+					"description": "Use interactions to show message/order between participants.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Lifeline/participant", "System, Controller, Sensor"],
+							["Message", "request(), response(), publish()"],
+							["Async vs sync", "Signal vs call semantics"],
+							["Timing constraints", "Deadlines, periodic triggers" ]
+						]
+					},
+					"example": "Pseudo-interaction:\nController -> Sensor: requestFrame()\nSensor -> Controller: frameReady(frame)"
+				},
+				{
+					"title": "States and transitions",
+					"description": "Use state machines for mode logic, lifecycle, and safety behavior.",
+					"table": {
+						"headers": ["Element", "Purpose"],
+						"rows": [
+							["State", "Named mode (Idle, Active, Fault)."],
+							["Transition", "Move between states (trigger/guard/effect)."],
+							["Entry/exit/do", "Actions on state entry/exit/during."],
+							["Composite state", "Hierarchy and substates." ]
+						]
+					},
+					"example": "Pseudo-state machine:\nstate Idle\nstate Active\ntransition Idle -> Active [startCmd] / beginStreaming()\ntransition Active -> Idle [stopCmd] / stopStreaming()"
+				}
+			]
+		},
+		{
+			"title": "Requirements and Verification",
+			"description": "Capture requirements, refine them, and link to design and tests.",
+			"items": [
+				{
+					"title": "Requirement anatomy",
+					"description": "Write testable requirements with clear IDs, statements, and rationale.",
+					"table": {
+						"headers": ["Field", "Guideline"],
+						"rows": [
+							["ID", "Stable identifier (e.g., SYS-REQ-001)."],
+							["Text", "Shall statement; measurable if possible."],
+							["Rationale", "Why it exists (stakeholder need)."],
+							["Verification method", "Test, analysis, inspection, demonstration."],
+							["Acceptance criteria", "What evidence proves satisfaction." ]
+						]
+					},
+					"example": "Requirement example (pseudo):\nrequirement SYS-REQ-001 {\n  text: 'The system shall publish telemetry at >= 10 Hz.'\n  verifyBy: TestCase TC-010\n  rationale: 'Supports operator situational awareness.'\n}"
+				},
+				{
+					"title": "Traceability relationships",
+					"description": "Use trace links intentionally: keep them directional and meaningful.",
+					"table": {
+						"headers": ["Link", "Meaning"],
+						"rows": [
+							["refine", "A requirement is refined into more detailed requirements."],
+							["derive", "A requirement is derived from another (downstream implication)."],
+							["satisfy", "A design element provides the capability to meet the requirement."],
+							["verify", "A test case/analysis confirms requirement satisfaction."],
+							["trace", "Generic trace when a more specific relationship doesn't exist." ]
+						]
+					},
+					"example": "Example trace chain:\nStakeholderNeed N1\n  refine -> SystemRequirement R1\n  satisfy -> DesignElement D1\n  verify -> TestCase T1\nKeep the chain queryable and auditable."
+				}
+			]
+		},
+		{
+			"title": "Constraints and Parametrics",
+			"description": "Define equations/constraints and bind them to model properties for analysis.",
+			"items": [
+				{
+					"title": "Constraint modeling workflow",
+					"description": "Parametrics are most useful when bindings are explicit and units are consistent.",
+					"table": {
+						"headers": ["Step", "What you do"],
+						"rows": [
+							["Define value properties", "E.g., mass, power, dataRate."],
+							["Define constraint definition", "E.g., totalPower = sum(subsystemPower)."],
+							["Bind parameters", "Connect constraint params to part properties."],
+							["Evaluate", "Tool computes derived values or checks constraints." ]
+						]
+					},
+					"example": "Pseudo-constraint:\nconstraint PowerBudget {\n  in p1, p2\n  out total\n  total = p1 + p2\n}\nBind: totalPower = PowerBudget(p1=subA.power, p2=subB.power).total"
+				},
+				{
+					"title": "Common analysis patterns",
+					"description": "Reusable patterns for early trades.",
+					"table": {
+						"headers": ["Pattern", "Example quantities"],
+						"rows": [
+							["Budget sum", "mass, power, cost"],
+							["Rate/throughput", "bandwidth, sample rate"],
+							["Energy over time", "power * duration"],
+							["Margin", "required vs available"],
+							["Worst-case", "max temperature, peak current" ]
+						]
+					},
+					"example": "Define attributes for Required/Available, then constraint:\nmargin = (available - required) / required\nTrack margin at subsystem and system levels."
+				}
+			]
+		},
+		{
+			"title": "Allocations and Trade Studies",
+			"description": "Map functions to structure and support design decisions.",
+			"items": [
+				{
+					"title": "Function-to-structure allocation",
+					"description": "Use allocation to answer: where does this behavior execute?",
+					"table": {
+						"headers": ["Allocation", "Use"],
+						"rows": [
+							["Behavior → Part", "Assign an activity/action to the component responsible."],
+							["Requirement → Design", "Sometimes modeled via satisfy (preferred) rather than allocate."],
+							["Interface → Part", "Assign interface ownership / endpoints." ]
+						]
+					},
+					"example": "Example:\nActivity ComputeSolution is allocated to part FlightComputer\nActivity AcquireSensorData is allocated to part SensorSubsystem"
+				},
+				{
+					"title": "Trade study scaffolding",
+					"description": "Keep trade study criteria explicit and tied to requirements.",
+					"table": {
+						"headers": ["Element", "Content"],
+						"rows": [
+							["Alternatives", "A, B, C designs or parameter sets."],
+							["Criteria", "Cost, mass, performance, risk."],
+							["Weights", "Importance per stakeholder."],
+							["Evidence", "Simulation results, vendor data, tests."],
+							["Decision record", "Selected option with rationale." ]
+						]
+					},
+					"example": "Trade study best practice:\n- tie each criterion to one or more requirements\n- store assumptions in the model\n- keep results reproducible (inputs + outputs)"
+				}
+			]
+		},
+		{
+			"title": "Views, Viewpoints, and Queries",
+			"description": "Create stakeholder-focused slices of the model.",
+			"items": [
+				{
+					"title": "Viewpoints vs views",
+					"description": "A viewpoint defines rules/templates; a view is an instance showing specific elements.",
+					"table": {
+						"headers": ["Term", "Definition"],
+						"rows": [
+							["Concern", "A stakeholder interest (safety, cost, performance)."],
+							["Viewpoint", "How to construct a view (selectors, formatting, rules)."],
+							["View", "A concrete representation (diagram/table/report)."],
+							["Query", "Select elements/relationships for a view." ]
+						]
+					},
+					"example": "Example: Interface Viewpoint\n- concern: interoperability\n- query: all ports + connections for System\n- view: diagram + table listing interface types and directions"
+				},
+				{
+					"title": "Typical view types",
+					"description": "Useful, repeatable views for engineering reviews.",
+					"table": {
+						"headers": ["View type", "Shows"],
+						"rows": [
+							["Structure breakdown", "System composition and key attributes."],
+							["Interface/control document", "Ports, signals/flows, contracts."],
+							["Requirement coverage", "Requirements with satisfy/verify links."],
+							["Behavior flow", "Top-level activities and transitions."],
+							["Budget summary", "Mass/power/cost rollups and margins." ]
+						]
+					},
+					"example": "For each view, keep: purpose, scope, query/selection rules, and audience."
+				}
+			]
+		},
+		{
+			"title": "Integration and Interchange (Conceptual)",
+			"description": "How SysML v2 fits into a toolchain (ALM/PLM/simulation), without tool-specific assumptions.",
+			"items": [
+				{
+					"title": "Common integration touchpoints",
+					"description": "Most integrations revolve around IDs, trace links, and exported artifacts.",
+					"table": {
+						"headers": ["External system", "Typical linkage"],
+						"rows": [
+							["Issue tracker / ALM", "Requirement IDs, verification results, change requests."],
+							["PLM", "Part baselines, BOM alignment, configuration variants."],
+							["Simulation tools", "Parameters, constraints, co-simulation mappings."],
+							["Documentation", "Generated reports from views." ]
+						]
+					},
+					"example": "Integration best practice:\n- use stable IDs for requirements/interfaces\n- store trace links in the model (not only in documents)\n- automate report generation from views"
+				},
+				{
+					"title": "Versioning and baselines",
+					"description": "Treat the model like code: baseline releases, review diffs, and manage change impacts.",
+					"table": {
+						"headers": ["Practice", "Benefit"],
+						"rows": [
+							["Baseline tags", "Reproduce analysis and verification at a point in time."],
+							["Model reviews", "Catch breaking changes to interfaces/requirements."],
+							["Impact analysis", "Query what requirements/views/tests are affected by a change."],
+							["Change records", "Link change requests to model edits." ]
+						]
+					},
+					"example": "When you change an interface type, query:\n- all ports using it\n- all behaviors depending on it\n- all verification artifacts tied to those behaviors"
+				}
+			]
+		}
+	]
+}
