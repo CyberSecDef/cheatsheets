@@ -1,0 +1,371 @@
+{
+	"title": "Regular Expressions Cheatsheet",
+	"description": "A practical reference for regular expression syntax and features across common flavors (PCRE, JavaScript, Python, .NET, POSIX).",
+	"language": "regex",
+	"categories": [
+		{
+			"title": "Basics and Flavors",
+			"description": "Regex syntax varies slightly by engine (PCRE, JavaScript, Python, .NET, POSIX). Test patterns in the engine you actually run.",
+			"items": [
+				{
+					"title": "Common engines and gotchas",
+					"description": "Key differences that frequently matter.",
+					"table": {
+						"headers": ["Feature", "Notes"],
+						"rows": [
+							["Backtracking", "Most modern engines (PCRE/.NET/Python/JS) backtrack; POSIX ERE has different semantics"],
+							["Lookbehind", "Supported in .NET/Python/PCRE; supported in modern JS (not historically)"],
+							["Named groups", "Syntax differs: (?<name>...) (.NET/JS), (?P<name>...) (Python)"],
+							["Unicode classes", "\\p{L} etc supported in many engines; details vary"],
+							["DotAll", "Flag to make . match newlines: s (PCRE/JS/Python)"],
+							["Multiline", "Flag to make ^/$ match line boundaries: m" ]
+						]
+					},
+					"example": "// Same idea, different engines:\n// Python named group: (?P<word>\\w+)\n// .NET/JS named group: (?<word>\\w+)\n// POSIX ERE often lacks lookarounds"
+				},
+				{
+					"title": "Greedy vs lazy (quantifier behavior)",
+					"description": "Greedy matches as much as possible; lazy (aka reluctant) matches as little as possible.",
+					"table": {
+						"headers": ["Pattern", "Meaning"],
+						"rows": [
+							[".*", "Greedy: as much as possible"],
+							[".*?", "Lazy: as little as possible (supported in many engines)"],
+							["\\w+", "One or more word chars" ]
+						]
+					},
+					"example": "Text: <b>one</b><b>two</b>\nGreedy: <b>.*</b>  -> <b>one</b><b>two</b>\nLazy:   <b>.*?</b> -> <b>one</b>"
+				}
+			]
+		},
+		{
+			"title": "Anchors",
+			"description": "Anchors match positions, not characters.",
+			"items": [
+				{
+					"title": "Line and string anchors",
+					"description": "^ and $ depend on multiline mode in many engines.",
+					"table": {
+						"headers": ["Token", "Meaning"],
+						"rows": [
+							["^", "Start of string (or line with multiline flag)"],
+							["$", "End of string (or line with multiline flag)"],
+							["\\A", "Start of string (PCRE/Python/.NET)"],
+							["\\Z", "End of string or before final newline (PCRE/Python)"],
+							["\\z", "Absolute end of string (PCRE/.NET)"],
+							["\\b", "Word boundary"],
+							["\\B", "Not a word boundary" ]
+						]
+					},
+					"example": "// Validate a whole string (anchors):\n^[A-Za-z0-9_]{3,16}$\n\n// Word boundary example: matches 'cat' in 'cat!' but not in 'concatenate'\n\\bcat\\b"
+				}
+			]
+		},
+		{
+			"title": "Quantifiers",
+			"description": "Quantifiers control repetition.",
+			"items": [
+				{
+					"title": "Common quantifiers",
+					"description": "Add ? after a quantifier in many engines to make it lazy.",
+					"table": {
+						"headers": ["Token", "Meaning"],
+						"rows": [
+							["?", "0 or 1"],
+							["*", "0 or more"],
+							["+", "1 or more"],
+							["{n}", "Exactly n"],
+							["{n,}", "At least n"],
+							["{n,m}", "Between n and m"],
+							["*? +? ?? {n,m}?", "Lazy versions (in most backtracking engines)" ]
+						]
+					},
+					"example": "// US ZIP: 12345 or 12345-6789\n^\\d{5}(-\\d{4})?$"
+				},
+				{
+					"title": "Atomic / possessive quantifiers (engine-specific)",
+					"description": "These reduce backtracking. Availability varies by engine.",
+					"table": {
+						"headers": ["Syntax", "Notes"],
+						"rows": [
+							["a++", "Possessive (Java, PCRE, some others)"],
+							["(?>...)", "Atomic group (PCRE/.NET)"],
+							["(?>.*)", "Prevents backtracking into the group" ]
+						]
+					},
+					"example": "// PCRE/.NET atomic group example (useful for performance hardening):\n^(?>\\d+)-\\d+$"
+				}
+			]
+		},
+		{
+			"title": "Groups and Ranges",
+			"description": "Grouping controls precedence, capture, and alternation.",
+			"items": [
+				{
+					"title": "Capturing and non-capturing groups",
+					"description": null,
+					"table": {
+						"headers": ["Syntax", "Meaning"],
+						"rows": [
+							["(...) ", "Capturing group"],
+							["(?:...)", "Non-capturing group"],
+							["(?<name>...)", "Named capture (.NET/JS)"],
+							["(?P<name>...)", "Named capture (Python)"],
+							["\\1, \\2", "Backreference by number"],
+							["\\k<name> / (?P=name)", "Named backreference (engine-specific)" ]
+						]
+					},
+					"example": "// Capture area code and local number\n^\\((\\d{3})\\)\\s*(\\d{3}-\\d{4})$\n\n// Non-capturing group for alternation\n^(?:cat|dog)s?$"
+				},
+				{
+					"title": "Alternation and precedence",
+					"description": "| has low precedence; group to control what it applies to.",
+					"table": {
+						"headers": ["Pattern", "Meaning"],
+						"rows": [
+							["cat|dog", "cat OR dog"],
+							["(?:cat|dog)s", "cats OR dogs"],
+							["cat|dogs", "cat OR dogs" ]
+						]
+					},
+					"example": "// Good:\n^(?:GET|POST|PUT|DELETE)\\s+\\/\n\n// Bad (missing grouping):\n^GET|POST\\s+\\/"
+				}
+			]
+		},
+		{
+			"title": "Escape Sequences",
+			"description": "Escapes can mean different things depending on regex flavor and the host language string literal.",
+			"items": [
+				{
+					"title": "Common escapes",
+					"description": null,
+					"table": {
+						"headers": ["Escape", "Meaning"],
+						"rows": [
+							["\\d / \\D", "Digit / not digit"],
+							["\\w / \\W", "Word char / not word char"],
+							["\\s / \\S", "Whitespace / not whitespace"],
+							["\\t", "Tab"],
+							["\\n", "Newline"],
+							["\\r", "Carriage return"],
+							["\\xNN", "Hex byte/char (engine-specific)"],
+							["\\uNNNN", "Unicode code unit (common)"],
+							["\\Q...\\E", "Escape literal text (PCRE)" ]
+						]
+					},
+					"example": "// Match a literal dot: \\.\n// Match a Windows path separator: \\\\ (regex), often needs additional escaping in strings"
+				},
+				{
+					"title": "Double-escaping (host language vs regex)",
+					"description": "In many languages, backslash must be escaped in string literals.",
+					"table": {
+						"headers": ["Context", "Example"],
+						"rows": [
+							["Regex pattern", "\\d+"],
+							["JavaScript string", "'\\\\d+'"],
+							["Python raw string", "r'\\d+'"],
+							["C# verbatim", "@\"\\d+\"" ]
+						]
+					},
+					"example": "// JavaScript: new RegExp('\\\\d+') matches digits\n// Python: re.compile(r'\\d+') matches digits"
+				}
+			]
+		},
+		{
+			"title": "Character Classes",
+			"description": "Character classes match one character from a set.",
+			"items": [
+				{
+					"title": "Class syntax",
+					"description": "Place - carefully; escape it or put it at the start/end.",
+					"table": {
+						"headers": ["Syntax", "Meaning"],
+						"rows": [
+							["[abc]", "a or b or c"],
+							["[^abc]", "Not a, b, or c"],
+							["[a-z]", "Range"],
+							["[0-9]", "Digits (ASCII)"],
+							["[A-Fa-f0-9]", "Hex digit"],
+							["[\\s\\S]", "Any char including newlines (common trick)" ]
+						]
+					},
+					"example": "// Hex color (3 or 6):\n^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$"
+				},
+				{
+					"title": "Unicode properties (engine-specific)",
+					"description": "Useful for matching letters across languages.",
+					"table": {
+						"headers": ["Syntax", "Meaning"],
+						"rows": [
+							["\\p{L}", "Any letter"],
+							["\\p{N}", "Any number"],
+							["\\p{Zs}", "Space separator"],
+							["\\P{L}", "Not a letter" ]
+						]
+					},
+					"example": "// Words in many scripts (if supported):\n^\\p{L}+(?:[ -]\\p{L}+)*$"
+				}
+			]
+		},
+		{
+			"title": "Common Metacharacters",
+			"description": "Metacharacters have special meaning unless escaped.",
+			"items": [
+				{
+					"title": "Metacharacter quick table",
+					"description": null,
+					"table": {
+						"headers": ["Char", "Meaning"],
+						"rows": [
+							[".", "Any char except newline (unless dotall)"],
+							["^ $", "Anchors"],
+							["* + ? { }", "Quantifiers"],
+							["( )", "Grouping"],
+							["[ ]", "Character class"],
+							["|", "Alternation"],
+							["\\", "Escape" ]
+						]
+					},
+					"example": "// Escape special chars to match literally\n\\. \\? \\+ \\* \\^ \\$ \\( \\) \\[ \\] \\{ \\} \\| \\\\"
+				}
+			]
+		},
+		{
+			"title": "Pattern Modifiers (Flags)",
+			"description": "Flags change how the engine interprets a pattern.",
+			"items": [
+				{
+					"title": "Common flags",
+					"description": "Exact letters and syntax vary by engine.",
+					"table": {
+						"headers": ["Flag", "Meaning"],
+						"rows": [
+							["i", "Case-insensitive"],
+							["m", "Multiline (^/$ match line boundaries)"],
+							["s", "DotAll (.) matches newlines"],
+							["g", "Global (JS: find all matches)"],
+							["u", "Unicode mode (JS)"],
+							["x", "Verbose / free-spacing (PCRE/Python)" ]
+						]
+					},
+					"example": "// JavaScript literal with flags:\n/^[a-z]+$/i\n\n// PCRE-style inline modifiers (engine-specific):\n(?i)^[a-z]+$"
+				}
+			]
+		},
+		{
+			"title": "POSIX",
+			"description": "POSIX Basic/Extended Regular Expressions (BRE/ERE) show up in tools like grep/sed/awk. They differ from PCRE in features and escaping rules.",
+			"items": [
+				{
+					"title": "POSIX character classes",
+					"description": "These are used inside [ ] and are locale-aware.",
+					"table": {
+						"headers": ["Class", "Meaning"],
+						"rows": [
+							["[:alpha:]", "Letters"],
+							["[:digit:]", "Digits"],
+							["[:alnum:]", "Letters and digits"],
+							["[:space:]", "Whitespace"],
+							["[:lower:]", "Lowercase"],
+							["[:upper:]", "Uppercase"],
+							["[:punct:]", "Punctuation"],
+							["[:xdigit:]", "Hex digits" ]
+						]
+					},
+					"example": "// POSIX ERE email-ish (rough):\n^[[:alnum:]_.+-]+@[[:alnum:]_.-]+$"
+				},
+				{
+					"title": "BRE vs ERE differences (quick)",
+					"description": "In BRE, some metacharacters are literal unless escaped.",
+					"table": {
+						"headers": ["Feature", "BRE vs ERE"],
+						"rows": [
+							["Grouping", "BRE uses \\(...\\), ERE uses (...)"],
+							["Alternation", "BRE often lacks |; ERE supports |"],
+							["+ ?", "BRE often treats + ? as literals; ERE supports + ?"],
+							["{m,n}", "BRE often requires escaping: \\{m,n\\}" ]
+						]
+					},
+					"example": "# ERE (grep -E):\necho 'abc' | grep -E '(ab|xy)c'\n\n# BRE (grep):\necho 'abc' | grep '\\(ab\\)c'"
+				}
+			]
+		},
+		{
+			"title": "Special Characters",
+			"description": "Characters with special meaning in regex or in the host language.",
+			"items": [
+				{
+					"title": "Characters commonly requiring escaping",
+					"description": "Which characters must be escaped depends on context (inside/outside classes, and engine).",
+					"table": {
+						"headers": ["Character", "When to escape"],
+						"rows": [
+							[".", "Outside classes, it means 'any char'"],
+							["+ * ? { }", "Quantifiers"],
+							["( )", "Grouping"],
+							["[ ]", "Character class"],
+							["^ $", "Anchors"],
+							["|", "Alternation"],
+							["\\", "Escape itself"],
+							["-", "Inside classes defines ranges" ]
+						]
+					},
+					"example": "// Inside a class, these are special: ] - ^ (sometimes)\\n// Example class matching literal - and ]: [\\-\\]]"
+				}
+			]
+		},
+		{
+			"title": "String Replacement",
+			"description": "Replacing matches with literals or captured groups.",
+			"items": [
+				{
+					"title": "Replacement backreferences",
+					"description": "Backreference syntax differs by engine and language API.",
+					"table": {
+						"headers": ["Engine/API", "Replacement reference"],
+						"rows": [
+							["Many regex engines", "$1, $2 (common)"],
+							["JavaScript replace", "$1, $<name>"],
+							["Python re.sub", "\\1 or \\g<1> (recommended)"],
+							[".NET Regex.Replace", "$1, ${name}" ]
+						]
+					},
+					"example": "Text: 'Lovelace, Ada'\nPattern: ^(\\w+),\\s*(\\w+)$\n\nJavaScript:\n'\"Lovelace, Ada\"'.replace(/^(\\w+),\\s*(\\w+)$/, '$2 $1')\n\nPython:\nre.sub(r'^(\\w+),\\s*(\\w+)$', r'\\2 \\1', 'Lovelace, Ada')\n\n.NET:\nRegex.Replace('Lovelace, Ada', @\"^(\\w+),\\s*(\\w+)$\", \"$2 $1\")"
+				},
+				{
+					"title": "Replacement functions / callbacks",
+					"description": "Many APIs let you compute the replacement dynamically based on a match.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["JavaScript replace(fn)", "Callback receives match and capture groups"],
+							["Python re.sub(func)", "Replacement can be a function taking a Match"],
+							[".NET Regex.Replace(matchEvaluator)", "Delegate computes replacement" ]
+						]
+					},
+					"example": "// JavaScript: uppercase matched words\n'hello world'.replace(/\\w+/g, m => m.toUpperCase())\n\n# Python: wrap digits in brackets\nre.sub(r'\\d+', lambda m: '[' + m.group(0) + ']', 'a1 b22')"
+				}
+			]
+		},
+		{
+			"title": "Assertions",
+			"description": "Assertions (lookarounds) match positions without consuming characters (in supported engines).",
+			"items": [
+				{
+					"title": "Lookahead and lookbehind",
+					"description": "Lookbehind support varies by engine.",
+					"table": {
+						"headers": ["Syntax", "Meaning"],
+						"rows": [
+							["(?=...)", "Positive lookahead"],
+							["(?!...)", "Negative lookahead"],
+							["(?<=...)", "Positive lookbehind"],
+							["(?<!...)", "Negative lookbehind" ]
+						]
+					},
+					"example": "// Match 'foo' only if followed by 'bar':\nfoo(?=bar)\n\n// Match 'foo' not followed by 'bar':\nfoo(?!bar)\n\n// Match digits preceded by $ (if lookbehind supported):\n(?<=\\$)\\d+(?:\\.\\d+)?"
+				}
+			]
+		}
+	]
+}

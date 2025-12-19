@@ -1,0 +1,274 @@
+{
+	"title": "GitLab CI / Runner CLI Cheatsheet",
+	"description": "A comprehensive guide to GitLab CI-related command line tools and workflows: glab (GitLab CLI), gitlab-runner, config linting, and day-to-day troubleshooting.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Installation and Initial Setup",
+			"description": "Install the common GitLab CLI tools and verify they work.",
+			"items": [
+				{
+					"title": "Install glab (GitLab CLI)",
+					"description": "glab is GitLab's official CLI for interacting with GitLab projects, MRs, issues, and pipelines.",
+					"table": {
+						"headers": ["System", "Command"],
+						"rows": [
+							["macOS (Homebrew)", "brew install glab"],
+							["Windows (Chocolatey)", "choco install glab"],
+							["Linux (package)", "See https://gitlab.com/gitlab-org/cli"],
+							["Verify", "glab version" ]
+						]
+					},
+					"example": "glab version"
+				},
+				{
+					"title": "Install GitLab Runner",
+					"description": "gitlab-runner runs GitLab CI jobs. Install where you want the runner to execute jobs.",
+					"table": {
+						"headers": ["System", "Command"],
+						"rows": [
+							["Linux (package)", "See https://docs.gitlab.com/runner/install/"],
+							["Docker", "docker run --rm -it gitlab/gitlab-runner:latest --version"],
+							["Verify", "gitlab-runner --version" ]
+						]
+					},
+					"example": "gitlab-runner --version"
+				}
+			]
+		},
+		{
+			"title": "Authentication (glab)",
+			"description": "Authenticate glab to your GitLab instance.",
+			"items": [
+				{
+					"title": "Auth commands",
+					"description": "Use OAuth or a personal access token depending on your environment.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["glab auth login", "Interactive login (choose GitLab.com or self-managed host)."],
+							["glab auth status", "Show current auth status."],
+							["glab auth logout", "Remove saved credentials."],
+							["glab config set -g git_protocol ssh", "Set global config (example)." ]
+						]
+					},
+					"example": "glab auth login\nglab auth status"
+				}
+			]
+		},
+		{
+			"title": "Pipelines (glab)",
+			"description": "Interact with pipelines from the CLI.",
+			"items": [
+				{
+					"title": "View pipelines",
+					"description": "Useful for checking status and investigating failures.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["glab pipeline list", "List recent pipelines."],
+							["glab pipeline view <id>", "Show a pipeline summary."],
+							["glab pipeline status", "Show pipeline status for current project."],
+							["glab pipeline ci", "Open CI config (subcommands vary by glab version)." ]
+						]
+					},
+					"example": "glab pipeline list\nglab pipeline view 123456"
+				},
+				{
+					"title": "Retry and run",
+					"description": "Some operations depend on permissions and GitLab version.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["glab pipeline retry <id>", "Retry a pipeline (if supported)."],
+							["glab pipeline run", "Run a pipeline (if supported by your glab version/GitLab instance)." ]
+						]
+					},
+					"example": "glab pipeline retry 123456"
+				}
+			]
+		},
+		{
+			"title": "Jobs (glab)",
+			"description": "Inspect CI jobs and their logs.",
+			"items": [
+				{
+					"title": "View jobs and logs",
+					"description": "Command availability can vary by glab version.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["glab job list", "List jobs for the latest pipeline (or filters)."],
+							["glab job view <id>", "Show job details."],
+							["glab job trace <id>", "Print job logs/trace." ]
+						]
+					},
+					"example": "glab job list\nglab job trace 987654"
+				}
+			]
+		},
+		{
+			"title": "Merge Requests and Reviews (glab)",
+			"description": "MR-centric workflows often drive CI usage.",
+			"items": [
+				{
+					"title": "MR essentials",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["glab mr list", "List merge requests."],
+							["glab mr view <id>", "View MR details."],
+							["glab mr create", "Create a merge request."],
+							["glab mr approve <id>", "Approve an MR (if allowed)."],
+							["glab mr merge <id>", "Merge an MR (if allowed)." ]
+						]
+					},
+					"example": "glab mr list\nglab mr view 42"
+				}
+			]
+		},
+		{
+			"title": "Runner Registration and Management (gitlab-runner)",
+			"description": "Register, list, start/stop, and troubleshoot runners.",
+			"items": [
+				{
+					"title": "Register a runner",
+					"description": "Registration typically requires a token from your GitLab instance.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["gitlab-runner register", "Interactive registration."],
+							["gitlab-runner register --non-interactive ...", "Scriptable registration (flags depend on runner version)."],
+							["gitlab-runner unregister --name <name>", "Remove a runner registration by name."],
+							["gitlab-runner verify", "Verify runner is registered and can connect." ]
+						]
+					},
+					"example": "gitlab-runner register\n# Follow prompts for URL, token, executor, tags"
+				},
+				{
+					"title": "Runner service control",
+					"description": "Exact commands differ by OS and install method.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["gitlab-runner status", "Show runner service status (if supported)."],
+							["gitlab-runner start", "Start runner service (if supported)."],
+							["gitlab-runner stop", "Stop runner service (if supported)."],
+							["gitlab-runner restart", "Restart runner service (if supported)."],
+							["gitlab-runner list", "List configured runners." ]
+						]
+					},
+					"example": "gitlab-runner list\ngitlab-runner restart"
+				},
+				{
+					"title": "Runner config location",
+					"description": "Runner configuration is usually stored in config.toml.",
+					"table": {
+						"headers": ["Platform", "Typical path"],
+						"rows": [
+							["Linux", "/etc/gitlab-runner/config.toml"],
+							["macOS", "~/.gitlab-runner/config.toml (varies)"],
+							["Windows", "C:\\GitLab-Runner\\config.toml (common)" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Running Jobs Locally (gitlab-runner)",
+			"description": "Helpful for debugging scripts, but local runs won't perfectly match GitLab's pipeline behavior.",
+			"items": [
+				{
+					"title": "Local execution",
+					"description": "The exact behavior depends on executor and runner configuration.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["gitlab-runner exec shell <job>", "Run a job locally using the shell executor."],
+							["gitlab-runner exec docker <job>", "Run a job locally using the docker executor."],
+							["gitlab-runner --debug run", "Run runner with debug logs (varies by version)." ]
+						]
+					},
+					"example": "# Run a job named 'test' from .gitlab-ci.yml (if supported):\ngitlab-runner exec shell test"
+				}
+			]
+		},
+		{
+			"title": "CI Configuration Validation",
+			"description": "Validate .gitlab-ci.yml with GitLab's CI Lint and catch common errors earlier.",
+			"items": [
+				{
+					"title": "CI Lint (concepts)",
+					"description": "GitLab provides CI lint via UI and API. You can also do basic YAML checks locally.",
+					"table": {
+						"headers": ["Method", "Notes"],
+						"rows": [
+							["GitLab UI", "Project → CI/CD → CI Lint"],
+							["GitLab API", "POST /projects/:id/ci/lint (requires token)"],
+							["Local YAML lint", "Catches YAML syntax errors but not GitLab-specific semantics" ]
+						]
+					},
+					"example": "# Example (self-managed):\n# curl --request POST --header \"PRIVATE-TOKEN: <token>\" \\\n+#   --form \"content=<.gitlab-ci.yml\" \\\n+#   https://gitlab.example.com/api/v4/projects/<id>/ci/lint"
+				}
+			]
+		},
+		{
+			"title": "Variables, Secrets, and Artifacts",
+			"description": "Operational knobs that commonly affect pipelines.",
+			"items": [
+				{
+					"title": "Variables (high-signal)",
+					"description": "Variable names and scoping vary by GitLab instance and settings.",
+					"table": {
+						"headers": ["Topic", "Notes"],
+						"rows": [
+							["CI variables", "Set at project/group/instance level; can be masked/protected."],
+							["Environment variables", "Jobs receive variables as env vars."],
+							["Protected variables", "Available only on protected branches/tags."],
+							["Artifacts", "Job outputs stored and downloaded by later jobs."],
+							["Cache", "Reusable directories between jobs (best-effort)." ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting and Debugging",
+			"description": "Diagnose common CI failures and runner issues.",
+			"items": [
+				{
+					"title": "Common CI failures",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause"],
+						"rows": [
+							["Job stuck/pending", "No runner matches tags / runner offline / concurrency limit"],
+							["Permission denied", "Token scope, protected branch settings, or runner permissions"],
+							["Docker: cannot connect", "Runner executor misconfigured or docker socket not available"],
+							["Artifacts missing", "Artifacts not declared, expired, or job didn't run"],
+							["Cache not reused", "Cache key changes, different runner, or cache backend not configured"],
+							["Pipeline skipped", "rules/only/except prevent job from running" ]
+						]
+					},
+					"example": "# Quick triage steps:\n# 1) Check pipeline graph + job logs\n# 2) Confirm runner is online and tags match\n# 3) Check CI variables/protected branch settings"
+				},
+				{
+					"title": "Runner debug logs",
+					"description": "Increase verbosity when diagnosing runner issues.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["gitlab-runner --debug run", "Run with debug logging."],
+							["gitlab-runner verify", "Verify connectivity to GitLab."],
+							["gitlab-runner list", "Confirm runner config." ]
+						]
+					},
+					"example": "gitlab-runner verify\ngitlab-runner --debug run"
+				}
+			]
+		}
+	]
+}
