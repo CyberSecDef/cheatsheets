@@ -1,0 +1,509 @@
+{
+	"title": "C# Cheatsheet",
+	"description": "A general-purpose C# quick reference covering syntax, methods, LINQ, packages, common pitfalls, and day-to-day patterns (.NET).",
+	"language": "csharp",
+	"categories": [
+		{
+			"title": "Basic Functionality",
+			"description": "Core syntax: types, variables, strings, nullability, and console I/O.",
+			"items": [
+				{
+					"title": "Program structure",
+					"description": "Modern C# supports top-level statements; classic style uses a Program.Main method.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Namespace", "namespace App;"],
+							["Using", "using System;"],
+							["Top-level", "Console.WriteLine(\"Hello\");"],
+							["Main method", "static void Main(string[] args) { }" ]
+						]
+					},
+					"example": "using System;\n\nConsole.WriteLine(\"Hello, C#\");"
+				},
+				{
+					"title": "Variables, types, and nullability",
+					"description": "Prefer var when the type is obvious. Enable nullable reference types for safer code.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Type inference", "var n = 42;"],
+							["Explicit", "int x = 1;"],
+							["Nullable value type", "int? n = null;"],
+							["Nullable reference", "string? s = null;"],
+							["Null-coalescing", "name ?? \"anonymous\""],
+							["Null-coalescing assign", "name ??= \"anonymous\"" ]
+						]
+					},
+					"example": "#nullable enable\nusing System;\n\nstring? name = null;\nname ??= \"anonymous\";\nConsole.WriteLine(name);"
+				},
+				{
+					"title": "Strings",
+					"description": "Use interpolation, verbatim strings, and StringBuilder for heavy concatenation.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Interpolate", "$\"Hello {name}\""],
+							["Verbatim", "@\"C:\\\\temp\\\\file.txt\""],
+							["Raw string (C# 11+)", "\"\"\"multi\nline\"\"\""],
+							["Contains", "s.Contains(\"sub\")"],
+							["Split", "s.Split(',')"],
+							["Trim", "s.Trim()" ]
+						]
+					},
+					"example": "using System;\n\nvar name = \"World\";\nConsole.WriteLine($\"Hello {name}\");\nvar path = @\"C:\\temp\\file.txt\";\nConsole.WriteLine(path);"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Methods, parameters, returns, scope, anonymous functions, and common built-ins.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "C# supports optional parameters, named arguments, out/ref/in, and tuples.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Return type", "int Add(int a, int b) => a + b;"],
+							["Optional params", "void Log(string msg, int level = 1)"],
+							["Named args", "Log(level: 2, msg: \"hi\")"],
+							["out", "bool TryParse(string s, out int n)"],
+							["ref", "void Mutate(ref int x)"],
+							["Tuple return", "(int q, int r) DivMod(int a, int b)" ]
+						]
+					},
+					"example": "using System;\n\nstatic (int q, int r) DivMod(int a, int b) => (a / b, a % b);\n\nvar (q, r) = DivMod(10, 3);\nConsole.WriteLine($\"{q} {r}\");"
+				},
+				{
+					"title": "Scope",
+					"description": "Variables are scoped to blocks. Members are scoped to their type; local functions are scoped to their containing method.",
+					"table": {
+						"headers": ["Scope", "Notes"],
+						"rows": [
+							["Block scope", "Variables declared in { } are not visible outside"],
+							["Member scope", "Fields/properties/methods belong to a type"],
+							["Local functions", "Functions declared inside methods"],
+							["Access modifiers", "public, private, protected, internal" ]
+						]
+					},
+					"example": "using System;\n\nstatic int Outer(int x)\n{\n    int Inner(int y) => x + y;\n    return Inner(5);\n}\n\nConsole.WriteLine(Outer(10));"
+				},
+				{
+					"title": "Anonymous functions",
+					"description": "Use lambda expressions for delegates and LINQ.",
+					"table": {
+						"headers": ["Form", "Example"],
+						"rows": [
+							["Expression lambda", "x => x * 2"],
+							["Statement lambda", "x => { return x * 2; }"],
+							["Func/Action", "Func<int,int> f = x => x * 2;" ]
+						]
+					},
+					"example": "using System;\nusing System.Linq;\n\nvar nums = new[] { 1, 2, 3, 4 };\nvar evens = nums.Where(n => n % 2 == 0).Select(n => n * 10);\nConsole.WriteLine(string.Join(\",\", evens));"
+				},
+				{
+					"title": "Built-in / predefined functions (common)",
+					"description": "Frequently used BCL methods and helpers.",
+					"table": {
+						"headers": ["Area", "Examples"],
+						"rows": [
+							["Strings", "string.IsNullOrEmpty, string.Join, string.Concat"],
+							["Parsing", "int.TryParse, DateTime.TryParse"],
+							["Collections", "Enumerable.Select/Where/Any/All"],
+							["Math", "Math.Abs, Math.Round, Math.Clamp"],
+							["JSON", "System.Text.Json.JsonSerializer"],
+							["Tasks", "Task.Delay, Task.WhenAll" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering collections, validation, and parsing patterns.",
+			"items": [
+				{
+					"title": "LINQ filtering",
+					"description": "LINQ is the idiomatic way to filter/project data in memory.",
+					"table": {
+						"headers": ["Method", "Purpose"],
+						"rows": [
+							["Where", "Filter by predicate"],
+							["Select", "Project/transform"],
+							["OrderBy", "Sort"],
+							["First/FirstOrDefault", "Get first item"],
+							["Any/All", "Boolean aggregation"],
+							["Distinct", "Remove duplicates" ]
+						]
+					},
+					"example": "using System;\nusing System.Linq;\n\nvar users = new[] { (Id: 1, Name: \"Ada\"), (Id: 2, Name: \"Linus\") };\nvar names = users.Where(u => u.Id > 1).Select(u => u.Name);\nConsole.WriteLine(string.Join(\",\", names));"
+				},
+				{
+					"title": "Parsing and validation",
+					"description": "Prefer TryParse over Parse for user input.",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["int.TryParse", "Avoids exceptions"],
+							["Guid.TryParse", "Parse GUIDs"],
+							["DateTime.TryParse", "Parse date/time"],
+							["Regex.IsMatch", "Validate with regex" ]
+						]
+					},
+					"example": "using System;\n\nvar s = \"123\";\nif (int.TryParse(s, out var n))\n{\n    Console.WriteLine(n);\n}"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Program-wide state, environment, and configuration.",
+			"items": [
+				{
+					"title": "Environment and arguments",
+					"description": null,
+					"table": {
+						"headers": ["API", "Purpose"],
+						"rows": [
+							["Environment.GetEnvironmentVariable", "Read env vars"],
+							["Environment.SetEnvironmentVariable", "Set env vars (process/user/machine)"],
+							["Environment.CurrentDirectory", "Working directory"],
+							["Environment.Exit", "Exit process"],
+							["args", "Command-line args to Main" ]
+						]
+					},
+					"example": "using System;\n\nvar home = Environment.GetEnvironmentVariable(\"HOME\");\nConsole.WriteLine(home);"
+				},
+				{
+					"title": "Global using directives",
+					"description": "In .NET 6+, SDK templates often include implicit/global usings.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["global using", "global using System;"],
+							["Implicit usings", "<ImplicitUsings>enable</ImplicitUsings>" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "NuGet packages and project structure (.csproj).",
+			"items": [
+				{
+					"title": "dotnet CLI essentials",
+					"description": "Most .NET workflows run via dotnet.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["dotnet --info", "Show .NET SDK/runtime info"],
+							["dotnet new console", "Create console app"],
+							["dotnet build", "Build"],
+							["dotnet run", "Build and run"],
+							["dotnet test", "Run tests"],
+							["dotnet add package Newtonsoft.Json", "Add NuGet package"],
+							["dotnet restore", "Restore packages"],
+							["dotnet publish -c Release", "Publish" ]
+						]
+					},
+					"example": "dotnet new console -n Demo\ncd Demo\ndotnet add package Dapper\ndotnet run"
+				},
+				{
+					"title": "Project references and packages",
+					"description": "Projects reference other projects or NuGet packages.",
+					"table": {
+						"headers": ["Concept", "Where"],
+						"rows": [
+							["PackageReference", "In .csproj"],
+							["ProjectReference", "Reference another project"],
+							["Central package mgmt", "Directory.Packages.props" ]
+						]
+					},
+					"example": "<!-- In .csproj -->\n<ItemGroup>\n  <PackageReference Include=\"Dapper\" Version=\"2.*\" />\n</ItemGroup>"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Common operators, comparisons, and null-handling.",
+			"items": [
+				{
+					"title": "Comparison and null-handling",
+					"description": "Prefer == for value equality (or Equals). Use ?. and ?? to handle nulls safely.",
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["== / !=", "Equality/inequality"],
+							["< <= > >=", "Comparisons"],
+							["&& || !", "Boolean operators"],
+							["?? / ??=", "Null-coalescing / assign"],
+							["?.", "Null-conditional (safe navigation)"],
+							["is / as", "Type checks and safe casts" ]
+						]
+					},
+					"example": "using System;\n\nstring? s = null;\nConsole.WriteLine((s?.Length ?? 0) > 0);"
+				},
+				{
+					"title": "Pattern matching",
+					"description": "Modern C# uses pattern matching for expressive conditions.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Type pattern", "if (o is string s)"],
+							["Property pattern", "if (u is { IsActive: true })"],
+							["Relational", "if (n is > 0 and < 10)"],
+							["Switch expression", "var msg = n switch { 0 => \"zero\", _ => \"other\" };" ]
+						]
+					},
+					"example": "object o = \"hi\";\nif (o is string s && s.Length > 0)\n{\n    Console.WriteLine(s);\n}"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequent runtime errors and pitfalls.",
+			"items": [
+				{
+					"title": "Typical exceptions",
+					"description": null,
+					"table": {
+						"headers": ["Exception", "Common cause"],
+						"rows": [
+							["NullReferenceException", "Dereferencing null"],
+							["InvalidOperationException", "Bad state (e.g., LINQ First on empty)"],
+							["ArgumentNullException", "Null passed where not allowed"],
+							["ArgumentException", "Invalid argument value"],
+							["IndexOutOfRangeException", "Bad array index"],
+							["KeyNotFoundException", "Missing dictionary key"],
+							["FormatException", "Bad parse/format" ]
+						]
+					},
+					"example": "using System;\nusing System.Linq;\n\nvar xs = Array.Empty<int>();\nvar firstOr = xs.FirstOrDefault();\nConsole.WriteLine(firstOr);"
+				},
+				{
+					"title": "Common gotchas",
+					"description": "A few frequent surprises.",
+					"table": {
+						"headers": ["Gotcha", "Fix"],
+						"rows": [
+							["LINQ deferred execution", "Materialize with ToList()/ToArray() if needed"],
+							["Blocking async", "Avoid .Result/.Wait(); use await"],
+							["Culture-sensitive parsing", "Use invariant culture for machine formats" ]
+						]
+					},
+					"example": "using System;\nusing System.Globalization;\n\nvar n = double.Parse(\"1.23\", CultureInfo.InvariantCulture);\nConsole.WriteLine(n);"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Arrays, lists, dictionaries, and common collection patterns.",
+			"items": [
+				{
+					"title": "Arrays and lists",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["T[]", "Fixed-size array"],
+							["List<T>", "Dynamic array"],
+							["Dictionary<TKey,TValue>", "Key/value map"],
+							["HashSet<T>", "Unique set" ]
+						]
+					},
+					"example": "using System;\nusing System.Collections.Generic;\n\nvar a = new[] { 1, 2, 3 };\nvar list = new List<int> { 1, 2, 3 };\nlist.Add(4);\nConsole.WriteLine(string.Join(\",\", list));"
+				},
+				{
+					"title": "LINQ on collections",
+					"description": "LINQ is great for readable transformations; watch allocations in hot paths.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Filter", "xs.Where(x => x > 0)"],
+							["Project", "xs.Select(x => x * 2)"],
+							["Aggregate", "xs.Sum()"],
+							["Materialize", "xs.ToList()" ]
+						]
+					},
+					"example": "using System;\nusing System.Linq;\n\nvar xs = new[] { -1, 0, 1, 2 };\nvar ys = xs.Where(x => x > 0).Select(x => x * 2).ToArray();\nConsole.WriteLine(string.Join(\",\", ys));"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "Iteration patterns.",
+			"items": [
+				{
+					"title": "for / foreach / while",
+					"description": null,
+					"table": {
+						"headers": ["Loop", "When to use"],
+						"rows": [
+							["foreach", "Iterate enumerable collections"],
+							["for", "Index-based iteration"],
+							["while", "Loop until a condition changes"],
+							["break/continue", "Control flow" ]
+						]
+					},
+					"example": "using System;\n\nvar xs = new[] { \"a\", \"b\" };\nforeach (var x in xs)\n{\n    Console.WriteLine(x);\n}"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "Branching and switch expressions.",
+			"items": [
+				{
+					"title": "if / else / switch",
+					"description": "Switch expressions are concise for mapping values.",
+					"table": {
+						"headers": ["Construct", "Notes"],
+						"rows": [
+							["if/else", "Standard branching"],
+							["switch statement", "Multiple cases and fallthrough with goto (rare)"],
+							["switch expression", "Returns a value" ]
+						]
+					},
+					"example": "using System;\n\nvar code = 404;\nvar msg = code switch\n{\n    200 => \"OK\",\n    404 => \"Not Found\",\n    _ => \"Other\"\n};\nConsole.WriteLine(msg);"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "Regex in .NET is powerful; consider timeouts for untrusted input.",
+			"items": [
+				{
+					"title": "Regex basics",
+					"description": null,
+					"table": {
+						"headers": ["API", "Purpose"],
+						"rows": [
+							["Regex.IsMatch", "Test a match"],
+							["Regex.Match", "Get first match"],
+							["Regex.Matches", "Get all matches"],
+							["Regex.Replace", "Replace matches"],
+							["RegexOptions", "IgnoreCase, Multiline, Compiled" ]
+						]
+					},
+					"example": "using System;\nusing System.Text.RegularExpressions;\n\nvar email = \"a@example.com\";\nvar ok = Regex.IsMatch(email, @\"^[^@]+@[^@]+$\", RegexOptions.CultureInvariant);\nConsole.WriteLine(ok);"
+				}
+			]
+		},
+		{
+			"title": "Date and Time",
+			"description": "Prefer DateTimeOffset for timestamps; use TimeSpan for durations.",
+			"items": [
+				{
+					"title": "Date/time essentials",
+					"description": null,
+					"table": {
+						"headers": ["Type/API", "Purpose"],
+						"rows": [
+							["DateTimeOffset.UtcNow", "Current UTC timestamp"],
+							["DateTime.UtcNow", "UTC time (no offset)"],
+							["TimeSpan", "Duration"],
+							["Parse", "DateTimeOffset.Parse / TryParse"],
+							["Format", "dto.ToString(\"O\") (round-trip ISO-like)" ]
+						]
+					},
+					"example": "using System;\n\nvar now = DateTimeOffset.UtcNow;\nConsole.WriteLine(now.ToString(\"O\"));\nvar tomorrow = now.AddDays(1);\nConsole.WriteLine(tomorrow.ToString(\"O\"));"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "Use ADO.NET for low-level control; ORMs like Dapper/EF Core are common.",
+			"items": [
+				{
+					"title": "ADO.NET essentials (provider-based)",
+					"description": "Providers differ (SqlClient, Npgsql, MySqlConnector). Prefer async APIs and parameterized queries.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Connection", "Open/Close connections; use using/await using"],
+							["Command", "Use parameters instead of string concatenation"],
+							["Reader", "Read rows forward-only"],
+							["Transactions", "Use for consistency" ]
+						]
+					},
+					"example": "// Provider-specific example shape:\n// using var conn = new SqlConnection(connString);\n// await conn.OpenAsync();\n// using var cmd = conn.CreateCommand();\n// cmd.CommandText = \"SELECT Name FROM Users WHERE Id = @id\";\n// cmd.Parameters.AddWithValue(\"@id\", id);\n// var name = (string?)await cmd.ExecuteScalarAsync();"
+				},
+				{
+					"title": "Entity Framework Core (overview)",
+					"description": "EF Core is a popular ORM for .NET with migrations and LINQ queries.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["DbContext", "Unit of work for queries/commands"],
+							["Migrations", "Track schema changes"],
+							["LINQ queries", "Translated to SQL where possible" ]
+						]
+					},
+					"example": "// Typical usage:\n// await using var db = new AppDbContext();\n// var users = await db.Users.Where(u => u.IsActive).ToListAsync();"
+				}
+			]
+		},
+		{
+			"title": "Extras: Exceptions and Error Handling",
+			"description": "Use try/catch for exceptional cases; prefer throwing specific exception types.",
+			"items": [
+				{
+					"title": "try/catch/finally",
+					"description": null,
+					"table": {
+						"headers": ["Block", "When it runs"],
+						"rows": [
+							["try", "Code that might throw"],
+							["catch", "Handle exceptions"],
+							["finally", "Cleanup always" ]
+						]
+					},
+					"example": "using System;\n\ntry\n{\n    throw new InvalidOperationException(\"boom\");\n}\ncatch (InvalidOperationException ex)\n{\n    Console.Error.WriteLine(ex.Message);\n}\nfinally\n{\n    Console.WriteLine(\"done\");\n}"
+				}
+			]
+		},
+		{
+			"title": "Extras: Async and Tasks",
+			"description": "Async/await and Task-based concurrency.",
+			"items": [
+				{
+					"title": "async/await essentials",
+					"description": "Avoid blocking with .Result or .Wait(); prefer await all the way.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Await", "var x = await f();"],
+							["Parallel", "await Task.WhenAll(a, b);"],
+							["Delay", "await Task.Delay(1000);"],
+							["Cancellation", "CancellationToken" ]
+						]
+					},
+					"example": "using System;\nusing System.Threading.Tasks;\n\nstatic async Task<int> WorkAsync()\n{\n    await Task.Delay(100);\n    return 42;\n}\n\nConsole.WriteLine(await WorkAsync());"
+				}
+			]
+		},
+		{
+			"title": "Extras: Classes and Records",
+			"description": "Object-oriented basics and modern record types.",
+			"items": [
+				{
+					"title": "Classes, properties, records",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Class", "class User { public int Id {get; set;} }"],
+							["Record", "record User(int Id, string Name);"],
+							["Init-only", "public string Name { get; init; }"],
+							["With-expr", "u with { Name = \"New\" }" ]
+						]
+					},
+					"example": "using System;\n\npublic record User(int Id, string Name);\n\nvar u1 = new User(1, \"Ada\");\nvar u2 = u1 with { Name = \"Ada Lovelace\" };\nConsole.WriteLine(u2);"
+				}
+			]
+		}
+	]
+}

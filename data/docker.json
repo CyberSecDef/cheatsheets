@@ -1,0 +1,302 @@
+{
+    "title": "Docker Command Cheatsheet",
+    "description": "A comprehensive guide to essential Docker commands for container management, from installation and setup to advanced usage.",
+    "language": "shell",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Commands to install Docker on various operating systems and perform initial configuration.",
+            "items": [
+                {
+                    "title": "Installation",
+                    "description": "Install Docker on different operating systems using the appropriate package manager.",
+                    "table": {
+                        "headers": ["System", "Command"],
+                        "rows": [
+                            ["macOS (with Homebrew)", "brew install docker"],
+                            ["Windows (with Chocolatey)", "choco install docker-desktop"],
+                            ["Debian/Ubuntu", "sudo apt-get install docker.io"],
+                            ["Fedora/CentOS", "sudo dnf install docker"],
+                            ["Arch Linux", "sudo pacman -S docker"]
+                        ]
+                    },
+                    "example": null
+                },
+                {
+                    "title": "Post-install checks",
+                    "description": "Verify Docker is running and that you can talk to the daemon.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker version", "Shows client/server versions (server requires daemon access)."],
+                            ["docker info", "Shows daemon configuration and runtime details."],
+                            ["docker run --rm hello-world", "Pulls and runs a test image to confirm Docker works."]
+                        ]
+                    },
+                    "example": "docker version\ndocker info\ndocker run --rm hello-world"
+                },
+                {
+                    "title": "Linux: run docker without sudo (optional)",
+                    "description": "On many Linux distros, add your user to the docker group so you don’t need sudo. Log out/in after.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["sudo usermod -aG docker $USER", "Adds current user to docker group."],
+                            ["newgrp docker", "Re-evaluates group membership in the current shell (temporary)."],
+                            ["docker run --rm hello-world", "Re-test after group change."]
+                        ]
+                    },
+                    "example": "sudo usermod -aG docker $USER\nnewgrp docker\ndocker run --rm hello-world"
+                }
+            ]
+        },
+        {
+            "title": "Images: Pulling, Building, Tagging",
+            "description": "Images are immutable templates used to create containers. You’ll typically pull from a registry or build from a Dockerfile.",
+            "items": [
+                {
+                    "title": "Image commands",
+                    "description": null,
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker images", "Lists images on your machine."],
+                            ["docker pull <image>:<tag>", "Downloads an image from a registry."],
+                            ["docker build -t <name>:<tag> .", "Builds an image from a Dockerfile in the current directory."],
+                            ["docker tag <src> <dst>", "Adds a new tag to an image."],
+                            ["docker rmi <image>", "Removes an image by name or ID."],
+                            ["docker image prune", "Removes dangling images."]
+                        ]
+                    },
+                    "example": "docker pull nginx:latest\ndocker build -t myapp:dev .\ndocker tag myapp:dev myrepo/myapp:dev\ndocker images"
+                },
+                {
+                    "title": "Inspecting images",
+                    "description": "See image metadata, history, and layers.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker inspect <image>", "Shows detailed JSON metadata."],
+                            ["docker history <image>", "Shows layer history."],
+                            ["docker image ls --digests", "Shows repo digests for pulled images."]
+                        ]
+                    },
+                    "example": "docker inspect nginx:latest\ndocker history nginx:latest"
+                }
+            ]
+        },
+        {
+            "title": "Containers: Running and Lifecycle",
+            "description": "Containers are running instances of images. These commands cover creating, starting, stopping, and removing containers.",
+            "items": [
+                {
+                    "title": "Run basics",
+                    "description": "docker run creates and starts a container. Common flags control name, ports, volumes, env vars, and restart policies.",
+                    "table": {
+                        "headers": ["Flag", "Meaning"],
+                        "rows": [
+                            ["--name <name>", "Assigns a name to the container."],
+                            ["-d", "Runs in detached mode (background)."],
+                            ["-it", "Interactive + pseudo-TTY (good for shells)."],
+                            ["--rm", "Deletes the container when it exits."],
+                            ["-p <host>:<container>", "Publishes a container port to the host."],
+                            ["-v <host>:<container>", "Bind-mounts a host path into the container."],
+                            ["-e KEY=VALUE", "Sets environment variables."],
+                            ["--restart unless-stopped", "Restart policy for long-running services."]
+                        ]
+                    },
+                    "example": "# Run nginx on host port 8080\ndocker run -d --name web -p 8080:80 nginx:latest\n\n# One-off interactive container\ndocker run -it --rm ubuntu:24.04 bash"
+                },
+                {
+                    "title": "Lifecycle commands",
+                    "description": null,
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker ps", "Lists running containers."],
+                            ["docker ps -a", "Lists all containers (including stopped)."],
+                            ["docker start <container>", "Starts a stopped container."],
+                            ["docker stop <container>", "Stops a running container (SIGTERM then SIGKILL)."],
+                            ["docker restart <container>", "Restarts a container."],
+                            ["docker rm <container>", "Removes a stopped container."],
+                            ["docker rm -f <container>", "Forcibly removes a running container."]
+                        ]
+                    },
+                    "example": "docker ps\ndocker stop web\ndocker rm web"
+                }
+            ]
+        },
+        {
+            "title": "Inspecting, Logs, and Debugging",
+            "description": "Understand what is running, view logs, and execute commands inside containers.",
+            "items": [
+                {
+                    "title": "Inspect and logs",
+                    "description": null,
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker logs <container>", "Shows container stdout/stderr logs."],
+                            ["docker logs -f <container>", "Follows logs (stream)."],
+                            ["docker inspect <container>", "Shows container config and runtime state as JSON."],
+                            ["docker top <container>", "Shows running processes inside the container."],
+                            ["docker stats", "Shows live resource usage."]
+                        ]
+                    },
+                    "example": "docker logs -f web\ndocker inspect web"
+                },
+                {
+                    "title": "Exec into a container",
+                    "description": "Run a command in an existing container (often used for debugging).",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker exec -it <container> sh", "Open a shell (alpine/busybox often use sh)."],
+                            ["docker exec -it <container> bash", "Open bash (if installed)."],
+                            ["docker exec <container> <cmd>", "Run a single command."]
+                        ]
+                    },
+                    "example": "docker exec -it web sh\ndocker exec web nginx -t"
+                }
+            ]
+        },
+        {
+            "title": "Networking",
+            "description": "Docker networks connect containers together. Use user-defined bridge networks for service-to-service communication.",
+            "items": [
+                {
+                    "title": "Network commands",
+                    "description": null,
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker network ls", "Lists networks."],
+                            ["docker network create <name>", "Creates a user-defined bridge network."],
+                            ["docker network inspect <name>", "Shows network details and connected containers."],
+                            ["docker network connect <net> <container>", "Connects a container to a network."],
+                            ["docker network disconnect <net> <container>", "Disconnects a container from a network."],
+                            ["docker network rm <name>", "Removes a network."]
+                        ]
+                    },
+                    "example": "docker network create appnet\ndocker run -d --name db --network appnet postgres:16\ndocker run -d --name api --network appnet myapi:dev\ndocker network inspect appnet"
+                }
+            ]
+        },
+        {
+            "title": "Volumes and Data",
+            "description": "Volumes persist data outside the container lifecycle. Prefer named volumes for databases.",
+            "items": [
+                {
+                    "title": "Volume commands",
+                    "description": null,
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker volume ls", "Lists volumes."],
+                            ["docker volume create <name>", "Creates a named volume."],
+                            ["docker volume inspect <name>", "Shows volume details."],
+                            ["docker volume rm <name>", "Removes a volume (must not be in use)."],
+                            ["docker volume prune", "Removes unused volumes."]
+                        ]
+                    },
+                    "example": "docker volume create pgdata\ndocker run -d --name db -e POSTGRES_PASSWORD=secret -v pgdata:/var/lib/postgresql/data postgres:16"
+                },
+                {
+                    "title": "Bind mounts vs named volumes",
+                    "description": "Bind mounts map a host path (good for dev). Named volumes are managed by Docker (good for persistent app data).",
+                    "table": {
+                        "headers": ["Type", "Example"],
+                        "rows": [
+                            ["Bind mount", "-v $(pwd):/app"],
+                            ["Named volume", "-v mydata:/data"]
+                        ]
+                    },
+                    "example": "# Bind mount current directory into container\ndocker run --rm -it -v $(pwd):/app -w /app node:20 bash"
+                }
+            ]
+        },
+        {
+            "title": "Docker Compose",
+            "description": "Compose defines and runs multi-container apps. Modern Docker installs support `docker compose` (plugin).",
+            "items": [
+                {
+                    "title": "Common compose commands",
+                    "description": null,
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker compose up", "Starts services (foreground)."],
+                            ["docker compose up -d", "Starts services in the background."],
+                            ["docker compose down", "Stops and removes containers/networks (keeps named volumes unless -v)."],
+                            ["docker compose logs -f", "Follows logs for all services."],
+                            ["docker compose ps", "Lists compose services."],
+                            ["docker compose exec <svc> <cmd>", "Exec into a service container."],
+                            ["docker compose build", "Builds service images."]
+                        ]
+                    },
+                    "example": "docker compose up -d\ndocker compose logs -f\ndocker compose exec api sh\ndocker compose down"
+                }
+            ]
+        },
+        {
+            "title": "Sharing Images (Registries)",
+            "description": "Push and pull images from registries like Docker Hub or private registries.",
+            "items": [
+                {
+                    "title": "Registry commands",
+                    "description": null,
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker login", "Authenticates to a registry."],
+                            ["docker logout", "Removes stored credentials for a registry."],
+                            ["docker push <image>:<tag>", "Uploads an image to a registry."],
+                            ["docker pull <image>:<tag>", "Downloads an image from a registry."],
+                            ["docker tag <local> <registry>/<repo>:<tag>", "Tags for pushing to a specific registry/repo."]
+                        ]
+                    },
+                    "example": "docker login\ndocker tag myapp:dev myrepo/myapp:dev\ndocker push myrepo/myapp:dev"
+                }
+            ]
+        },
+        {
+            "title": "Cleanup and Troubleshooting",
+            "description": "Over time Docker accumulates unused containers, images, networks, and volumes. These commands help reclaim disk space and diagnose issues.",
+            "items": [
+                {
+                    "title": "Prune commands",
+                    "description": "Prune removes unused objects. Use carefully; it can delete data you still care about.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["docker system df", "Shows disk usage by images/containers/volumes."],
+                            ["docker container prune", "Removes stopped containers."],
+                            ["docker image prune", "Removes dangling images."],
+                            ["docker image prune -a", "Removes unused images (not just dangling)."],
+                            ["docker volume prune", "Removes unused volumes."],
+                            ["docker system prune", "Removes unused containers, networks, images (dangling) and build cache."],
+                            ["docker system prune -a --volumes", "Aggressive prune including unused images and volumes."]
+                        ]
+                    },
+                    "example": "docker system df\ndocker system prune"
+                },
+                {
+                    "title": "Common debugging checks",
+                    "description": null,
+                    "table": {
+                        "headers": ["Question", "Command"],
+                        "rows": [
+                            ["Is the container running?", "docker ps -a"],
+                            ["Why did it exit?", "docker logs <container>"],
+                            ["What command is it running?", "docker inspect <container>"],
+                            ["Are ports mapped?", "docker port <container>"],
+                            ["What networks is it on?", "docker inspect <container> | grep -i network"],
+                            ["Is the image correct?", "docker image ls"]
+                        ]
+                    },
+                    "example": "docker ps -a\ndocker logs web\ndocker inspect web"
+                }
+            ]
+        }
+    ]
+}

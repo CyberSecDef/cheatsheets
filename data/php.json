@@ -1,0 +1,454 @@
+{
+    "title": "PHP Cheatsheet",
+    "description": "A general-purpose PHP quick reference covering syntax, functions, globals, forms, arrays, common pitfalls, and day-to-day patterns.",
+    "language": "php",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Installing PHP and verifying your environment.",
+            "items": [
+                {
+                    "title": "Installation",
+                    "description": "How to install PHP.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["sudo apt-get install php", "Install PHP on Debian-based systems"],
+                            ["brew install php", "Install PHP on macOS using Homebrew"],
+                            ["php -v", "Check the installed PHP version"]
+                        ]
+                    },
+                    "example": null
+                },
+                {
+                    "title": "Run a PHP built-in server",
+                    "description": "Useful for local development (not for production).",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["php -S localhost:8000", "Serve the current directory on port 8000"],
+                            ["php -S localhost:8000 -t public", "Serve a specific document root"],
+                            ["php -i", "Print PHP configuration (phpinfo) to stdout"],
+                            ["php -m", "List installed PHP extensions"],
+                            ["php --ini", "Show loaded php.ini files"],
+                            ["php -l file.php", "Lint a PHP file for syntax errors"],
+                            ["php -r 'echo 2+2;'", "Run a one-liner"],
+                            ["php -a", "Interactive shell" ]
+                        ]
+                    },
+                    "example": "php -S localhost:8000\nphp -l index.php\nphp -m"
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "Core language basics: variables, strings, output, and types.",
+            "items": [
+                {
+                    "title": "Variables and types",
+                    "description": "PHP is dynamically typed; strict typing can be enabled per file with declare(strict_types=1).",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Strict types", "declare(strict_types=1);"],
+                            ["Scalar types", "int, float, string, bool"],
+                            ["Other common types", "array, object, null"],
+                            ["Type checks", "is_string($x), is_array($x), is_int($x)"],
+                            ["Casting", "(int)$x, (string)$x"],
+                            ["Debug output", "var_dump($x), print_r($x)" ]
+                        ]
+                    },
+                    "example": "<?php\ndeclare(strict_types=1);\n\n$name = 'Ada';\n$age = 36;\n$active = true;\n\nvar_dump($name, $age, $active);\n?>"
+                },
+                {
+                    "title": "Strings",
+                    "description": "Single quotes do not interpolate variables; double quotes do.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Concatenate", "$s = 'a' . 'b';"],
+                            ["Interpolate", "$s = \"Hello $name\";"],
+                            ["Length", "strlen($s)"],
+                            ["Substring", "substr($s, 0, 5)"],
+                            ["Trim", "trim($s), rtrim($s)"],
+                            ["Split/join", "explode(',', $s), implode(',', $arr)" ]
+                        ]
+                    },
+                    "example": "<?php\n$name = 'World';\necho 'Hello ' . $name . PHP_EOL;\necho \"Hello $name\\n\";\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Functions",
+            "description": "Parameters, returns, scope, anonymous functions, and common built-ins.",
+            "items": [
+                {
+                    "title": "Parameters and returns",
+                    "description": "Use type hints and return types for clarity. Use nullable types and union types when appropriate.",
+                    "table": {
+                        "headers": ["Feature", "Example"],
+                        "rows": [
+                            ["Return type", "function f(): int { return 1; }"],
+                            ["Nullable", "function f(?string $s): ?string { ... }"],
+                            ["Union types", "function f(int|string $x): string { ... }"],
+                            ["Default values", "function f(int $n = 10) { ... }"],
+                            ["By reference", "function f(array &$a) { ... }"],
+                            ["Variadic", "function f(string ...$parts) { ... }" ]
+                        ]
+                    },
+                    "example": "<?php\nfunction add(int $a, int $b): int {\n    return $a + $b;\n}\n\necho add(2, 3);\n?>"
+                },
+                {
+                    "title": "Scope (global, static, closures)",
+                    "description": "Closures can capture variables with use(). static variables persist across calls.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["global", "global $x;"],
+                            ["$GLOBALS", "$GLOBALS['x']"],
+                            ["static local", "static $count = 0;"],
+                            ["closure capture", "function() use ($x) { ... }"],
+                            ["arrow function", "fn($n) => $n * 2" ]
+                        ]
+                    },
+                    "example": "<?php\n$x = 10;\n$double = function(int $n) use ($x): int {\n    return ($n * 2) + $x;\n};\n\necho $double(5);\n?>"
+                },
+                {
+                    "title": "Anonymous functions",
+                    "description": "Often used with array_map/filter/reduce and callbacks.",
+                    "table": {
+                        "headers": ["Use", "Example"],
+                        "rows": [
+                            ["array_map", "array_map(fn($x) => $x * 2, $arr)"],
+                            ["array_filter", "array_filter($arr, fn($x) => $x > 0)"],
+                            ["usort", "usort($arr, fn($a,$b) => $a <=> $b)" ]
+                        ]
+                    },
+                    "example": "<?php\n$nums = [3, 1, 2];\nusort($nums, fn($a, $b) => $a <=> $b);\nprint_r($nums);\n?>"
+                },
+                {
+                    "title": "Built-in / predefined functions (common)",
+                    "description": "A small sampling of frequently used built-ins.",
+                    "table": {
+                        "headers": ["Category", "Examples"],
+                        "rows": [
+                            ["Strings", "strlen, substr, str_contains, str_replace, trim"],
+                            ["Arrays", "count, array_map, array_filter, array_merge, array_key_exists"],
+                            ["JSON", "json_encode, json_decode"],
+                            ["Filesystem", "file_get_contents, file_put_contents, scandir"],
+                            ["Date/time", "date, DateTime, strtotime"],
+                            ["Debug", "var_dump, print_r, error_log" ]
+                        ]
+                    },
+                    "example": null
+                }
+            ]
+        },
+        {
+            "title": "PHP Filters",
+            "description": "Validate and sanitize common input values.",
+            "items": [
+                {
+                    "title": "filter_var() essentials",
+                    "description": "Use for input validation/sanitization; still consider context-specific escaping (HTML/SQL/etc.).",
+                    "table": {
+                        "headers": ["Filter", "What it does"],
+                        "rows": [
+                            ["FILTER_VALIDATE_EMAIL", "Validates an email address"],
+                            ["FILTER_VALIDATE_INT", "Validates an integer"],
+                            ["FILTER_VALIDATE_URL", "Validates a URL"],
+                            ["FILTER_SANITIZE_EMAIL", "Sanitizes an email"],
+                            ["FILTER_SANITIZE_URL", "Sanitizes a URL" ]
+                        ]
+                    },
+                    "example": "<?php\n$email = $_GET['email'] ?? '';\nif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {\n    echo 'Invalid email';\n    exit;\n}\necho 'OK';\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Superglobals and global state.",
+            "items": [
+                {
+                    "title": "Superglobals",
+                    "description": "Available in all scopes.",
+                    "table": {
+                        "headers": ["Variable", "Typical usage"],
+                        "rows": [
+                            ["$_GET", "Query string parameters"],
+                            ["$_POST", "Form data"],
+                            ["$_SERVER", "Request and server environment"],
+                            ["$_COOKIE", "Cookies"],
+                            ["$_SESSION", "Session data (after session_start())"],
+                            ["$_FILES", "Uploaded files"],
+                            ["$_ENV", "Environment variables"],
+                            ["$GLOBALS", "Global symbol table" ]
+                        ]
+                    },
+                    "example": "<?php\n$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';\n$q = $_GET['q'] ?? '';\necho $method . ' ' . $q;\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Magic Methods",
+            "description": "Hooks that PHP calls automatically in certain OOP scenarios.",
+            "items": [
+                {
+                    "title": "Common magic methods",
+                    "description": null,
+                    "table": {
+                        "headers": ["Method", "Purpose"],
+                        "rows": [
+                            ["__construct", "Constructor"],
+                            ["__destruct", "Destructor"],
+                            ["__toString", "String conversion"],
+                            ["__get / __set", "Property overloading"],
+                            ["__isset / __unset", "Property checks"],
+                            ["__call / __callStatic", "Method overloading"],
+                            ["__invoke", "Object called like a function"],
+                            ["__debugInfo", "Customize var_dump output" ]
+                        ]
+                    },
+                    "example": "<?php\nclass User {\n    public function __construct(private string $name) {}\n    public function __toString(): string { return $this->name; }\n}\n\necho new User('Ada');\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Common operators, including comparisons and null-handling.",
+            "items": [
+                {
+                    "title": "Comparison and null-handling",
+                    "description": "Prefer strict comparisons (===) to avoid surprising coercions.",
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["=== / !==", "Strict equality/inequality"],
+                            ["== / !=", "Loose equality/inequality (type juggling)"],
+                            ["<=>", "Spaceship operator (three-way comparison)"],
+                            ["??", "Null coalescing"],
+                            ["?:", "Ternary"],
+                            ["?.", "Nullsafe operator (method/property access)" ]
+                        ]
+                    },
+                    "example": "<?php\n$name = $_GET['name'] ?? 'anonymous';\n$len = $name !== '' ? strlen($name) : 0;\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequent pitfalls and how to recognize them.",
+            "items": [
+                {
+                    "title": "Typical runtime errors",
+                    "description": null,
+                    "table": {
+                        "headers": ["Symptom", "Likely cause"],
+                        "rows": [
+                            ["Undefined variable/index", "Accessing missing variables/array keys"],
+                            ["Trying to access array offset on value of type null", "Assuming a value exists"],
+                            ["Call to a member function ... on null", "Null object reference"],
+                            ["Headers already sent", "Output before header()/setcookie()/session_start()"],
+                            ["Allowed memory size exhausted", "Reading huge files into memory" ]
+                        ]
+                    },
+                    "example": "<?php\n// Avoid undefined index\n$id = $_GET['id'] ?? null;\nif ($id === null) {\n    http_response_code(400);\n    echo 'Missing id';\n    exit;\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Arrays",
+            "description": "Indexed arrays, associative arrays, and common operations.",
+            "items": [
+                {
+                    "title": "Array basics",
+                    "description": null,
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Create", "$a = [1, 2, 3]; $m = ['a' => 1];"],
+                            ["Append", "$a[] = 4;"],
+                            ["Key exists", "array_key_exists('a', $m)"],
+                            ["Count", "count($a)"],
+                            ["Merge", "array_merge($a, $b)"],
+                            ["Map/filter", "array_map(...), array_filter(...)" ]
+                        ]
+                    },
+                    "example": "<?php\n$users = [\n  ['id' => 1, 'name' => 'Ada'],\n  ['id' => 2, 'name' => 'Linus'],\n];\n\n$names = array_map(fn($u) => $u['name'], $users);\nprint_r($names);\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "Iteration patterns.",
+            "items": [
+                {
+                    "title": "for / foreach / while",
+                    "description": null,
+                    "table": {
+                        "headers": ["Loop", "When to use"],
+                        "rows": [
+                            ["foreach", "Iterate arrays/iterables (most common)"],
+                            ["for", "Index-based loops"],
+                            ["while", "Loop until a condition changes"],
+                            ["break/continue", "Control loop flow" ]
+                        ]
+                    },
+                    "example": "<?php\n$map = ['a' => 1, 'b' => 2];\nforeach ($map as $k => $v) {\n    echo $k . '=' . $v . PHP_EOL;\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "Branching and pattern matching.",
+            "items": [
+                {
+                    "title": "if / else / switch / match",
+                    "description": "match is an expression (returns a value) and is strict.",
+                    "table": {
+                        "headers": ["Construct", "Notes"],
+                        "rows": [
+                            ["if/elseif/else", "Standard branching"],
+                            ["switch", "Loose comparisons by default"],
+                            ["match", "Strict comparisons; returns a value" ]
+                        ]
+                    },
+                    "example": "<?php\n$code = 404;\n$msg = match ($code) {\n    200 => 'OK',\n    404 => 'Not Found',\n    default => 'Unknown',\n};\n?>"
+                }
+            ]
+        },
+        {
+            "title": "FORMS and Query String",
+            "description": "Handling GET/POST requests and safely reading input.",
+            "items": [
+                {
+                    "title": "Reading GET/POST",
+                    "description": "Always treat input as untrusted. Validate and escape for output.",
+                    "table": {
+                        "headers": ["Source", "Example"],
+                        "rows": [
+                            ["GET", "$q = $_GET['q'] ?? '';"],
+                            ["POST", "$name = $_POST['name'] ?? '';"],
+                            ["Method", "$_SERVER['REQUEST_METHOD']"],
+                            ["HTML escaping", "htmlspecialchars($s, ENT_QUOTES, 'UTF-8')" ]
+                        ]
+                    },
+                    "example": "<?php\nif (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {\n    $name = $_POST['name'] ?? '';\n    $safe = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');\n    echo 'Hello ' . $safe;\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "PCRE functions for matching and replacing.",
+            "items": [
+                {
+                    "title": "preg_* basics",
+                    "description": null,
+                    "table": {
+                        "headers": ["Function", "Purpose"],
+                        "rows": [
+                            ["preg_match", "Match once"],
+                            ["preg_match_all", "Match all occurrences"],
+                            ["preg_replace", "Replace using a regex"],
+                            ["preg_split", "Split string by regex" ]
+                        ]
+                    },
+                    "example": "<?php\n$email = 'a@example.com';\nif (preg_match('/^[^@]+@[^@]+$/', $email)) {\n    echo 'looks like email';\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Date and Time",
+            "description": "Prefer DateTime/DateTimeImmutable for non-trivial work.",
+            "items": [
+                {
+                    "title": "DateTime basics",
+                    "description": null,
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Now", "$dt = new DateTimeImmutable('now');"],
+                            ["Format", "$dt->format(DateTimeInterface::ATOM)"],
+                            ["Parse", "new DateTimeImmutable('2025-12-18 10:00:00')"],
+                            ["Add interval", "$dt->add(new DateInterval('P1D'))"],
+                            ["Timezone", "new DateTimeZone('UTC')" ]
+                        ]
+                    },
+                    "example": "<?php\n$dt = new DateTimeImmutable('now', new DateTimeZone('UTC'));\necho $dt->format(DateTimeInterface::ATOM);\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Database Interactions",
+            "description": "Use PDO with prepared statements to avoid SQL injection.",
+            "items": [
+                {
+                    "title": "PDO essentials",
+                    "description": "Prepared statements separate SQL from data.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Connect", "$pdo = new PDO($dsn, $user, $pass);"],
+                            ["Prepare", "$stmt = $pdo->prepare('SELECT * FROM t WHERE id = :id');"],
+                            ["Execute", "$stmt->execute(['id' => $id]);"],
+                            ["Fetch", "$row = $stmt->fetch(PDO::FETCH_ASSOC);"],
+                            ["Transactions", "$pdo->beginTransaction(); ... $pdo->commit();" ]
+                        ]
+                    },
+                    "example": "<?php\n$pdo = new PDO('mysql:host=localhost;dbname=app;charset=utf8mb4', 'user', 'pass', [\n    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,\n]);\n\n$id = (int)($_GET['id'] ?? 0);\n$stmt = $pdo->prepare('SELECT id, name FROM users WHERE id = :id');\n$stmt->execute(['id' => $id]);\n$row = $stmt->fetch(PDO::FETCH_ASSOC);\nvar_dump($row);\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Operators (More)",
+            "description": "Additional operators that come up frequently.",
+            "items": [
+                {
+                    "title": "Array + and ??=",
+                    "description": "Array union keeps left-hand keys; ??= assigns only if null/unset.",
+                    "table": {
+                        "headers": ["Operator", "Notes"],
+                        "rows": [
+                            ["+ (array union)", "$a + $b keeps keys from $a when overlapping"],
+                            ["??=", "$x ??= 'default'"],
+                            [".=", "String append" ]
+                        ]
+                    },
+                    "example": "<?php\n$a = ['x' => 1];\n$b = ['x' => 2, 'y' => 3];\nprint_r($a + $b);\n\n$name = null;\n$name ??= 'anonymous';\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Extras: OOP and Namespaces",
+            "description": "Common object-oriented and organization features.",
+            "items": [
+                {
+                    "title": "Namespaces and autoloading (overview)",
+                    "description": "Use namespaces to avoid name collisions. Composer is the common autoloader in modern PHP projects.",
+                    "table": {
+                        "headers": ["Topic", "Notes"],
+                        "rows": [
+                            ["namespace", "namespace App\\Service;"],
+                            ["use", "use App\\Service\\Mailer;"],
+                            ["Composer", "composer.json + vendor/autoload.php" ]
+                        ]
+                    },
+                    "example": "<?php\n// In a modern project you'd include Composer's autoloader:\n// require __DIR__ . '/vendor/autoload.php';\n\nnamespace App\\Service;\n\nclass Mailer {}\n?>"
+                },
+                {
+                    "title": "Exceptions",
+                    "description": "Prefer exceptions for error handling in application code.",
+                    "table": {
+                        "headers": ["Construct", "Example"],
+                        "rows": [
+                            ["throw", "throw new RuntimeException('message');"],
+                            ["try/catch", "try { ... } catch (Throwable $e) { ... }"],
+                            ["finally", "finally { cleanup }" ]
+                        ]
+                    },
+                    "example": "<?php\ntry {\n    throw new RuntimeException('boom');\n} catch (Throwable $e) {\n    error_log($e->getMessage());\n}\n?>"
+                }
+            ]
+        }
+    ]
+}

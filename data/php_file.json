@@ -1,0 +1,500 @@
+{
+    "title": "PHP File I/O Cheatsheet",
+    "description": "A comprehensive quick reference for File I/O operations in PHP, from basic reads/writes to locking and structured formats.",
+    "language": "php",
+    "categories": [
+        {
+            "title": "Opening, Creating, and Closing Files",
+            "description": "Core functions for opening files and working with file handles (resources). Prefer higher-level helpers for small files; close handles when you open them.",
+            "items": [
+                {
+                    "title": "fopen() modes",
+                    "description": "The mode string controls how the file is opened (read/write/append/create).",
+                    "table": {
+                        "headers": [
+                            "Mode",
+                            "Meaning"
+                        ],
+                        "rows": [
+                            [
+                                "r",
+                                "Read-only; pointer at start; fails if file does not exist."
+                            ],
+                            [
+                                "r+",
+                                "Read/write; pointer at start; fails if file does not exist."
+                            ],
+                            [
+                                "w",
+                                "Write-only; truncates; creates if missing."
+                            ],
+                            [
+                                "w+",
+                                "Read/write; truncates; creates if missing."
+                            ],
+                            [
+                                "a",
+                                "Append; creates if missing; pointer at end."
+                            ],
+                            [
+                                "a+",
+                                "Read/append; creates if missing; pointer at end."
+                            ],
+                            [
+                                "x",
+                                "Create and write; fails if file exists."
+                            ],
+                            [
+                                "c",
+                                "Open for write; creates if missing; does not truncate."
+                            ],
+                            [
+                                "b",
+                                "Binary mode (recommended on Windows; safe everywhere)."
+                            ]
+                        ]
+                    },
+                    "example": null
+                },
+                {
+                    "title": "Common file functions",
+                    "description": "Quick helpers for common tasks.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "fopen(path, mode)",
+                                "Opens a file handle (resource) or returns false on failure."
+                            ],
+                            [
+                                "fclose(handle)",
+                                "Closes an open handle."
+                            ],
+                            [
+                                "file_get_contents(path)",
+                                "Reads the entire file into a string."
+                            ],
+                            [
+                                "file_put_contents(path, data, flags)",
+                                "Writes a string to a file (overwrite by default; FILE_APPEND to append)."
+                            ],
+                            [
+                                "touch(path)",
+                                "Creates the file if it does not exist (or updates modified time)."
+                            ],
+                            [
+                                "is_readable(path) / is_writable(path)",
+                                "Checks access before I/O."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$path = 'example.txt';\n\nif (!file_exists($path)) {\n    touch($path);\n}\n\n$handle = fopen($path, 'rb');\nif ($handle === false) {\n    throw new RuntimeException('Failed to open file');\n}\n\ntry {\n    $contents = stream_get_contents($handle);\n    echo $contents;\n} finally {\n    fclose($handle);\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Reading Files",
+            "description": "Read whole files, iterate line-by-line, or stream in chunks for large inputs.",
+            "items": [
+                {
+                    "title": "Read whole file",
+                    "description": "Best for small-to-medium files.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "file_get_contents(path)",
+                                "Reads entire file into a string."
+                            ],
+                            [
+                                "file(path, flags)",
+                                "Reads file into an array of lines."
+                            ],
+                            [
+                                "readfile(path)",
+                                "Outputs a file directly and returns bytes sent."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$text = file_get_contents('my_file.txt');\n$lines = file('my_file.txt', FILE_IGNORE_NEW_LINES);\n?>"
+                },
+                {
+                    "title": "Read line-by-line (streaming)",
+                    "description": "Memory-efficient for large files.",
+                    "table": {
+                        "headers": [
+                            "Approach",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "fgets(handle)",
+                                "Reads a line from an open handle."
+                            ],
+                            [
+                                "SplFileObject",
+                                "Object-oriented iteration over file lines."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$handle = fopen('my_file.txt', 'rb');\nif ($handle === false) {\n    throw new RuntimeException('open failed');\n}\n\ntry {\n    while (($line = fgets($handle)) !== false) {\n        echo rtrim($line) . PHP_EOL;\n    }\n} finally {\n    fclose($handle);\n}\n\n$file = new SplFileObject('my_file.txt');\nforeach ($file as $line) {\n    echo rtrim((string)$line) . PHP_EOL;\n}\n?>"
+                },
+                {
+                    "title": "Read in chunks",
+                    "description": "Useful for large files or binary data.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "fread(handle, length)",
+                                "Reads up to length bytes."
+                            ],
+                            [
+                                "feof(handle)",
+                                "Checks if EOF has been reached."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$in = fopen('big.bin', 'rb');\nif ($in === false) {\n    throw new RuntimeException('open failed');\n}\n\ntry {\n    $bufSize = 8192;\n    while (!feof($in)) {\n        $chunk = fread($in, $bufSize);\n        if ($chunk === false) {\n            throw new RuntimeException('read failed');\n        }\n        // process $chunk\n    }\n} finally {\n    fclose($in);\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Writing and Appending",
+            "description": "Write strings, append logs, and stream output.",
+            "items": [
+                {
+                    "title": "file_put_contents() flags",
+                    "description": "Simple write/append with optional locking.",
+                    "table": {
+                        "headers": [
+                            "Flag",
+                            "Effect"
+                        ],
+                        "rows": [
+                            [
+                                "(none)",
+                                "Overwrite existing file (or create it)."
+                            ],
+                            [
+                                "FILE_APPEND",
+                                "Append to the file instead of overwriting."
+                            ],
+                            [
+                                "LOCK_EX",
+                                "Acquire an exclusive lock while writing."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\nfile_put_contents('out.txt', 'Hello' . PHP_EOL);\nfile_put_contents('out.txt', 'More' . PHP_EOL, FILE_APPEND);\nfile_put_contents('out.txt', 'With lock' . PHP_EOL, FILE_APPEND | LOCK_EX);\n?>"
+                },
+                {
+                    "title": "fopen() + fwrite()",
+                    "description": "More control for streaming writes.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "fwrite(handle, data)",
+                                "Writes bytes to a handle."
+                            ],
+                            [
+                                "fflush(handle)",
+                                "Flushes buffers to disk/stream."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$out = fopen('log.txt', 'ab');\nif ($out === false) {\n    throw new RuntimeException('open failed');\n}\n\ntry {\n    fwrite($out, date('c') . ' started' . PHP_EOL);\n    fflush($out);\n} finally {\n    fclose($out);\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Directory and File Management",
+            "description": "Create directories, list files, move/copy/rename, and delete.",
+            "items": [
+                {
+                    "title": "Filesystem helpers",
+                    "description": null,
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "mkdir(path, mode, recursive)",
+                                "Creates a directory (recursive=true creates parents)."
+                            ],
+                            [
+                                "scandir(path)",
+                                "Lists directory entries."
+                            ],
+                            [
+                                "glob(pattern)",
+                                "Finds paths matching a pattern (e.g., *.json)."
+                            ],
+                            [
+                                "rename(src, dst)",
+                                "Renames or moves a file/directory."
+                            ],
+                            [
+                                "copy(src, dst)",
+                                "Copies a file."
+                            ],
+                            [
+                                "unlink(path)",
+                                "Deletes a file."
+                            ],
+                            [
+                                "rmdir(path)",
+                                "Removes an empty directory."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$dir = __DIR__ . '/out';\nif (!is_dir($dir)) {\n    mkdir($dir, 0775, true);\n}\n\nfile_put_contents($dir . '/a.txt', 'A');\ncopy($dir . '/a.txt', $dir . '/b.txt');\nrename($dir . '/b.txt', $dir . '/renamed.txt');\n\n$files = glob($dir . '/*.txt');\nprint_r($files);\n\nunlink($dir . '/a.txt');\nunlink($dir . '/renamed.txt');\nrmdir($dir);\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Paths and Portability",
+            "description": "Use built-in helpers and constants to avoid path bugs across environments.",
+            "items": [
+                {
+                    "title": "Path helpers",
+                    "description": null,
+                    "table": {
+                        "headers": [
+                            "Helper",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "__DIR__",
+                                "Directory of the current script."
+                            ],
+                            [
+                                "DIRECTORY_SEPARATOR",
+                                "OS-specific separator."
+                            ],
+                            [
+                                "basename(path)",
+                                "Returns the filename component."
+                            ],
+                            [
+                                "dirname(path)",
+                                "Returns the directory component."
+                            ],
+                            [
+                                "pathinfo(path)",
+                                "Returns parts like dirname/basename/extension/filename."
+                            ],
+                            [
+                                "realpath(path)",
+                                "Resolves a path to an absolute canonical path (or false)."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$path = __DIR__ . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'file.txt';\necho basename($path) . PHP_EOL;\nprint_r(pathinfo($path));\n?>"
+                }
+            ]
+        },
+        {
+            "title": "File Information and Permissions",
+            "description": "Inspect metadata and check access before performing I/O.",
+            "items": [
+                {
+                    "title": "Metadata and checks",
+                    "description": null,
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "file_exists(path)",
+                                "Checks whether a file or directory exists."
+                            ],
+                            [
+                                "is_file(path) / is_dir(path)",
+                                "Distinguish files vs directories."
+                            ],
+                            [
+                                "filesize(path)",
+                                "Gets size in bytes (may be cached)."
+                            ],
+                            [
+                                "filemtime(path)",
+                                "Last modification time (Unix timestamp)."
+                            ],
+                            [
+                                "stat(path)",
+                                "Returns a stat array of filesystem metadata."
+                            ],
+                            [
+                                "chmod(path, mode)",
+                                "Changes permissions (platform-dependent)."
+                            ],
+                            [
+                                "clearstatcache()",
+                                "Clears cached stat results."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$path = 'my_file.txt';\nif (file_exists($path) && is_file($path) && is_readable($path)) {\n    echo 'size: ' . filesize($path) . PHP_EOL;\n    echo 'mtime: ' . date('c', filemtime($path)) . PHP_EOL;\n} else {\n    echo 'Missing or not readable' . PHP_EOL;\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Advanced File Operations",
+            "description": "Locking, seeking, and truncating.",
+            "items": [
+                {
+                    "title": "File locking with flock()",
+                    "description": "Use locks to coordinate between processes (best-effort; depends on filesystem).",
+                    "table": {
+                        "headers": [
+                            "Lock",
+                            "Meaning"
+                        ],
+                        "rows": [
+                            [
+                                "LOCK_SH",
+                                "Shared lock (read)."
+                            ],
+                            [
+                                "LOCK_EX",
+                                "Exclusive lock (write)."
+                            ],
+                            [
+                                "LOCK_NB",
+                                "Non-blocking."
+                            ],
+                            [
+                                "LOCK_UN",
+                                "Unlock."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$h = fopen('shared.txt', 'c+b');\nif ($h === false) {\n    throw new RuntimeException('open failed');\n}\n\ntry {\n    if (!flock($h, LOCK_EX)) {\n        throw new RuntimeException('lock failed');\n    }\n\n    ftruncate($h, 0);\n    rewind($h);\n    fwrite($h, 'updated at ' . date('c') . PHP_EOL);\n    fflush($h);\n\n    flock($h, LOCK_UN);\n} finally {\n    fclose($h);\n}\n?>"
+                },
+                {
+                    "title": "Seeking and truncating",
+                    "description": "Move the file pointer or resize an open file.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "fseek(handle, offset, whence)",
+                                "Moves file pointer."
+                            ],
+                            [
+                                "ftell(handle)",
+                                "Gets current pointer position."
+                            ],
+                            [
+                                "rewind(handle)",
+                                "Moves pointer to beginning."
+                            ],
+                            [
+                                "ftruncate(handle, size)",
+                                "Truncates or extends the file."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$h = fopen('data.bin', 'c+b');\nif ($h === false) {\n    throw new RuntimeException('open failed');\n}\n\ntry {\n    fwrite($h, 'abcdef');\n    fseek($h, 2);\n    fwrite($h, 'XX'); // abXXef\n\n    ftruncate($h, 4); // abXX\n    rewind($h);\n    echo stream_get_contents($h) . PHP_EOL;\n} finally {\n    fclose($h);\n}\n?>"
+                }
+            ]
+        },
+        {
+            "title": "JSON and CSV",
+            "description": "Read/write structured data stored in files.",
+            "items": [
+                {
+                    "title": "JSON read/write",
+                    "description": "Decode JSON into arrays and encode back to JSON for writing.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "json_decode(string, true)",
+                                "Parses JSON into associative arrays."
+                            ],
+                            [
+                                "json_encode(value, flags)",
+                                "Serializes a value to JSON (use JSON_PRETTY_PRINT for readability)."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$cfg = json_decode(file_get_contents('config.json'), true);\nif (!is_array($cfg)) {\n    throw new RuntimeException('Invalid JSON');\n}\n\n$cfg['updatedAt'] = date('c');\n$json = json_encode($cfg, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);\nfile_put_contents('config.json', $json . PHP_EOL);\n?>"
+                },
+                {
+                    "title": "CSV read/write",
+                    "description": "Use fgetcsv()/fputcsv() for CSV.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "fgetcsv(handle)",
+                                "Reads a CSV row into an array."
+                            ],
+                            [
+                                "fputcsv(handle, fields)",
+                                "Writes an array as a CSV row."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$out = fopen('users.csv', 'wb');\nif ($out === false) {\n    throw new RuntimeException('open failed');\n}\nfputcsv($out, ['id', 'name']);\nfputcsv($out, [1, 'Alice']);\nfputcsv($out, [2, 'Bob']);\nfclose($out);\n\n$in = fopen('users.csv', 'rb');\n$header = fgetcsv($in);\nwhile (($row = fgetcsv($in)) !== false) {\n    $assoc = array_combine($header, $row);\n    print_r($assoc);\n}\nfclose($in);\n?>"
+                }
+            ]
+        },
+        {
+            "title": "Temporary Files and Directories",
+            "description": "Create temporary files safely for intermediate work.",
+            "items": [
+                {
+                    "title": "tempnam()",
+                    "description": "Create a unique temporary filename in the system temp directory.",
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "sys_get_temp_dir()",
+                                "Returns the system temp directory."
+                            ],
+                            [
+                                "tempnam(dir, prefix)",
+                                "Creates a unique filename in dir."
+                            ]
+                        ]
+                    },
+                    "example": "<?php\n$tmp = tempnam(sys_get_temp_dir(), 'demo_');\nfile_put_contents($tmp, 'temp data');\necho $tmp . PHP_EOL;\nunlink($tmp);\n?>"
+                }
+            ]
+        }
+    ]
+}

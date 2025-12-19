@@ -1,0 +1,470 @@
+{
+	"title": "JavaScript Cheatsheet",
+	"description": "A general-purpose JavaScript quick reference covering syntax, functions, modules, common pitfalls, and day-to-day patterns (browser + Node.js).",
+	"language": "javascript",
+	"categories": [
+		{
+			"title": "Basic Functionality",
+			"description": "Core syntax: variables, types, strings, objects, and basic I/O.",
+			"items": [
+				{
+					"title": "Variables and types",
+					"description": "Prefer const by default; use let when reassigning. Avoid var in modern JS.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["const", "const n = 1"],
+							["let", "let x = 0; x += 1"],
+							["Primitive types", "string, number, bigint, boolean, undefined, symbol, null"],
+							["Objects", "object (including arrays, functions)"],
+							["Type checks", "typeof x, Array.isArray(x)"],
+							["Nullish", "x == null checks null or undefined" ]
+						]
+					},
+					"example": "const name = 'Ada';\nlet count = 0;\ncount += 1;\nconsole.log(typeof name, typeof count);"
+				},
+				{
+					"title": "Strings and template literals",
+					"description": "Use template literals for interpolation and multi-line strings.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Interpolate", "`Hello ${name}`"],
+							["Multi-line", "`a\\n b`"],
+							["Includes", "s.includes('sub')"],
+							["Slice", "s.slice(0, 5)"],
+							["Replace", "s.replace('a', 'b')"],
+							["Trim", "s.trim()" ]
+						]
+					},
+					"example": "const name = 'World';\nconsole.log(`Hello ${name}`);\nconsole.log('  x  '.trim());"
+				},
+				{
+					"title": "Objects",
+					"description": "Objects are key/value maps. Use optional chaining and nullish coalescing for safer access.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Create", "const o = { a: 1 }"],
+							["Access", "o.a, o['a']"],
+							["Optional chaining", "o.user?.name"],
+							["Nullish coalescing", "x ?? 'default'"],
+							["Destructure", "const {a} = o"],
+							["Spread", "const o2 = { ...o, b: 2 }" ]
+						]
+					},
+					"example": "const user = { profile: { name: 'Ada' } };\nconsole.log(user.profile?.name ?? 'anonymous');"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Parameters, returns, scope, anonymous functions, and common built-ins.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "Use default parameters and rest parameters; JS functions can return any value.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Default parameter", "function f(n = 10) { ... }"],
+							["Rest parameters", "function f(...args) { ... }"],
+							["Destructured params", "function f({id, name}) { ... }"],
+							["Return object", "return { ok: true }"],
+							["Return early", "if (!x) return null" ]
+						]
+					},
+					"example": "function divmod(a, b) {\n  return { q: Math.floor(a / b), r: a % b };\n}\nconsole.log(divmod(10, 3));"
+				},
+				{
+					"title": "Scope and this",
+					"description": "let/const are block-scoped. Arrow functions capture this lexically; function() has its own this depending on call site.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Block scope", "let/const inside { }"],
+							["Hoisting", "function declarations hoist; let/const have TDZ"],
+							["this (method)", "obj.m() sets this=obj"],
+							["this (arrow)", "arrow uses surrounding this" ]
+						]
+					},
+					"example": "const obj = {\n  x: 1,\n  m() { return this.x; },\n  a: () => this\n};\nconsole.log(obj.m());"
+				},
+				{
+					"title": "Anonymous functions",
+					"description": "Use arrow functions for callbacks; name functions when stack traces matter.",
+					"table": {
+						"headers": ["Use", "Example"],
+						"rows": [
+							["Callback", "arr.map(x => x * 2)"],
+							["IIFE", "(() => { ... })()"],
+							["Async", "async () => { await f() }" ]
+						]
+					},
+					"example": "console.log([1,2,3].map(x => x * 2));"
+				},
+				{
+					"title": "Built-in / predefined functions (common)",
+					"description": "A small sampling of frequently used built-ins and global utilities.",
+					"table": {
+						"headers": ["Built-in", "What it does"],
+						"rows": [
+							["Number.isFinite", "Check finite number"],
+							["parseInt / parseFloat", "Parse numbers from strings"],
+							["encodeURIComponent", "URL-encode a component"],
+							["setTimeout / setInterval", "Timers"],
+							["Promise", "Async primitive"],
+							["JSON.parse / JSON.stringify", "JSON conversion"],
+							["Math", "Math helpers (floor, random, etc.)"],
+							["Date", "Date/time object" ]
+						]
+					},
+					"example": "const s = '42';\nconsole.log(parseInt(s, 10), Number.isFinite(3.1));"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering collections and validating/parsing values.",
+			"items": [
+				{
+					"title": "Array filter/map/reduce",
+					"description": "Prefer pure callbacks; be mindful of performance for very large arrays.",
+					"table": {
+						"headers": ["Method", "What it does"],
+						"rows": [
+							["filter", "Keep items matching predicate"],
+							["map", "Transform each item"],
+							["reduce", "Fold items into a single value"],
+							["find", "Return first match"],
+							["some/every", "Boolean aggregations" ]
+						]
+					},
+					"example": "const nums = [1,2,3,4,5];\nconst evens = nums.filter(n => n % 2 === 0);\nconst sum = nums.reduce((a, b) => a + b, 0);\nconsole.log(evens, sum);"
+				},
+				{
+					"title": "Parsing and basic validation",
+					"description": "Use Number() for strict-ish conversion; parseInt requires a radix.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Trim", "s.trim()"],
+							["Number conversion", "Number(s)"],
+							["Int conversion", "parseInt(s, 10)"],
+							["Check NaN", "Number.isNaN(x)"],
+							["URL query", "new URLSearchParams(location.search)" ]
+						]
+					},
+					"example": "const n = Number('12');\nconsole.log(Number.isNaN(n) ? 'bad' : n);"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Global namespaces differ between browser and Node.",
+			"items": [
+				{
+					"title": "Common globals",
+					"description": null,
+					"table": {
+						"headers": ["Name", "Where"],
+						"rows": [
+							["globalThis", "Standard global object (browser + Node)"],
+							["window", "Browser global (DOM)"],
+							["document", "Browser DOM document"],
+							["process", "Node process info"],
+							["console", "Logging"],
+							["Buffer", "Node binary data" ]
+						]
+					},
+					"example": "console.log(typeof globalThis, typeof window, typeof process);"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "ES modules, CommonJS, and package managers.",
+			"items": [
+				{
+					"title": "ES modules (import/export)",
+					"description": "Modern JS uses ESM. In Node, ESM depends on package.json type or file extension.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Named export", "export function f() {}"],
+							["Default export", "export default class X {}"],
+							["Named import", "import { f } from './mod.js'"],
+							["Default import", "import X from './mod.js'"],
+							["Dynamic import", "const mod = await import('./mod.js')" ]
+						]
+					},
+					"example": "// mod.js\nexport const answer = 42;\n\n// app.js\nimport { answer } from './mod.js';\nconsole.log(answer);"
+				},
+				{
+					"title": "npm basics",
+					"description": "Node projects typically use npm/pnpm/yarn.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["npm init -y", "Create package.json"],
+							["npm install pkg", "Add dependency"],
+							["npm install -D pkg", "Add dev dependency"],
+							["npm run test", "Run a script"],
+							["node file.js", "Run a script" ]
+						]
+					},
+					"example": "npm init -y\nnpm install lodash\nnode index.js"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Common operators, comparisons, and null-handling.",
+			"items": [
+				{
+					"title": "Comparisons and null-handling",
+					"description": "Prefer strict equality (===) to avoid type coercion surprises.",
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["=== / !==", "Strict equality/inequality"],
+							["== / !=", "Loose equality/inequality (coercion)"],
+							["??", "Nullish coalescing"],
+							["?.", "Optional chaining"],
+							["?:", "Ternary operator"],
+							["&& || !", "Boolean operators" ]
+						]
+					},
+					"example": "const x = 0;\nconsole.log(x ?? 10);      // 0\nconsole.log(x || 10);      // 10\nconsole.log(null ?? 'd');  // 'd'"
+				},
+				{
+					"title": "Spread/rest and destructuring",
+					"description": "Great for copying, merging, and extracting values.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Array spread", "const b = [...a, 4]"],
+							["Object spread", "const o2 = { ...o, b: 2 }"],
+							["Destructure array", "const [a, b] = xs"],
+							["Destructure object", "const {id, name} = user"],
+							["Rest", "const {a, ...rest} = obj" ]
+						]
+					},
+					"example": "const user = { id: 1, name: 'Ada', role: 'admin' };\nconst { name, ...rest } = user;\nconsole.log(name, rest);"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequent runtime errors and environment pitfalls.",
+			"items": [
+				{
+					"title": "Typical errors",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause"],
+						"rows": [
+							["TypeError: Cannot read properties of undefined", "Accessing a missing value"],
+							["ReferenceError", "Using a variable before declaration or not in scope"],
+							["SyntaxError", "Invalid JS syntax or JSON parsing"],
+							["UnhandledPromiseRejection", "Async error not awaited/caught"],
+							["CORS error", "Browser blocks cross-origin request"],
+							["JSON.parse error", "Invalid JSON" ]
+						]
+					},
+					"example": "async function run() {\n  try {\n    const res = await fetch('/api');\n    const data = await res.json();\n    console.log(data?.user?.name ?? 'anonymous');\n  } catch (err) {\n    console.error(err);\n  }\n}\nrun();"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Array operations and common patterns.",
+			"items": [
+				{
+					"title": "Array basics",
+					"description": null,
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Create", "const a = [1, 2, 3]"],
+							["Push/pop", "a.push(4); a.pop()"],
+							["Slice", "a.slice(0, 2)"],
+							["Splice", "a.splice(1, 1)"],
+							["Find", "a.find(x => x === 2)"],
+							["Includes", "a.includes(2)" ]
+						]
+					},
+					"example": "const a = [1,2,3];\na.push(4);\nconsole.log(a.slice(1));"
+				},
+				{
+					"title": "Typed arrays",
+					"description": "For binary data and performance-sensitive numeric work.",
+					"table": {
+						"headers": ["Type", "Example"],
+						"rows": [
+							["Uint8Array", "new Uint8Array([1,2,3])"],
+							["ArrayBuffer", "new ArrayBuffer(16)"],
+							["DataView", "new DataView(buffer)" ]
+						]
+					},
+					"example": "const bytes = new Uint8Array([65, 66, 67]);\nconsole.log(new TextDecoder().decode(bytes));"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "Iteration patterns.",
+			"items": [
+				{
+					"title": "for / for..of / for..in",
+					"description": "Use for..of for arrays/iterables, and for..in for object keys.",
+					"table": {
+						"headers": ["Loop", "When to use"],
+						"rows": [
+							["for", "Index-based loops"],
+							["for..of", "Iterate values of arrays/iterables"],
+							["for..in", "Iterate keys (objects; arrays not recommended)"],
+							["while", "Loop until a condition changes"],
+							["break/continue", "Control flow" ]
+						]
+					},
+					"example": "const xs = ['a','b'];\nfor (const x of xs) console.log(x);\nconst o = {a:1,b:2};\nfor (const k in o) console.log(k, o[k]);"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "Branching and pattern-like control flow.",
+			"items": [
+				{
+					"title": "if / else / switch",
+					"description": null,
+					"table": {
+						"headers": ["Construct", "Notes"],
+						"rows": [
+							["if/else", "Standard branching"],
+							["switch", "Uses strict comparison (===) per case"],
+							["Short-circuit", "cond && doThing()" ]
+						]
+					},
+					"example": "const code = 404;\nlet msg;\nswitch (code) {\n  case 200: msg = 'OK'; break;\n  case 404: msg = 'Not Found'; break;\n  default: msg = 'Other';\n}\nconsole.log(msg);"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "RegExp is built-in; be aware of flags and escaping.",
+			"items": [
+				{
+					"title": "RegExp basics",
+					"description": null,
+					"table": {
+						"headers": ["Method", "Example"],
+						"rows": [
+							["test", "/^a/.test(s)"],
+							["match", "s.match(/pat/g)"],
+							["replace", "s.replace(/a/g, 'b')"],
+							["exec", "re.exec(s)"],
+							["flags", "i (case-insensitive), g (global), m (multiline), s (dotAll)" ]
+						]
+					},
+					"example": "const email = 'a@example.com';\nconst ok = /^[^@]+@[^@]+$/.test(email);\nconsole.log(ok);"
+				}
+			]
+		},
+		{
+			"title": "Date and Time",
+			"description": "Use Date for basics; use Intl for formatting; consider libraries for complex time zone work.",
+			"items": [
+				{
+					"title": "Date basics",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Now", "new Date()"],
+							["ISO string", "new Date().toISOString()"],
+							["Parse", "new Date('2025-12-18T10:00:00Z')"],
+							["Epoch ms", "Date.now()"],
+							["Intl format", "new Intl.DateTimeFormat('en-US').format(d)" ]
+						]
+					},
+					"example": "const d = new Date('2025-12-18T10:00:00Z');\nconsole.log(d.toISOString());\nconsole.log(new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d));"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "JavaScript interacts with databases either via backend code (Node) or browser storage (IndexedDB).",
+			"items": [
+				{
+					"title": "Node.js (typical pattern)",
+					"description": "Use a DB driver (e.g., Postgres, MySQL, SQLite) and parameterized queries.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Parameterized queries", "Avoid SQL injection"],
+							["Connection pool", "Reuse connections for servers"],
+							["Migrations", "Track schema changes" ],
+							["Transactions", "Use for multi-step consistency" ]
+						]
+					},
+					"example": "// Example shape (varies by driver):\n// const db = new Client({ connectionString: process.env.DATABASE_URL });\n// await db.connect();\n// const res = await db.query('SELECT name FROM users WHERE id = $1', [id]);\n// console.log(res.rows[0]);"
+				},
+				{
+					"title": "Browser: IndexedDB (overview)",
+					"description": "IndexedDB is asynchronous and event-based; wrappers can improve ergonomics.",
+					"table": {
+						"headers": ["API", "Purpose"],
+						"rows": [
+							["indexedDB.open", "Open/create a database"],
+							["IDBTransaction", "Read/write operations"],
+							["Object store", "Key/value store within a DB"],
+							["Index", "Query support" ]
+						]
+					},
+					"example": "// IndexedDB is verbose; consider a wrapper for real apps.\nconst req = indexedDB.open('app', 1);\nreq.onupgradeneeded = () => req.result.createObjectStore('kv');\nreq.onsuccess = () => console.log('opened');"
+				}
+			]
+		},
+		{
+			"title": "Extras: Async and Promises",
+			"description": "Promises, async/await, and common patterns.",
+			"items": [
+				{
+					"title": "Async/await essentials",
+					"description": "Always handle rejections with try/catch or .catch().",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Await", "const x = await f()"],
+							["Parallel", "await Promise.all([a(), b()])"],
+							["Race", "await Promise.race([...])"],
+							["Finally", "promise.finally(() => cleanup())" ]
+						]
+					},
+					"example": "async function main() {\n  const [a, b] = await Promise.all([\n    Promise.resolve(1),\n    Promise.resolve(2),\n  ]);\n  console.log(a + b);\n}\nmain().catch(console.error);"
+				}
+			]
+		},
+		{
+			"title": "Extras: JSON",
+			"description": "Converting to/from JSON safely.",
+			"items": [
+				{
+					"title": "JSON.parse / JSON.stringify",
+					"description": "JSON.parse throws on invalid JSON; JSON.stringify drops functions and symbols.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Parse", "JSON.parse(s)"],
+							["Stringify", "JSON.stringify(obj)"],
+							["Pretty print", "JSON.stringify(obj, null, 2)" ]
+						]
+					},
+					"example": "const s = '{\"ok\":true,\"n\":1}';\nconst obj = JSON.parse(s);\nconsole.log(JSON.stringify(obj, null, 2));"
+				}
+			]
+		}
+	]
+}

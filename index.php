@@ -100,7 +100,7 @@
         </div>
 
         <!-- Masonry Grid -->
-        <div class="row" data-masonry='{"percentPosition": true}' id="masonry-grid">
+        <div class="row g-2" data-masonry='{"percentPosition": true}' id="masonry-grid">
             <!-- Cards will be dynamically inserted here -->
         </div>
     </main>
@@ -159,7 +159,7 @@
 
                 data.categories.forEach(category => {
                     const col = document.createElement('div');
-                    col.className = 'col-md-6 col-lg-4 mb-4';
+                    col.className = 'col-4 mb-4';
 
                     let itemsHtml = '';
                     category.items.forEach(item => {
@@ -211,7 +211,7 @@
                 });
 
                 Prism.highlightAll();
-
+                
             })
             .catch(error => console.error('Error fetching data:', error)); // Handle any errors
         }

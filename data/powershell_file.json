@@ -1,0 +1,414 @@
+{
+    "title": "PowerShell File I/O Cheatsheet",
+    "description": "A comprehensive quick reference for File I/O operations in the PowerShell scripting language, covering everything from basic operations to advanced techniques.",
+    "language": "powershell",
+    "categories": [
+        {
+            "title": "Opening, Creating, and Closing Files",
+            "description": "Primary cmdlets and methods for file handling in PowerShell. It is best practice to close the file stream after operations are complete.",
+            "items": [
+                {
+                    "title": "File Functions",
+                    "description": null,
+                    "table": {
+                        "headers": [
+                            "Function",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "New-Item -Path <path> -ItemType File",
+                                "Creates a new file at the specified path. If the file already exists, it will not be overwritten."
+                            ],
+                            [
+                                "Get-Content -Path <path>",
+                                "Reads the content of a file and returns it as an array of lines."
+                            ],
+                            [
+                                "Set-Content -Path <path> -Value <content>",
+                                "Writes content to a file, replacing any existing content."
+                            ],
+                            [
+                                "Add-Content -Path <path> -Value <content>",
+                                "Appends content to the end of a file without overwriting existing content."
+                            ],
+                            [
+                                "Remove-Item -Path <path>",
+                                "Deletes the specified file."
+                            ]
+                        ]
+                    },
+                    "example": "New-Item -Path \"my_file.txt\" -ItemType File\nGet-Content -Path \"my_file.txt\"\nSet-Content -Path \"my_file.txt\" -Value \"New content\"\nAdd-Content -Path \"my_file.txt\" -Value \"Additional content\"\nRemove-Item -Path \"my_file.txt\""
+                },
+                {
+                    "title": ".NET Streams (when you need an actual handle)",
+                    "description": "For fine-grained control (encoding, buffering, locking), use .NET stream APIs. Prefer try/finally to ensure Dispose() runs.",
+                    "table": {
+                        "headers": [
+                            "API",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "[System.IO.File]::OpenRead(path)",
+                                "Opens a FileStream for read-only access."
+                            ],
+                            [
+                                "[System.IO.File]::OpenWrite(path)",
+                                "Opens a FileStream for writing (overwrites existing content)."
+                            ],
+                            [
+                                "New-Object System.IO.StreamReader(stream, encoding)",
+                                "Reads text from a stream with an explicit encoding."
+                            ],
+                            [
+                                "New-Object System.IO.StreamWriter(stream, encoding)",
+                                "Writes text to a stream with an explicit encoding."
+                            ]
+                        ]
+                    },
+                    "example": "$path = '.\\my_file.txt'\n$stream = $null\n$reader = $null\ntry {\n    $stream = [System.IO.File]::OpenRead($path)\n    $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::UTF8)\n    $text = $reader.ReadToEnd()\n    $text\n} finally {\n    if ($reader) { $reader.Dispose() }\n    if ($stream) { $stream.Dispose() }\n}"
+                }
+            ]
+        },
+        {
+            "title": "Reading Files",
+            "description": "Common patterns for reading files as lines, as a single string, or by tailing logs.",
+            "items": [
+                {
+                    "title": "Get-Content patterns",
+                    "description": "By default, Get-Content returns an array of lines. Use -Raw to read the whole file into a single string.",
+                    "table": {
+                        "headers": [
+                            "Command",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "Get-Content -Path <path>",
+                                "Reads a file as an array of lines."
+                            ],
+                            [
+                                "Get-Content -Path <path> -Raw",
+                                "Reads the entire file as one string (good for JSON/XML)."
+                            ],
+                            [
+                                "Get-Content -Path <path> -Tail 50",
+                                "Reads only the last N lines."
+                            ],
+                            [
+                                "Get-Content -Path <path> -Wait",
+                                "Tails a file (like tail -f)."
+                            ],
+                            [
+                                "Get-Content -LiteralPath <path>",
+                                "Treats the path literally (no wildcard expansion)."
+                            ]
+                        ]
+                    },
+                    "example": "$path = '.\\app.log'\n# Read lines\n$lines = Get-Content -Path $path\n# Read whole file\n$text = Get-Content -Path $path -Raw\n# Tail last 20 lines\nGet-Content -Path $path -Tail 20\n# Follow log\n# Get-Content -Path $path -Wait"
+                },
+                {
+                    "title": "Fast read (small files) via .NET",
+                    "description": "For small files, the .NET helpers are concise and fast.",
+                    "table": {
+                        "headers": [
+                            "API",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "[IO.File]::ReadAllText(path)",
+                                "Reads a text file into a single string."
+                            ],
+                            [
+                                "[IO.File]::ReadAllLines(path)",
+                                "Reads a text file into a string array (lines)."
+                            ],
+                            [
+                                "[IO.File]::ReadAllBytes(path)",
+                                "Reads a file into a byte array (binary)."
+                            ]
+                        ]
+                    },
+                    "example": "$text = [IO.File]::ReadAllText('.\\config.json')\n$lines = [IO.File]::ReadAllLines('.\\my_file.txt')\n$bytes = [IO.File]::ReadAllBytes('.\\image.png')"
+                }
+            ]
+        },
+        {
+            "title": "Writing and Appending",
+            "description": "Write text, append text, control encoding, and write binary content.",
+            "items": [
+                {
+                    "title": "Set-Content vs Out-File vs Add-Content",
+                    "description": "Use Set-Content to replace, Add-Content to append, and Out-File when you want formatting control or to write pipeline output.",
+                    "table": {
+                        "headers": [
+                            "Command",
+                            "Notes"
+                        ],
+                        "rows": [
+                            [
+                                "Set-Content -Path <path> -Value <text>",
+                                "Replaces file contents."
+                            ],
+                            [
+                                "Add-Content -Path <path> -Value <text>",
+                                "Appends to file."
+                            ],
+                            [
+                                "Out-File -FilePath <path>",
+                                "Writes formatted output (often used with pipelines)."
+                            ],
+                            [
+                                "-Encoding utf8",
+                                "Explicitly set encoding when needed (varies by PowerShell version)."
+                            ],
+                            [
+                                "-NoNewline",
+                                "Write without trailing newline (Out-File, Set-Content on newer PS)."
+                            ]
+                        ]
+                    },
+                    "example": "$path = '.\\output.txt'\nSet-Content -Path $path -Value 'first line'\nAdd-Content -Path $path -Value 'second line'\nGet-Process | Select-Object -First 5 | Out-File -FilePath $path -Append"
+                },
+                {
+                    "title": "Write binary files",
+                    "description": "Use .NET APIs for binary reads/writes.",
+                    "table": null,
+                    "example": "$bytes = 0..255\n[IO.File]::WriteAllBytes('.\\bytes.bin', [byte[]]$bytes)\n$readBack = [IO.File]::ReadAllBytes('.\\bytes.bin')\n$readBack.Length"
+                }
+            ]
+        },
+        {
+            "title": "Directory and File Management",
+            "description": "Create, list, copy, move, rename, and delete files and directories.",
+            "items": [
+                {
+                    "title": "Common filesystem cmdlets",
+                    "description": "Most file system operations are cmdlets. Use -Recurse cautiously when deleting.",
+                    "table": {
+                        "headers": [
+                            "Cmdlet",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "Get-ChildItem (-Path <path>)",
+                                "Lists files and folders (alias: ls, dir, gci)."
+                            ],
+                            [
+                                "New-Item -ItemType Directory -Path <path>",
+                                "Creates a directory."
+                            ],
+                            [
+                                "Copy-Item -Path <src> -Destination <dst>",
+                                "Copies files/folders."
+                            ],
+                            [
+                                "Move-Item -Path <src> -Destination <dst>",
+                                "Moves files/folders."
+                            ],
+                            [
+                                "Rename-Item -Path <path> -NewName <name>",
+                                "Renames a file/folder."
+                            ],
+                            [
+                                "Remove-Item -Path <path>",
+                                "Deletes a file/folder (use -Recurse for folders)."
+                            ],
+                            [
+                                "Test-Path -Path <path>",
+                                "Checks existence."
+                            ]
+                        ]
+                    },
+                    "example": "# List recursively\nGet-ChildItem -Path '.\\data' -Recurse\n\n# Create directory and a file\nNew-Item -ItemType Directory -Path '.\\out' -Force | Out-Null\nNew-Item -ItemType File -Path '.\\out\\result.txt' -Force | Out-Null\n\n# Copy and rename\nCopy-Item -Path '.\\out\\result.txt' -Destination '.\\out\\result-copy.txt'\nRename-Item -Path '.\\out\\result-copy.txt' -NewName 'result-renamed.txt'\n\n# Cleanup\nRemove-Item -Path '.\\out' -Recurse -Force"
+                }
+            ]
+        },
+        {
+            "title": "Paths and Wildcards",
+            "description": "PowerShell paths support wildcards by default. Use -LiteralPath to avoid wildcard expansion.",
+            "items": [
+                {
+                    "title": "Path helpers",
+                    "description": "Prefer these cmdlets for cross-platform path handling and to avoid string concatenation bugs.",
+                    "table": {
+                        "headers": [
+                            "Cmdlet",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "Join-Path -Path <base> -ChildPath <child>",
+                                "Builds a path using the correct separator."
+                            ],
+                            [
+                                "Split-Path -Path <path>",
+                                "Gets directory or leaf components."
+                            ],
+                            [
+                                "Resolve-Path -Path <path>",
+                                "Resolves to a full provider path."
+                            ],
+                            [
+                                "Convert-Path -Path <path>",
+                                "Converts a provider path to a filesystem path."
+                            ]
+                        ]
+                    },
+                    "example": "$base = (Get-Location).Path\n$full = Join-Path -Path $base -ChildPath 'logs\\app.log'\n$full\nSplit-Path -Path $full\nSplit-Path -Path $full -Leaf"
+                },
+                {
+                    "title": "-Path vs -LiteralPath",
+                    "description": "If your filenames contain wildcard characters like [ or ], -LiteralPath prevents accidental pattern matching.",
+                    "table": null,
+                    "example": "$weird = '.\\file[1].txt'\nSet-Content -LiteralPath $weird -Value 'ok'\nGet-Content -LiteralPath $weird"
+                }
+            ]
+        },
+        {
+            "title": "Metadata and Permissions",
+            "description": "Inspect file info and manage ACLs.",
+            "items": [
+                {
+                    "title": "File info",
+                    "description": "Get-Item/Get-ChildItem return FileInfo/DirectoryInfo objects with useful properties.",
+                    "table": {
+                        "headers": [
+                            "Property",
+                            "Meaning"
+                        ],
+                        "rows": [
+                            [
+                                "FullName",
+                                "Full path"
+                            ],
+                            [
+                                "Length",
+                                "Size in bytes (files)"
+                            ],
+                            [
+                                "LastWriteTime",
+                                "Last modified timestamp"
+                            ],
+                            [
+                                "Attributes",
+                                "Flags like ReadOnly, Hidden"
+                            ]
+                        ]
+                    },
+                    "example": "Get-ChildItem -Path '.\\' -File |\n  Select-Object FullName, Length, LastWriteTime, Attributes |\n  Sort-Object Length -Descending |\n  Select-Object -First 10"
+                },
+                {
+                    "title": "ACL basics",
+                    "description": "On Windows, Get-Acl/Set-Acl manage NTFS permissions. (On non-Windows, behavior depends on provider/host.)",
+                    "table": {
+                        "headers": [
+                            "Cmdlet",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "Get-Acl -Path <path>",
+                                "Reads permissions."
+                            ],
+                            [
+                                "Set-Acl -Path <path> -AclObject <acl>",
+                                "Writes permissions."
+                            ]
+                        ]
+                    },
+                    "example": "$acl = Get-Acl -Path '.\\my_file.txt'\n$acl.Access | Select-Object IdentityReference, FileSystemRights, AccessControlType | Format-Table -AutoSize"
+                }
+            ]
+        },
+        {
+            "title": "Temporary Files and Directories",
+            "description": "Create temporary files safely for intermediate work.",
+            "items": [
+                {
+                    "title": "New-TemporaryFile",
+                    "description": "Creates a temp file and returns a FileInfo object.",
+                    "table": null,
+                    "example": "$tmp = New-TemporaryFile\n$tmp.FullName\nSet-Content -Path $tmp.FullName -Value 'temp data'\nRemove-Item -Path $tmp.FullName"
+                },
+                {
+                    "title": "Temp directory",
+                    "description": "Use .NET to locate the temp directory.",
+                    "table": null,
+                    "example": "$tempDir = [IO.Path]::GetTempPath()\n$tempFile = Join-Path $tempDir 'example.txt'\nSet-Content -Path $tempFile -Value 'hello'\nRemove-Item -Path $tempFile"
+                }
+            ]
+        },
+        {
+            "title": "JSON and CSV",
+            "description": "Common patterns for reading/writing structured data files.",
+            "items": [
+                {
+                    "title": "JSON read/write",
+                    "description": "ConvertFrom-Json parses JSON text; ConvertTo-Json serializes objects. Use -Raw when reading JSON from disk.",
+                    "table": {
+                        "headers": [
+                            "Command",
+                            "Description"
+                        ],
+                        "rows": [
+                            [
+                                "Get-Content -Raw <path> | ConvertFrom-Json",
+                                "Reads JSON file into an object."
+                            ],
+                            [
+                                "<obj> | ConvertTo-Json -Depth <n>",
+                                "Serializes an object to JSON (use -Depth for nested objects)."
+                            ],
+                            [
+                                "<obj> | ConvertTo-Json | Set-Content <path>",
+                                "Writes JSON to a file."
+                            ]
+                        ]
+                    },
+                    "example": "$config = Get-Content -Raw '.\\config.json' | ConvertFrom-Json\n$config.username\n\n$config.username = 'alice'\n$config | ConvertTo-Json -Depth 10 | Set-Content -Path '.\\config.json'"
+                },
+                {
+                    "title": "CSV import/export",
+                    "description": "Import-Csv returns objects; Export-Csv writes objects.",
+                    "table": null,
+                    "example": "$rows = Import-Csv -Path '.\\users.csv'\n$rows | Select-Object -First 5\n\n$rows | Export-Csv -Path '.\\users-out.csv' -NoTypeInformation"
+                }
+            ]
+        },
+        {
+            "title": "Error Handling for File Operations",
+            "description": "PowerShell uses non-terminating errors by default for many cmdlets. Use -ErrorAction Stop with try/catch when you need control flow.",
+            "items": [
+                {
+                    "title": "try/catch + -ErrorAction Stop",
+                    "description": null,
+                    "table": {
+                        "headers": [
+                            "Pattern",
+                            "Why"
+                        ],
+                        "rows": [
+                            [
+                                "-ErrorAction Stop",
+                                "Converts many cmdlet errors into terminating errors (catchable)."
+                            ],
+                            [
+                                "try { ... } catch { ... }",
+                                "Handle errors with access to $_ (the exception record)."
+                            ],
+                            [
+                                "finally { ... }",
+                                "Always runs cleanup logic."
+                            ]
+                        ]
+                    },
+                    "example": "try {\n    $text = Get-Content -Path '.\\missing.txt' -Raw -ErrorAction Stop\n} catch {\n    Write-Host ('Failed: ' + $_.Exception.Message)\n}"
+                }
+            ]
+        }
+    ]
+}

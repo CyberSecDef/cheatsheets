@@ -1,0 +1,26 @@
+{
+    "title": "Sample Cheatsheet",
+    "description": "A comprehensive guide to .",
+    "language": "shell",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Instaling the thing.",
+            "items": [
+                {
+                    "title": "Installation",
+                    "description": "How to install the thing.",
+                    "table": {
+                        "headers": ["Function", "Description"],
+                        "rows": [
+                            ["Function 1", "What it does."],
+                            ["Function 2", "What this does."],
+                            
+                        ]
+                    },
+                    "example": "// Example of doing something\nwith multiple lines"
+                },
+            ]
+        }        
+    ]
+}

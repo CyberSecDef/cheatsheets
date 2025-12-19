@@ -1,0 +1,576 @@
+{
+	"title": "Python Cheatsheet",
+	"description": "A general-purpose Python quick reference covering syntax, functions, modules, common pitfalls, and day-to-day patterns.",
+	"language": "python",
+	"categories": [
+		{
+			"title": "Installation and Tooling",
+			"description": "Common commands for running Python, managing environments, and packages.",
+			"items": [
+				{
+					"title": "Python and pip basics",
+					"description": "Prefer python3 and pip3 on Linux/macOS (depends on your system).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["python --version", "Show Python version"],
+							["python -m pip --version", "Show pip version"],
+							["python file.py", "Run a script"],
+							["python -m module", "Run a module as a script"],
+							["python -c \"print(2+2)\"", "Run a one-liner"],
+							["python -m pip install requests", "Install a package"],
+							["python -m pip install -r requirements.txt", "Install dependencies"],
+							["python -m pip freeze", "List installed packages"],
+							["python -m pip list", "List installed packages (tabular)" ]
+						]
+					},
+					"example": "python --version\npython -m pip install -r requirements.txt\npython app.py"
+				},
+				{
+					"title": "Virtual environments",
+					"description": "Use venv to isolate dependencies per project.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["python -m venv .venv", "Create a virtual environment"],
+							["source .venv/bin/activate", "Activate (bash/zsh)"],
+							[".venv\\Scripts\\activate", "Activate (Windows PowerShell)"],
+							["deactivate", "Deactivate" ]
+						]
+					},
+					"example": "python -m venv .venv\nsource .venv/bin/activate\npython -m pip install requests"
+				}
+			]
+		},
+		{
+			"title": "Basic Functionality",
+			"description": "Core syntax: variables, types, strings, formatting, and basic I/O.",
+			"items": [
+				{
+					"title": "Variables and types",
+					"description": "Python is dynamically typed; type hints are optional but useful.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Assignment", "x = 42"],
+							["Multiple assignment", "a, b = 1, 2"],
+							["None", "x = None"],
+							["Type checks", "isinstance(x, int)"],
+							["Casting", "int('123'), str(123)"],
+							["Debug", "print(x), repr(x)" ]
+						]
+					},
+					"example": "name = 'Ada'\nage = 36\nactive = True\nprint(name, age, active, type(age))"
+				},
+				{
+					"title": "Strings",
+					"description": "Use f-strings for formatting; strings are immutable.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Format", "f'Hello {name}'"],
+							["Join", "','.join(parts)"],
+							["Split", "s.split(',')"],
+							["Strip", "s.strip()"],
+							["Contains", "'sub' in s"],
+							["Replace", "s.replace('a', 'b')" ]
+						]
+					},
+					"example": "name = 'World'\nprint(f'Hello {name}')\ns = ' a,b,c '\nprint([p.strip() for p in s.split(',')])"
+				},
+				{
+					"title": "Input and output",
+					"description": "Use print() for output; input() reads from stdin.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["print(*args)", "Writes text to stdout"],
+							["input(prompt)", "Reads a line from stdin"],
+							["sys.stderr", "Write errors/logs"],
+							["logging", "Structured logging (recommended for apps)" ]
+						]
+					},
+					"example": "import sys\nprint('hello')\nprint('oops', file=sys.stderr)"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Parameters, returns, scope, anonymous functions, and common built-ins.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "Supports defaults, keyword-only args, variadics (*args/**kwargs), and multiple returns via tuples.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Return value", "def f() -> int: return 1"],
+							["Multiple return", "return a, b"],
+							["Default", "def f(n=10): ..."],
+							["Keyword args", "f(n=3)"],
+							["*args", "def f(*args): ..."],
+							["**kwargs", "def f(**kwargs): ..."],
+							["Keyword-only", "def f(*, debug=False): ..." ]
+						]
+					},
+					"example": "def divmod2(a: int, b: int) -> tuple[int, int]:\n    return a // b, a % b\n\nq, r = divmod2(10, 3)\nprint(q, r)"
+				},
+				{
+					"title": "Scope (LEGB) and globals",
+					"description": "Python resolves names with LEGB: Local, Enclosing, Global, Builtins.",
+					"table": {
+						"headers": ["Keyword", "Meaning"],
+						"rows": [
+							["global", "Bind a name in module scope"],
+							["nonlocal", "Bind a name in nearest enclosing function scope" ]
+						]
+					},
+					"example": "x = 1\n\ndef outer():\n    y = 2\n    def inner():\n        nonlocal y\n        y += 1\n        return y\n    return inner\n\ninc = outer()\nprint(inc(), inc())"
+				},
+				{
+					"title": "Anonymous functions",
+					"description": "lambda is limited to a single expression; prefer def for anything non-trivial.",
+					"table": {
+						"headers": ["Use", "Example"],
+						"rows": [
+							["lambda", "sorted(xs, key=lambda x: x['name'])"],
+							["closure", "def make_adder(n): return lambda x: x+n" ]
+						]
+					},
+					"example": "users = [{'name': 'Ada'}, {'name': 'Linus'}]\nprint(sorted(users, key=lambda u: u['name']))"
+				},
+				{
+					"title": "Built-in / predefined functions (common)",
+					"description": "A small sampling of frequently used built-ins.",
+					"table": {
+						"headers": ["Built-in", "What it does"],
+						"rows": [
+							["len", "Length of a collection"],
+							["sum/min/max", "Aggregation"],
+							["sorted", "Sort an iterable"],
+							["any/all", "Boolean aggregation"],
+							["enumerate", "Index + value iteration"],
+							["zip", "Iterate multiple iterables together"],
+							["map/filter", "Functional transforms (often replaced by comprehensions)"],
+							["range", "Integer sequence"],
+							["type/isinstance", "Type inspection" ]
+						]
+					},
+					"example": "nums = [1, 2, 3, 4]\nprint(sum(nums), any(n > 3 for n in nums))"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering collections and validating/parsing values.",
+			"items": [
+				{
+					"title": "Filtering and mapping",
+					"description": "List comprehensions are the idiomatic approach.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Filter", "[x for x in xs if x > 0]"],
+							["Map", "[x * 2 for x in xs]"],
+							["Filter + map", "[x * 2 for x in xs if x > 0]"],
+							["Built-in filter", "list(filter(pred, xs))"],
+							["Built-in map", "list(map(f, xs))" ]
+						]
+					},
+					"example": "xs = [-2, -1, 0, 1, 2]\nprint([x * 2 for x in xs if x > 0])"
+				},
+				{
+					"title": "Parsing and validation",
+					"description": "Use int()/float() for parsing and exceptions for invalid input.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Int parse", "int('123')"],
+							["Float parse", "float('1.25')"],
+							["Safe parse", "try: int(s) except ValueError"],
+							["Email-like check", "re.fullmatch(r'[^@]+@[^@]+', s)" ]
+						]
+					},
+					"example": "import re\n\ndef parse_int(s: str) -> int | None:\n    try:\n        return int(s.strip())\n    except ValueError:\n        return None\n\nprint(parse_int(' 12 '))\nprint(bool(re.fullmatch(r'[^@]+@[^@]+', 'a@example.com')))"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Module-level state and common global namespaces.",
+			"items": [
+				{
+					"title": "Global variables",
+					"description": "Globals are module-level names. Prefer passing dependencies explicitly.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Module global", "DEFAULT_TIMEOUT = 5"],
+							["Modify global", "global x"],
+							["Builtins", "__builtins__ (internal)"],
+							["Module name", "__name__" ]
+						]
+					},
+					"example": "DEFAULT_TIMEOUT = 5\n\ncount = 0\n\ndef bump():\n    global count\n    count += 1\n\nbump()\nprint(count)"
+				},
+				{
+					"title": "Environment variables",
+					"description": "Use os.environ / os.getenv for configuration.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["Read", "os.getenv('NAME', 'default')"],
+							["All vars", "dict(os.environ)" ]
+						]
+					},
+					"example": "import os\nprint(os.getenv('HOME'))\nprint(os.getenv('APP_ENV', 'dev'))"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "Imports, packaging, and dependency management.",
+			"items": [
+				{
+					"title": "Imports",
+					"description": "Prefer absolute imports in packages; use aliases to avoid name collisions.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Import module", "import json"],
+							["Import symbol", "from pathlib import Path"],
+							["Alias", "import numpy as np"],
+							["Relative import", "from .utils import f" ]
+						]
+					},
+					"example": "from pathlib import Path\nimport json\n\nprint(Path('.').resolve())\nprint(json.dumps({'ok': True}))"
+				},
+				{
+					"title": "pip and project deps",
+					"description": "requirements.txt is common; modern projects often use pyproject.toml (pip, poetry, uv, etc.).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["python -m pip install -r requirements.txt", "Install deps"],
+							["python -m pip freeze > requirements.txt", "Pin deps"],
+							["python -m pip install -e .", "Editable install of a local package" ]
+						]
+					},
+					"example": "python -m pip install -r requirements.txt\npython -m pip freeze > requirements.txt"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Common operators and related syntax.",
+			"items": [
+				{
+					"title": "Comparison, boolean, membership, identity",
+					"description": "Use is for identity (None checks), == for value equality.",
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["== != < <= > >=", "Comparisons"],
+							["and / or / not", "Boolean operators"],
+							["in / not in", "Membership"],
+							["is / is not", "Identity"],
+							["?:", "No ternary operator; use x if cond else y" ]
+						]
+					},
+					"example": "x = None\nprint(x is None)\nprint('a' in 'cat')\nprint('yes' if 1 < 2 else 'no')"
+				},
+				{
+					"title": "Arithmetic and bitwise",
+					"description": null,
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["+ - * / // %", "Arithmetic (// is floor division)"],
+							["**", "Exponent"],
+							["& | ^ ~", "Bitwise"],
+							["<< >>", "Bit shifts"],
+							["+=, -=, ...", "In-place update" ]
+						]
+					},
+					"example": "print(7 // 3, 7 % 3)\nprint(2 ** 10)\nprint(6 & 3, 6 | 3)"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequent exceptions and pitfalls.",
+			"items": [
+				{
+					"title": "Typical exceptions",
+					"description": null,
+					"table": {
+						"headers": ["Exception", "Common cause"],
+						"rows": [
+							["NameError", "Variable not defined"],
+							["TypeError", "Wrong type/arity, None used incorrectly"],
+							["ValueError", "Value has correct type but invalid (e.g., int('x'))"],
+							["KeyError", "Missing dict key"],
+							["IndexError", "List index out of range"],
+							["AttributeError", "Missing attribute/method"],
+							["FileNotFoundError", "Missing file path"],
+							["ImportError/ModuleNotFoundError", "Missing dependency or wrong module path" ]
+						]
+					},
+					"example": "d = {}\nprint(d.get('missing', 'default'))  # avoids KeyError"
+				},
+				{
+					"title": "Common gotchas",
+					"description": "A few frequent surprises.",
+					"table": {
+						"headers": ["Gotcha", "Fix"],
+						"rows": [
+							["Mutable default args", "Use None and create inside function"],
+							["Shadowing built-ins", "Avoid naming variables list, dict, str, etc."],
+							["Chained comparison confusion", "Remember: 1 < x < 10 is valid" ]
+						]
+					},
+					"example": "def add_item(x, items=None):\n    if items is None:\n        items = []\n    items.append(x)\n    return items"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Python uses lists/tuples for sequences, and dicts/sets for collections.",
+			"items": [
+				{
+					"title": "Lists, tuples, sets, dicts",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["list", "Mutable sequence"],
+							["tuple", "Immutable sequence"],
+							["set", "Unique items, unordered"],
+							["dict", "Key/value mapping" ]
+						]
+					},
+					"example": "xs = [1, 2, 3]\nxs.append(4)\nprint(xs, xs[1:3])\n\nm = {'a': 1}\nprint(m.get('b', 0))"
+				},
+				{
+					"title": "Comprehensions",
+					"description": "Comprehensions are concise and idiomatic.",
+					"table": {
+						"headers": ["Type", "Example"],
+						"rows": [
+							["List", "[x * 2 for x in xs if x > 0]"],
+							["Dict", "{k: v for k, v in pairs}"],
+							["Set", "{x for x in xs}"],
+							["Generator", "(x for x in xs)" ]
+						]
+					},
+					"example": "xs = [1, 2, 3, 4]\nprint([x * 2 for x in xs if x % 2 == 0])\nprint({x: x*x for x in xs})"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "Iteration patterns.",
+			"items": [
+				{
+					"title": "for / while",
+					"description": "Use enumerate() for index+value; use break/continue as needed.",
+					"table": {
+						"headers": ["Loop", "Example"],
+						"rows": [
+							["for", "for x in xs: ..."],
+							["enumerate", "for i, x in enumerate(xs): ..."],
+							["while", "while cond: ..."],
+							["break/continue", "break; continue" ]
+						]
+					},
+					"example": "xs = ['a', 'b', 'c']\nfor i, x in enumerate(xs):\n    print(i, x)"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "Branching with if/elif/else and pattern matching (Python 3.10+).",
+			"items": [
+				{
+					"title": "if / elif / else",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["if", "if x > 0: ..."],
+							["elif", "elif x == 0: ..."],
+							["else", "else: ..."],
+							["Truthy/falsy", "Empty collections are falsy" ]
+						]
+					},
+					"example": "x = 0\nif x > 0:\n    print('pos')\nelif x == 0:\n    print('zero')\nelse:\n    print('neg')"
+				},
+				{
+					"title": "match / case (3.10+)",
+					"description": "Structural pattern matching can replace some switch-style logic.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Literal", "case 404:"],
+							["OR", "case 400 | 401:"],
+							["Sequence", "case [x, y]:"],
+							["Mapping", "case {'id': i}:" ]
+						]
+					},
+					"example": "code = 404\nmatch code:\n    case 200:\n        msg = 'OK'\n    case 404:\n        msg = 'Not Found'\n    case _:\n        msg = 'Other'\nprint(msg)"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "The re module supports PCRE-like syntax.",
+			"items": [
+				{
+					"title": "re basics",
+					"description": null,
+					"table": {
+						"headers": ["Function", "Purpose"],
+						"rows": [
+							["re.search", "Find first match anywhere"],
+							["re.match", "Match only at start"],
+							["re.fullmatch", "Match the entire string"],
+							["re.findall", "Return all matches"],
+							["re.sub", "Replace matches"],
+							["re.compile", "Compile a pattern" ]
+						]
+					},
+					"example": "import re\n\npat = re.compile(r'^(\\w+)@(\\w+)\\.(\\w+)$')\nm = pat.fullmatch('a@example.com')\nprint(m.group(1) if m else None)"
+				}
+			]
+		},
+		{
+			"title": "Date and Time",
+			"description": "Use datetime and timezone-aware values for real applications.",
+			"items": [
+				{
+					"title": "datetime essentials",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Now", "datetime.now(timezone.utc)"],
+							["Format", "dt.isoformat()"],
+							["Parse", "datetime.fromisoformat(s)"],
+							["Timedelta", "dt + timedelta(days=1)"],
+							["Unix timestamp", "datetime.fromtimestamp(ts, tz=timezone.utc)" ]
+						]
+					},
+					"example": "from datetime import datetime, timedelta, timezone\n\ndt = datetime.now(timezone.utc)\nprint(dt.isoformat())\nprint((dt + timedelta(days=1)).isoformat())"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "Python DB access varies by driver; use parameterized queries to avoid SQL injection.",
+			"items": [
+				{
+					"title": "SQLite (stdlib: sqlite3)",
+					"description": "sqlite3 is built-in and is great for demos and local tools.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Connect", "sqlite3.connect('app.db')"],
+							["Execute", "cur.execute('SELECT ... WHERE id=?', (id,))"],
+							["Fetch one", "cur.fetchone()"],
+							["Fetch all", "cur.fetchall()"],
+							["Commit", "con.commit()" ]
+						]
+					},
+					"example": "import sqlite3\n\ncon = sqlite3.connect(':memory:')\ncur = con.cursor()\ncur.execute('CREATE TABLE users(id INTEGER, name TEXT)')\ncur.execute('INSERT INTO users VALUES(?, ?)', (1, 'Ada'))\ncon.commit()\ncur.execute('SELECT name FROM users WHERE id=?', (1,))\nprint(cur.fetchone())"
+				},
+				{
+					"title": "DB-API notes",
+					"description": "Most SQL drivers follow PEP 249 (DB-API 2.0).",
+					"table": {
+						"headers": ["Tip", "Why"],
+						"rows": [
+							["Use placeholders", "Avoid SQL injection"],
+							["Close connections/cursors", "Release resources"],
+							["Use connection pooling", "For production services" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Extras: Exceptions and Error Handling",
+			"description": "Use exceptions for error handling; be specific when catching.",
+			"items": [
+				{
+					"title": "try/except/else/finally",
+					"description": null,
+					"table": {
+						"headers": ["Block", "When it runs"],
+						"rows": [
+							["try", "Wrap code that may fail"],
+							["except", "Runs on exception"],
+							["else", "Runs if no exception"],
+							["finally", "Runs always" ]
+						]
+					},
+					"example": "try:\n    n = int('12')\nexcept ValueError as e:\n    print('bad')\nelse:\n    print('ok', n)\nfinally:\n    print('done')"
+				}
+			]
+		},
+		{
+			"title": "Extras: Classes and Dataclasses",
+			"description": "OOP basics and dataclasses for lightweight data containers.",
+			"items": [
+				{
+					"title": "Classes and methods",
+					"description": "self is explicit; methods are functions on the class.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Class", "class User: ..."],
+							["Constructor", "def __init__(self, name):"],
+							["Instance method", "def greet(self):"],
+							["@classmethod", "Constructors/factories"],
+							["@staticmethod", "Namespaced function" ]
+						]
+					},
+					"example": "class User:\n    def __init__(self, name: str):\n        self.name = name\n\n    def greet(self) -> str:\n        return f'hi {self.name}'\n\nprint(User('Ada').greet())"
+				},
+				{
+					"title": "dataclasses",
+					"description": "Generate __init__, repr, comparisons, etc.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Decorator", "@dataclass"],
+							["Default values", "field(default_factory=list)"],
+							["Frozen", "@dataclass(frozen=True)" ]
+						]
+					},
+					"example": "from dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: int\n    y: int\n\nprint(Point(1, 2))"
+				}
+			]
+		},
+		{
+			"title": "Extras: Typing",
+			"description": "Type hints improve readability and tooling.",
+			"items": [
+				{
+					"title": "Common typing patterns",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Example"],
+						"rows": [
+							["Optional", "str | None"],
+							["List/Dict", "list[int], dict[str, int]"],
+							["Callable", "Callable[[int], str]"],
+							["Protocol", "Structural typing" ]
+						]
+					},
+					"example": "from typing import Callable\n\ndef apply(n: int, f: Callable[[int], int]) -> int:\n    return f(n)\n\nprint(apply(10, lambda x: x * 2))"
+				}
+			]
+		}
+	]
+}

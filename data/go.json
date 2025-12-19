@@ -1,0 +1,538 @@
+{
+	"title": "Go Cheatsheet",
+	"description": "A general-purpose Go quick reference covering syntax, functions, packages/modules, common pitfalls, and day-to-day patterns.",
+	"language": "go",
+	"categories": [
+		{
+			"title": "Installation and Tooling",
+			"description": "Core Go toolchain commands for building, testing, and managing modules.",
+			"items": [
+				{
+					"title": "Go toolchain essentials",
+					"description": "Most Go work flows through the go command.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["go version", "Show installed Go version"],
+							["go env", "Show Go environment variables"],
+							["go run .", "Build and run the current module"],
+							["go build ./...", "Build all packages"],
+							["go test ./...", "Run all tests"],
+							["go test -race ./...", "Run tests with the race detector"],
+							["go fmt ./...", "Format packages (gofmt)"],
+							["go vet ./...", "Static checks for suspicious constructs"],
+							["go doc fmt.Println", "Show documentation for a symbol"],
+							["go mod init example.com/myapp", "Create a new module"],
+							["go mod tidy", "Add/remove module requirements"],
+							["go list -m all", "List module dependencies"],
+							["go clean -cache -testcache", "Clear build/test caches"],
+							["go work init", "Initialize a workspace (multi-module)"],
+							["go work use ./module", "Add a module to the workspace"],
+							["go generate ./...", "Run go:generate directives"],
+							["go install pkg@version", "Install a tool binary at a version" ]
+						]
+					},
+					"example": "go mod init example.com/hello\n\ngo fmt ./...\n\ngo test ./...\n\ngo test -race ./..."
+				}
+			]
+		},
+		{
+			"title": "Basic Functionality",
+			"description": "Core syntax: packages, imports, variables, types, strings, and output.",
+			"items": [
+				{
+					"title": "Program structure",
+					"description": "Go code is organized into packages. The entry point is main.main().",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Package declaration", "package main"],
+							["Imports", "import (\"fmt\"; \"time\")"],
+							["Entry point", "func main() { ... }"],
+							["Visibility", "Exported identifiers start with a capital letter" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, Go\")\n}"
+				},
+				{
+					"title": "Variables, constants, and types",
+					"description": "Go is statically typed with type inference.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Short declaration", "x := 42"],
+							["Explicit type", "var name string = \"Ada\""],
+							["Zero values", "var n int // 0"],
+							["Constants", "const Pi = 3.14159"],
+							["Type conversion", "n := int(f)"],
+							["Pointers", "var p *int = &x; *p = 10" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tvar name string = \"Ada\"\n\tage := 36\n\tconst active = true\n\tf := 3.9\n\tn := int(f)\n\tfmt.Println(name, age, active, n)\n}"
+				},
+				{
+					"title": "Strings and runes",
+					"description": "Strings are byte slices; iterate runes for Unicode code points.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Length (bytes)", "len(s)"],
+							["Concatenate", "s = a + b"],
+							["Format", "fmt.Sprintf(\"%s %d\", name, n)"],
+							["Contains", "strings.Contains(s, \"sub\")"],
+							["Trim", "strings.TrimSpace(s)"],
+							["Iterate runes", "for _, r := range s { ... }" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"fmt\"\t\n\t\"strings\"\n)\n\nfunc main() {\n\ts := \"  café  \"\n\ts = strings.TrimSpace(s)\n\tfmt.Println(\"bytes\", len(s))\n\tfor _, r := range s {\n\t\tfmt.Printf(\"%c \", r)\n\t}\n\tfmt.Println()\n}"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Parameters, returns, scope, anonymous functions, and commonly used built-ins.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "Go supports multiple return values and named returns.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Single return", "func add(a, b int) int"],
+							["Multiple returns", "func split(s string) (string, string)"],
+							["Named returns", "func f() (n int, err error)"],
+							["Variadic", "func join(parts ...string) string"],
+							["Defer", "defer f.Close()" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc divmod(a, b int) (q int, r int) {\n\tq = a / b\n\tr = a % b\n\treturn\n}\n\nfunc main() {\n\tq, r := divmod(10, 3)\n\tfmt.Println(q, r)\n}"
+				},
+				{
+					"title": "Scope and closures",
+					"description": "Functions can close over variables from outer scope.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Package scope", "var Global = 1"],
+							["Block scope", "if x := 1; x > 0 { ... }"],
+							["Closure", "func() { fmt.Println(x) }" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc makeAdder(base int) func(int) int {\n\treturn func(n int) int {\n\t\treturn base + n\n\t}\n}\n\nfunc main() {\n\tadd10 := makeAdder(10)\n\tfmt.Println(add10(5))\n}"
+				},
+				{
+					"title": "Anonymous functions",
+					"description": "Often used with goroutines, callbacks, or small one-off logic.",
+					"table": {
+						"headers": ["Use", "Example"],
+						"rows": [
+							["Inline", "func(x int) int { return x * 2 }"],
+							["Goroutine", "go func() { ... }()" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tdouble := func(x int) int { return x * 2 }\n\tfmt.Println(double(21))\n}"
+				},
+				{
+					"title": "Built-in / predefined functions (common)",
+					"description": "A small sampling of frequently used built-ins.",
+					"table": {
+						"headers": ["Built-in", "What it does"],
+						"rows": [
+							["len / cap", "Length/capacity of arrays/slices/maps/channels"],
+							["make", "Allocate slices/maps/channels"],
+							["new", "Allocate zeroed value and return pointer"],
+							["append", "Append to a slice"],
+							["copy", "Copy between slices"],
+							["delete", "Delete a key from a map"],
+							["close", "Close a channel"],
+							["panic / recover", "Panic and recover (use sparingly)" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\ts := make([]int, 0, 3)\n\ts = append(s, 1, 2, 3)\n\tfmt.Println(len(s), cap(s))\n}"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering collections and validating/parsing input.",
+			"items": [
+				{
+					"title": "Filter a slice",
+					"description": "Idiomatic filtering uses a loop (or a small helper).",
+					"table": {
+						"headers": ["Pattern", "Notes"],
+						"rows": [
+							["Loop + append", "Simplest and fastest in most cases"],
+							["Generic helper", "Nice for reuse (Go 1.18+)" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc Filter[T any](in []T, keep func(T) bool) []T {\n\tout := make([]T, 0, len(in))\n\tfor _, v := range in {\n\t\tif keep(v) {\n\t\t\tout = append(out, v)\n\t\t}\n\t}\n\treturn out\n}\n\nfunc main() {\n\tnums := []int{1, 2, 3, 4, 5}\n\teven := Filter(nums, func(n int) bool { return n%2 == 0 })\n\tfmt.Println(even)\n}"
+				},
+				{
+					"title": "Parse and validate input",
+					"description": "Use strconv for numeric parsing and strings.TrimSpace for basic sanitation.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Trim", "strings.TrimSpace(s)"],
+							["Int parse", "strconv.Atoi(s)"],
+							["Float parse", "strconv.ParseFloat(s, 64)"],
+							["URL encoding", "url.QueryEscape(s)"],
+							["Validate with regex", "regexp.MatchString(pattern, s)" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"fmt\"\n\t\"regexp\"\n\t\"strconv\"\n\t\"strings\"\n)\n\nfunc main() {\n\ts := strings.TrimSpace(\" 123 \" )\n\tn, err := strconv.Atoi(s)\n\tfmt.Println(n, err)\n\nemail := \"a@example.com\"\nok, _ := regexp.MatchString(`^[^@]+@[^@]+$`, email)\n\tfmt.Println(ok)\n}"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Package-level variables/constants, initialization, and visibility.",
+			"items": [
+				{
+					"title": "Package-level state",
+					"description": "Globals are package-level identifiers. Prefer dependency injection for testability.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Package-level var", "var DefaultTimeout = 5 * time.Second"],
+							["Package-level const", "const AppName = \"demo\""],
+							["Initialization", "func init() { ... }"],
+							["Exported", "Name starts with capital letter" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"fmt\"\n\t\"time\"\n)\n\nvar DefaultTimeout = 2 * time.Second\n\nfunc init() {\n\t// init runs before main\n\tDefaultTimeout = 5 * time.Second\n}\n\nfunc main() {\n\tfmt.Println(DefaultTimeout)\n}"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "How Go organizes code and dependencies.",
+			"items": [
+				{
+					"title": "Modules and go.mod",
+					"description": "Modules are the unit of dependency versioning.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["go mod init example.com/myapp", "Create a new module"],
+							["go get example.com/pkg@v1.2.3", "Add/update a dependency"],
+							["go mod tidy", "Prune and add required deps"],
+							["go mod vendor", "Vendor deps into ./vendor"],
+							["go list -m -u all", "List available module upgrades"],
+							["go env GOPRIVATE", "Configure private modules" ]
+						]
+					},
+					"example": "go mod init example.com/myapp\ngo get github.com/google/uuid@latest\ngo mod tidy"
+				},
+				{
+					"title": "Imports and packages",
+					"description": "Import paths are module path + directory. Package name is declared in source.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Standard import", "import \"fmt\""],
+							["Grouped import", "import (\"fmt\"; \"net/http\")"],
+							["Blank import", "import _ \"driver/pkg\""],
+							["Alias", "import jsoniter \"github.com/...\"" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"fmt\"\n\t\"net/http\"\n)\n\nfunc main() {\n\t_ = http.MethodGet\n\tfmt.Println(\"ok\")\n}"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Common operators and related syntax.",
+			"items": [
+				{
+					"title": "Arithmetic, comparison, logical, bitwise",
+					"description": "Use == for value equality; there is no operator overloading.",
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["+ - * / %", "Arithmetic"],
+							["== != < <= > >=", "Comparison"],
+							["&& || !", "Logical"],
+							["& | ^ &^", "Bitwise (AND/OR/XOR/AND-NOT)"],
+							["<< >>", "Shifts"],
+							["&x / *p", "Address-of / dereference"],
+							["<-ch", "Receive from channel" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tx := 6\n\ty := 3\n\tfmt.Println(x+y, x%y)\n\tfmt.Println(x&y, x|y, x^y, x&^y)\n\tif x > y && y != 0 {\n\t\tfmt.Println(\"ok\")\n\t}\n}"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequent pitfalls and how to recognize them.",
+			"items": [
+				{
+					"title": "Typical compile/runtime errors",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause"],
+						"rows": [
+							["imported and not used", "Unused import (remove or use)"],
+							["declared and not used", "Unused variable (use it or remove)"],
+							["panic: runtime error: invalid memory address", "Nil pointer dereference"],
+							["fatal error: concurrent map writes", "Map writes from multiple goroutines without sync"],
+							["data race", "Shared mutable state without synchronization"],
+							["time.Parse returns error", "Wrong layout string (Go uses reference time)"],
+							["interface value is nil?", "Typed-nil in an interface (var e *T = nil; var err error = e)" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tvar p *int\n\tif p == nil {\n\t\tfmt.Println(\"nil pointer\")\n\t\treturn\n\t}\n\tfmt.Println(*p)\n}"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Arrays are fixed-length; slices are the more common dynamic view over arrays.",
+			"items": [
+				{
+					"title": "Arrays vs slices",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["[3]int", "Array: length is part of the type"],
+							["[]int", "Slice: length can change; references backing array"],
+							["append", "May reallocate backing array"],
+							["copy", "Copies elements between slices" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\ta := [3]int{1, 2, 3}\n\ts := a[:]\n\ts = append(s, 4)\n\tfmt.Println(a, s)\n}"
+				},
+				{
+					"title": "Maps",
+					"description": "Maps are reference types; iteration order is randomized.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Create", "m := map[string]int{}"],
+							["Make", "m := make(map[string]int, 8)"],
+							["Set", "m[\"a\"] = 1"],
+							["Get + ok", "v, ok := m[\"a\"]"],
+							["Delete", "delete(m, \"a\")" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tm := map[string]int{\"a\": 1}\n\tv, ok := m[\"a\"]\n\tfmt.Println(v, ok)\n\tdelete(m, \"a\")\n\t_, ok = m[\"a\"]\n\tfmt.Println(ok)\n}"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "Go only has one looping keyword: for.",
+			"items": [
+				{
+					"title": "for / range",
+					"description": null,
+					"table": {
+						"headers": ["Loop", "Example"],
+						"rows": [
+							["Classic for", "for i := 0; i < n; i++ { }"],
+							["While-style", "for cond { }"],
+							["Infinite", "for { }"],
+							["Range slice", "for i, v := range s { }"],
+							["Range map", "for k, v := range m { }"],
+							["Break/continue", "break; continue" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\ts := []string{\"a\", \"b\", \"c\"}\n\tfor i, v := range s {\n\t\tfmt.Println(i, v)\n\t}\n}"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "Branching with if/switch and type switches.",
+			"items": [
+				{
+					"title": "if / switch / type switch",
+					"description": "if can include a short statement; switch can omit a tag to behave like if/else chains.",
+					"table": {
+						"headers": ["Construct", "Notes"],
+						"rows": [
+							["if with init", "if v := f(); v > 0 { ... }"],
+							["switch", "switch x { case 1: ... default: ... }"],
+							["switch true", "switch { case cond: ... }"],
+							["type switch", "switch v := any.(type) { case string: ... }" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tvar any interface{} = 123\n\tswitch v := any.(type) {\n\tcase int:\n\t\tfmt.Println(\"int\", v)\n\tcase string:\n\t\tfmt.Println(\"string\", v)\n\tdefault:\n\t\tfmt.Println(\"other\")\n\t}\n}"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "The regexp package implements RE2 syntax (no backtracking).",
+			"items": [
+				{
+					"title": "regexp basics",
+					"description": null,
+					"table": {
+						"headers": ["Function", "Purpose"],
+						"rows": [
+							["regexp.Compile", "Compile pattern (returns error)"],
+							["regexp.MustCompile", "Compile pattern and panic on error"],
+							["re.MatchString", "Test match"],
+							["re.FindStringSubmatch", "Capture groups"],
+							["re.ReplaceAllString", "Replace" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"fmt\"\n\t\"regexp\"\n)\n\nfunc main() {\n\tre := regexp.MustCompile(`^(\\w+)@(\\w+)\\.(\\w+)$`)\n\tm := re.FindStringSubmatch(\"a@example.com\")\n\tfmt.Println(m)\n}"
+				}
+			]
+		},
+		{
+			"title": "Date and Time",
+			"description": "Use the time package. Remember: layouts use the reference time 2006-01-02 15:04:05.",
+			"items": [
+				{
+					"title": "time essentials",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Now", "time.Now()"],
+							["Format", "t.Format(time.RFC3339)"],
+							["Parse", "time.Parse(time.RFC3339, s)"],
+							["Custom layout", "t.Format(\"2006-01-02\")"],
+							["Duration", "time.Second, 500*time.Millisecond"],
+							["Add/sub", "t.Add(24 * time.Hour)"],
+							["Timers", "time.NewTimer(d), time.Sleep(d)" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"fmt\"\n\t\"time\"\n)\n\nfunc main() {\n\tnow := time.Now().UTC()\n\tfmt.Println(now.Format(time.RFC3339))\n\n\tt, err := time.Parse(time.RFC3339, \"2025-12-18T10:00:00Z\")\n\tfmt.Println(t, err)\n}"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "Use database/sql with prepared statements. You must import a driver for your database.",
+			"items": [
+				{
+					"title": "database/sql essentials",
+					"description": "Drivers register themselves via blank imports. Always close rows and use context in servers.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Connect", "db, err := sql.Open(\"driver\", dsn)"],
+							["Ping", "db.PingContext(ctx)"],
+							["Query row", "db.QueryRowContext(ctx, q, args...).Scan(&x)"],
+							["Query rows", "rows, _ := db.QueryContext(ctx, q, args...)"],
+							["Prepared stmt", "stmt, _ := db.PrepareContext(ctx, q)"],
+							["Tx", "tx, _ := db.BeginTx(ctx, nil)" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"context\"\n\t\"database/sql\"\t\n\t\"fmt\"\n\t\"time\"\n\t// Example: import a driver for your DB, e.g. Postgres or MySQL.\n\t// _ \"github.com/jackc/pgx/v5/stdlib\"\n)\n\nfunc main() {\n\tctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)\n\tdefer cancel()\n\n\tdb, err := sql.Open(\"driver\", \"dsn\")\n\tif err != nil {\n\t\tpanic(err)\n\t}\n\tdefer db.Close()\n\n\tvar name string\n\terr = db.QueryRowContext(ctx, \"SELECT name FROM users WHERE id = ?\", 1).Scan(&name)\n\tfmt.Println(name, err)\n}"
+				}
+			]
+		},
+		{
+			"title": "Extras: Error Handling",
+			"description": "Go uses explicit error returns and favors wrapping with %w.",
+			"items": [
+				{
+					"title": "Errors, wrapping, and checks",
+					"description": null,
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Return errors", "return value, err"],
+							["Wrap", "fmt.Errorf(\"context: %w\", err)"],
+							["Check", "errors.Is(err, target), errors.As(err, &t)"],
+							["Defer cleanup", "defer f.Close()" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"errors\"\n\t\"fmt\"\t\n)\n\nvar ErrNotFound = errors.New(\"not found\")\n\nfunc main() {\n\terr := fmt.Errorf(\"load user: %w\", ErrNotFound)\n\tfmt.Println(errors.Is(err, ErrNotFound))\n}"
+				}
+			]
+		},
+		{
+			"title": "Extras: Concurrency",
+			"description": "Goroutines, channels, and synchronization.",
+			"items": [
+				{
+					"title": "Goroutines and channels",
+					"description": "Use channels and sync primitives to coordinate; use context for cancellation.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Start goroutine", "go f()"],
+							["Make channel", "ch := make(chan int)"],
+							["Buffered channel", "ch := make(chan int, 16)"],
+							["Send/receive", "ch <- 1; x := <-ch"],
+							["Select", "select { case v := <-ch: ... }"],
+							["WaitGroup", "var wg sync.WaitGroup" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"fmt\"\n\t\"sync\"\n)\n\nfunc main() {\n\tch := make(chan int)\n\tvar wg sync.WaitGroup\n\twg.Add(1)\n\tgo func() {\n\t\tdefer wg.Done()\n\t\tch <- 42\n\t\tclose(ch)\n\t}()\n\n\tfor v := range ch {\n\t\tfmt.Println(v)\n\t}\n\twg.Wait()\n}"
+				}
+			]
+		},
+		{
+			"title": "Extras: Structs and Interfaces",
+			"description": "Composition, methods, interfaces, and embedding.",
+			"items": [
+				{
+					"title": "Structs, methods, interfaces",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Struct", "type User struct { ID int; Name string }"],
+							["Method", "func (u User) String() string"],
+							["Pointer receiver", "func (u *User) Rename(n string)"],
+							["Interface", "type Stringer interface { String() string }"],
+							["Embedding", "type Admin struct { User }" ]
+						]
+					},
+					"example": "package main\n\nimport \"fmt\"\n\ntype User struct {\n\tID   int\n\tName string\n}\n\nfunc (u User) String() string {\n\treturn fmt.Sprintf(\"%d:%s\", u.ID, u.Name)\n}\n\nfunc main() {\n\tfmt.Println(User{ID: 1, Name: \"Ada\"})\n}"
+				}
+			]
+		},
+		{
+			"title": "Extras: JSON and Encoding",
+			"description": "Encoding/decoding with encoding/json.",
+			"items": [
+				{
+					"title": "Marshal and Unmarshal",
+					"description": "Use struct tags to map JSON field names.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Marshal", "json.Marshal(v)"],
+							["Unmarshal", "json.Unmarshal(b, &v)"],
+							["Tags", "Name string `json:\"name\"`"],
+							["Decoder strict", "dec.DisallowUnknownFields()" ]
+						]
+					},
+					"example": "package main\n\nimport (\n\t\"encoding/json\"\n\t\"fmt\"\n)\n\ntype User struct {\n\tID   int    `json:\"id\"`\n\tName string `json:\"name\"`\n}\n\nfunc main() {\n\tu := User{ID: 1, Name: \"Ada\"}\n\tb, _ := json.Marshal(u)\n\tfmt.Println(string(b))\n\n\tvar v User\n\t_ = json.Unmarshal([]byte(`{\"id\":2,\"name\":\"Linus\"}`), &v)\n\tfmt.Println(v)\n}"
+				}
+			]
+		},
+		{
+			"title": "Extras: Testing",
+			"description": "How to run tests and common patterns.",
+			"items": [
+				{
+					"title": "go test essentials",
+					"description": "Table-driven tests are idiomatic.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["go test ./...", "Run all tests"],
+							["go test -run TestName", "Run tests matching regex"],
+							["go test -count=1", "Disable cached test results"],
+							["go test -bench .", "Run benchmarks"],
+							["go test -cover ./...", "Coverage" ]
+						]
+					},
+					"example": "package mathx\n\nimport \"testing\"\n\nfunc Add(a, b int) int { return a + b }\n\nfunc TestAdd(t *testing.T) {\n\ttests := []struct{ a, b, want int }{\n\t\t{1, 2, 3},\n\t\t{0, 0, 0},\n\t}\n\tfor _, tc := range tests {\n\t\tif got := Add(tc.a, tc.b); got != tc.want {\n\t\t\tt.Fatalf(\"Add(%d,%d)=%d want %d\", tc.a, tc.b, got, tc.want)\n\t\t}\n\t}\n}"
+				}
+			]
+		}
+	]
+}
