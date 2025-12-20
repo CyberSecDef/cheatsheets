@@ -1,0 +1,794 @@
+{
+    "title": "MATLAB",
+    "description": "A robust MATLAB quick reference covering language fundamentals, arrays/matrices, functions, operators, control flow, filtering, packages, I/O, regex, date/time, plotting, debugging/testing, and common errors.",
+    "language": "matlab",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Getting started: environment, documentation, and path management.",
+            "items": [
+                {
+                    "title": "Help and discovery",
+                    "description": "Find functions, documentation, and toolbox versions.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["ver", "List installed toolboxes and versions"],
+                            ["version", "MATLAB version string"],
+                            ["help name", "Help text for function or topic"],
+                            ["doc name", "Open documentation"],
+                            ["lookfor keyword", "Search help by keyword"],
+                            ["which name -all", "Show how a name resolves on the path"],
+                            ["exist('name','file')", "Check if file/function exists (2=file, 5=builtin)"],
+                            ["who / whos", "List variables (brief / detailed)"],
+                            ["clearvars", "Clear variables"],
+                            ["clc", "Clear Command Window"],
+                            ["close all", "Close all figure windows"]
+                        ]
+                    },
+                    "example": "which plot -all"
+                },
+                {
+                    "title": "Path and folders",
+                    "description": "Add/remove folders from the search path and manage the current folder.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["pwd", "Print current folder"],
+                            ["cd('path')", "Change current folder"],
+                            ["addpath('folder')", "Add folder to MATLAB path (current session)"],
+                            ["rmpath('folder')", "Remove folder from path"],
+                            ["savepath", "Persist the current path"],
+                            ["genpath('folder')", "Generate path string including subfolders"],
+                            ["rehash", "Refresh function and file system cache"],
+                            ["pathtool", "GUI for managing the MATLAB path"]
+                        ]
+                    },
+                    "example": "addpath(genpath(fullfile(pwd,'src')));\nsavepath"
+                },
+                {
+                    "title": "Scripts vs functions",
+                    "description": "Scripts run in the caller workspace; functions have their own workspace and explicit inputs/outputs.",
+                    "table": {
+                        "headers": ["File", "Behavior"],
+                        "rows": [
+                            ["my_script.m", "Executes in base/caller workspace"],
+                            ["function y = my_func(x)", "Has its own scope; returns outputs"],
+                            ["Live script (.mlx)", "Interactive document with code + output"]
+                        ]
+                    },
+                    "example": "% Prefer functions for reusable logic and tests."
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "Core syntax, variables, types, and everyday commands.",
+            "items": [
+                {
+                    "title": "Variables, display, and formatting",
+                    "description": "Create variables, control output, and change display format.",
+                    "table": {
+                        "headers": ["Pattern", "Notes"],
+                        "rows": [
+                            ["x = 1;", "Semicolon suppresses output"],
+                            ["disp(x)", "Display a value"],
+                            ["fprintf('%.2f\n', x)", "Formatted printing"],
+                            ["format short | long | compact", "Control numeric display"],
+                            ["class(x)", "Type/class"],
+                            ["size(A)", "Dimensions"],
+                            ["numel(A)", "Number of elements"],
+                            ["length(A)", "Longest dimension (often not what you want)"],
+                            ["isa(x,'double')", "Type check"]
+                        ]
+                    },
+                    "example": "x = pi;\nfprintf('pi ≈ %.3f\n', x)"
+                },
+                {
+                    "title": "Strings and characters",
+                    "description": "MATLAB has both string arrays (\"...\") and character vectors ('...').",
+                    "table": {
+                        "headers": ["Type", "Example"],
+                        "rows": [
+                            ["String scalar", "s = \"hello\""],
+                            ["Char vector", "c = 'hello'"],
+                            ["Concatenate strings", "t = s + \" world\""],
+                            ["Concatenate chars", "d = [c ' world']"],
+                            ["Convert", "string(c), char(s)"],
+                            ["Compare", "s == \"hello\" (strings), strcmp(c,'hello') (chars)" ]
+                        ]
+                    },
+                    "example": "s = \"abc\";\nstrlength(s)"
+                },
+                {
+                    "title": "Common data containers",
+                    "description": "Know the big four: numeric arrays, cell arrays, structs, and tables.",
+                    "table": {
+                        "headers": ["Container", "Use for"],
+                        "rows": [
+                            ["double array", "Numeric matrices, vectors, N-D arrays"],
+                            ["cell array", "Heterogeneous collections"],
+                            ["struct", "Named fields (records)"],
+                            ["table", "Columnar data with names and types"]
+                        ]
+                    },
+                    "example": "C = {1, 'a', rand(2)};\nS = struct('name','Ada','age',42);"
+                }
+            ]
+        },
+        {
+            "title": "Arrays",
+            "description": "Vectors, matrices, indexing, and reshaping.",
+            "items": [
+                {
+                    "title": "Create arrays",
+                    "description": "Common constructors and patterns.",
+                    "table": {
+                        "headers": ["Goal", "Example"],
+                        "rows": [
+                            ["Row vector", "v = [1 2 3]"],
+                            ["Column vector", "v = [1; 2; 3]"],
+                            ["Range", "x = 0:0.1:1"],
+                            ["linspace", "x = linspace(0,1,11)"],
+                            ["zeros/ones", "A = zeros(3,4); B = ones(2,2)"],
+                            ["identity", "I = eye(3)"],
+                            ["random", "R = rand(3); N = randn(3)"],
+                            ["diag", "D = diag([1 2 3])"],
+                            ["repmat", "T = repmat([1 2], 2, 3)" ]
+                        ]
+                    },
+                    "example": "A = [1 2 3; 4 5 6]"
+                },
+                {
+                    "title": "Indexing (1-based)",
+                    "description": "Use parentheses () for array indexing; end is the last index.",
+                    "table": {
+                        "headers": ["Pattern", "Meaning"],
+                        "rows": [
+                            ["A(i,j)", "Element at row i, col j"],
+                            ["A(:,j)", "All rows in column j"],
+                            ["A(i,:)", "All columns in row i"],
+                            ["A(end,:)", "Last row"],
+                            ["A(1:2:end)", "Every other element"],
+                            ["A(A>0)", "Logical indexing"],
+                            ["A(:)", "Linearize to column vector" ]
+                        ]
+                    },
+                    "example": "A = reshape(1:12, 3, 4);\nA(:,2)"
+                },
+                {
+                    "title": "Reshape and permute",
+                    "description": "Change shape without changing elements (when possible).",
+                    "table": {
+                        "headers": ["Function", "Example"],
+                        "rows": [
+                            ["reshape", "B = reshape(A, 2, 6)"],
+                            ["transpose", "A.' (non-conjugate), A' (conjugate)"],
+                            ["permute", "P = permute(A, [2 1 3])"],
+                            ["squeeze", "Remove singleton dimensions" ]
+                        ]
+                    },
+                    "example": "A = rand(2,3);\nB = A.'"
+                },
+                {
+                    "title": "Cells and structs indexing",
+                    "description": "Cells use {} to get contents; structs use dot access.",
+                    "table": {
+                        "headers": ["Type", "Indexing"],
+                        "rows": [
+                            ["Cell array", "C{1} gets element contents; C(1) returns a cell"],
+                            ["Struct", "S.field, S(i).field"],
+                            ["String array", "S(1) for elements" ]
+                        ]
+                    },
+                    "example": "C = {10, 20};\nx = C{1}; % 10"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Arithmetic, element-wise, relational, logical, and matrix ops.",
+            "items": [
+                {
+                    "title": "Arithmetic and matrix operators",
+                    "description": "Distinguish matrix ops from element-wise ops.",
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["+ -", "Add / subtract"],
+                            ["* / \\", "Matrix multiply / right divide / left divide"],
+                            ["^", "Matrix power"],
+                            [".* ./ .\\ .^", "Element-wise multiply/divide/power"],
+                            [".'", "Transpose (non-conjugate)"],
+                            ["'", "Conjugate transpose" ]
+                        ]
+                    },
+                    "example": "A = rand(3);\nx = rand(3,1);\ny = A\\x; % solve A*y = x"
+                },
+                {
+                    "title": "Relational and logical operators",
+                    "description": "Use & and | element-wise; && and || short-circuit for scalars.",
+                    "table": {
+                        "headers": ["Operator", "Notes"],
+                        "rows": [
+                            ["== ~= < <= > >=", "Relational"],
+                            ["& | ~", "Element-wise logical AND/OR/NOT"],
+                            ["&& ||", "Short-circuit (scalar logicals)"],
+                            ["xor", "Exclusive OR function" ]
+                        ]
+                    },
+                    "example": "tf = (x > 0) & (x < 1);"
+                },
+                {
+                    "title": "Colon operator",
+                    "description": "Build ranges and slices.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["start:end", "1:10"],
+                            ["start:step:end", "0:0.5:2"],
+                            ["A(:,1:3)", "First 3 columns" ]
+                        ]
+                    },
+                    "example": "x = 10:-2:0"
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "Branching, exception handling, and assertions.",
+            "items": [
+                {
+                    "title": "if / elseif / else",
+                    "description": "Use end to close blocks.",
+                    "example": "x = 5;\nif x < 0\n    y = -1;\nelseif x == 0\n    y = 0;\nelse\n    y = 1;\nend",
+                    "table": null
+                },
+                {
+                    "title": "switch / case",
+                    "description": "Cleaner for discrete cases.",
+                    "example": "cmd = \"start\";\nswitch cmd\n    case \"start\"\n        ok = true;\n    case \"stop\"\n        ok = false;\n    otherwise\n        error('Unknown command');\nend",
+                    "table": null
+                },
+                {
+                    "title": "try / catch",
+                    "description": "Handle errors and inspect exception identifiers/messages.",
+                    "example": "try\n    A = magic(3);\n    A(10);\ncatch ME\n    fprintf('Error: %s (%s)\\n', ME.message, ME.identifier);\nend",
+                    "table": null
+                },
+                {
+                    "title": "assert and validateattributes",
+                    "description": "Fail fast on invalid input.",
+                    "table": {
+                        "headers": ["Function", "Use"],
+                        "rows": [
+                            ["assert(cond,msg)", "Throw error if cond is false"],
+                            ["validateattributes(x, classes, attrs)", "Validate types/shapes/ranges"],
+                            ["mustBe...", "Argument validation functions (newer MATLAB)" ]
+                        ]
+                    },
+                    "example": "function y = f(x)\narguments\n    x (1,1) double {mustBeFinite}\nend\ny = x^2;\nend"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "Iteration patterns and common utilities.",
+            "items": [
+                {
+                    "title": "for loop",
+                    "description": "Iterate over a vector or 1:n.",
+                    "example": "s = 0;\nfor i = 1:10\n    s = s + i;\nend",
+                    "table": null
+                },
+                {
+                    "title": "while loop",
+                    "description": "Loop until condition becomes false.",
+                    "example": "x = 1;\nwhile x < 100\n    x = x * 2;\nend",
+                    "table": null
+                },
+                {
+                    "title": "Loop helpers",
+                    "description": "Common patterns for control flow and iteration.",
+                    "table": {
+                        "headers": ["Tool", "Example"],
+                        "rows": [
+                            ["break / continue", "break out / skip iteration"],
+                            ["arrayfun", "Apply function to array elements"],
+                            ["cellfun", "Apply function to cell elements"],
+                            ["strcmpi", "Case-insensitive compare for strings/chars" ]
+                        ]
+                    },
+                    "example": "A = 1:5;\nB = arrayfun(@(x) x^2, A)"
+                }
+            ]
+        },
+        {
+            "title": "Functions",
+            "description": "Definitions, parameters/returns, scope, anonymous functions, and common built-ins.",
+            "items": [
+                {
+                    "title": "Define a function",
+                    "description": "Functions live in their own files (or at end of scripts).",
+                    "example": "function y = square(x)\n    y = x.^2;\nend",
+                    "table": null
+                },
+                {
+                    "title": "Multiple inputs/outputs",
+                    "description": "Return multiple outputs with [a,b] = ... and manage optional arguments.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Multiple outputs", "[m,i] = max(x)"],
+                            ["Optional args", "nargin, inputParser, arguments block"],
+                            ["Varargs", "varargin / varargout"],
+                            ["Call by value", "Most types are copy-on-write; handles are reference-like" ]
+                        ]
+                    },
+                    "example": "function [mu,s] = stats(x)\n    mu = mean(x);\n    s = std(x);\nend"
+                },
+                {
+                    "title": "Anonymous functions and handles",
+                    "description": "Create function handles with @ and call them like f(x).",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Anonymous", "f = @(x) x.^2 + 1"],
+                            ["Handle to named function", "g = @sin"],
+                            ["Handle in optimization", "fminsearch(@(x) norm(A*x-b), x0)" ]
+                        ]
+                    },
+                    "example": "f = @(x) x.^2;\nf(3)"
+                },
+                {
+                    "title": "Scope (local, nested, persistent, global)",
+                    "description": "Understand where variables live and how they persist.",
+                    "table": {
+                        "headers": ["Type", "Notes"],
+                        "rows": [
+                            ["Local", "Default in functions"],
+                            ["Nested", "Inner function can access outer variables"],
+                            ["Persistent", "Retains value between calls"],
+                            ["Global", "Shared by name across workspaces (use sparingly)" ]
+                        ]
+                    },
+                    "example": "function n = counter()\n    persistent c;\n    if isempty(c); c = 0; end\n    c = c + 1;\n    n = c;\nend"
+                },
+                {
+                    "title": "Common built-ins",
+                    "description": "Frequently used numeric and array functions.",
+                    "table": {
+                        "headers": ["Category", "Examples"],
+                        "rows": [
+                            ["Reductions", "sum, mean, std, min, max"],
+                            ["Shape", "size, numel, length, reshape, permute"],
+                            ["Linear algebra", "inv (avoid), det, eig, svd, norm"],
+                            ["Indexing", "find, any, all, unique, sort"],
+                            ["Missing data", "isnan, ismissing, fillmissing" ]
+                        ]
+                    },
+                    "example": "[m,idx] = max([1 9 2]);"
+                }
+            ]
+        },
+        {
+            "title": "Filters",
+            "description": "Filtering data (signal processing and moving-window operations).",
+            "items": [
+                {
+                    "title": "Moving window smoothing",
+                    "description": "Quick denoising for time series.",
+                    "table": {
+                        "headers": ["Function", "Example"],
+                        "rows": [
+                            ["movmean", "y = movmean(x, 5)"],
+                            ["movmedian", "y = movmedian(x, 7)"],
+                            ["smoothdata", "y = smoothdata(x, 'movmean', 5)" ]
+                        ]
+                    },
+                    "example": "x = randn(100,1);\ny = movmean(x, 5);"
+                },
+                {
+                    "title": "Digital filtering (if available)",
+                    "description": "Use Signal Processing Toolbox functions when present.",
+                    "table": {
+                        "headers": ["Task", "Function"],
+                        "rows": [
+                            ["Apply FIR/IIR", "filter(b,a,x)"],
+                            ["Zero-phase", "filtfilt(b,a,x)"],
+                            ["Low/high-pass", "lowpass/highpass"],
+                            ["Design filters", "designfilt" ]
+                        ]
+                    },
+                    "example": "% y = lowpass(x, 0.2);  % depends on toolbox"
+                },
+                {
+                    "title": "Filtering via logical indexing",
+                    "description": "Filter rows/elements using logical masks.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Keep positives", "x = x(x>0)"],
+                            ["Filter table rows", "T = T(T.Age > 30, :)" ]
+                        ]
+                    },
+                    "example": "x = [-1 2 -3 4];\nx = x(x>0)"
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Global state and workspace interaction (use sparingly).",
+            "items": [
+                {
+                    "title": "global variables",
+                    "description": "Share a variable by name across functions that declare it global.",
+                    "example": "global CFG;\nCFG = struct('mode','dev','verbose',true);",
+                    "table": null
+                },
+                {
+                    "title": "Base workspace access",
+                    "description": "Advanced: evaluate or assign in another workspace.",
+                    "table": {
+                        "headers": ["Function", "Use"],
+                        "rows": [
+                            ["evalin", "Evaluate in base/caller workspace"],
+                            ["assignin", "Assign variable in base/caller workspace" ]
+                        ]
+                    },
+                    "example": "assignin('base','x',42);\nevalin('base','x')"
+                }
+            ]
+        },
+        {
+            "title": "Packages and Modules",
+            "description": "Organize code with package folders (+pkg) and manage dependencies via the path.",
+            "items": [
+                {
+                    "title": "Package folders (+name)",
+                    "description": "A folder named +util defines package util; call util.func().",
+                    "table": {
+                        "headers": ["Layout", "Call"],
+                        "rows": [
+                            ["+util/parse.m", "util.parse(...)"],
+                            ["+io/readCsv.m", "io.readCsv(...)" ]
+                        ]
+                    },
+                    "example": "% File: +util/add.m\n% function y = add(a,b); y = a+b; end\n% Use: util.add(1,2)"
+                },
+                {
+                    "title": "import (classes/packages)",
+                    "description": "Primarily used for packages/classes (more common with OOP).",
+                    "example": "import matlab.unittest.TestCase",
+                    "table": null
+                },
+                {
+                    "title": "Toolbox and project paths",
+                    "description": "MATLAB resolves symbols via the path; avoid name shadowing.",
+                    "table": {
+                        "headers": ["Command", "Tip"],
+                        "rows": [
+                            ["which name -all", "Detect shadowed functions"],
+                            ["addpath", "Add dependencies"],
+                            ["rmpath", "Remove conflicting folders" ]
+                        ]
+                    },
+                    "example": "which mean -all"
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "Search and replace with regexp/regexprep.",
+            "items": [
+                {
+                    "title": "regexp",
+                    "description": "Match patterns and extract tokens.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Test match", "tf = ~isempty(regexp(s,'^\"\\w+\"$','once'))"],
+                            ["Extract tokens", "t = regexp(s,'(\\d+)-(\\d+)','tokens','once')"],
+                            ["Case-insensitive", "regexp(s,'pattern','ignorecase')" ]
+                        ]
+                    },
+                    "example": "s = 'id=42';\nnum = regexp(s,'\\d+','match','once');"
+                },
+                {
+                    "title": "regexprep",
+                    "description": "Replace using a regex pattern.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Strip whitespace", "out = regexprep(s,'\\s+','')"],
+                            ["Replace digits", "out = regexprep(s,'\\d+','<num>')" ]
+                        ]
+                    },
+                    "example": "regexprep('a  b  c','\\s+',' ')"
+                }
+            ]
+        },
+        {
+            "title": "Date and Time",
+            "description": "Work with datetime, durations, and formatting.",
+            "items": [
+                {
+                    "title": "datetime basics",
+                    "description": "Prefer datetime over legacy datenum/datestr for new code.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Now", "t = datetime('now')"],
+                            ["Parse", "t = datetime('2025-12-20','InputFormat','yyyy-MM-dd')"],
+                            ["Format display", "t.Format = 'yyyy-MM-dd HH:mm:ss'"],
+                            ["Date arithmetic", "t + days(7), t - hours(3)"],
+                            ["Round/shift", "dateshift(t,'start','month')" ]
+                        ]
+                    },
+                    "example": "t = datetime('now');\nt.Format = 'yyyy-MM-dd';"
+                },
+                {
+                    "title": "Durations",
+                    "description": "Represent time intervals and convert units.",
+                    "table": {
+                        "headers": ["Function", "Example"],
+                        "rows": [
+                            ["minutes/hours/days", "d = hours(3) + minutes(15)"],
+                            ["seconds", "s = seconds(90)"],
+                            ["between", "d = between(t1,t2)" ]
+                        ]
+                    },
+                    "example": "d = hours(1) + minutes(30);\nminutes(d)"
+                },
+                {
+                    "title": "Legacy date functions",
+                    "description": "Older APIs still appear in codebases.",
+                    "table": {
+                        "headers": ["Function", "Notes"],
+                        "rows": [
+                            ["datenum", "Convert date to serial number"],
+                            ["datestr", "Convert to formatted string"],
+                            ["datevec", "Convert to [Y M D H M S]" ]
+                        ]
+                    },
+                    "example": "datestr(now)"
+                }
+            ]
+        },
+        {
+            "title": "Database Interactions",
+            "description": "Ways to query databases (toolbox-dependent).",
+            "items": [
+                {
+                    "title": "Database Toolbox (if available)",
+                    "description": "Use database connections and execute queries.",
+                    "table": {
+                        "headers": ["Step", "Concept"],
+                        "rows": [
+                            ["Connect", "conn = database(datasource, username, password)"],
+                            ["Query", "curs = exec(conn, 'SELECT ...')"],
+                            ["Fetch", "curs = fetch(curs); data = curs.Data"],
+                            ["Close", "close(conn)" ]
+                        ]
+                    },
+                    "example": "% conn = database('mydsn','user','pass');\n% curs = exec(conn,'SELECT 1');\n% curs = fetch(curs);\n% close(conn);"
+                },
+                {
+                    "title": "JDBC via Java",
+                    "description": "MATLAB can use Java JDBC drivers by adding jars to the path.",
+                    "table": {
+                        "headers": ["Action", "Example"],
+                        "rows": [
+                            ["Add driver", "javaaddpath('driver.jar')"],
+                            ["Connect", "java.sql.DriverManager.getConnection(url,user,pw)" ]
+                        ]
+                    },
+                    "example": "% Use with care; toolbox is usually easier."
+                },
+                {
+                    "title": "Flat-file alternative",
+                    "description": "Often simplest: export query results to CSV/Parquet and read with readtable/readmatrix.",
+                    "example": "T = readtable('export.csv');",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Data Import and Export",
+            "description": "Read/write common file formats for analysis and scripting.",
+            "items": [
+                {
+                    "title": "MAT-files",
+                    "description": "Persist variables to .mat files.",
+                    "table": {
+                        "headers": ["Task", "Command"],
+                        "rows": [
+                            ["Save", "save('file.mat','var1','var2')"],
+                            ["Load", "S = load('file.mat');"],
+                            ["Partial load", "load('file.mat','var1')" ]
+                        ]
+                    },
+                    "example": "A = rand(3);\nsave('tmp.mat','A');\nS = load('tmp.mat');"
+                },
+                {
+                    "title": "Tables and matrices",
+                    "description": "High-level import/export for CSV, Excel, delimited text.",
+                    "table": {
+                        "headers": ["Function", "Use"],
+                        "rows": [
+                            ["readtable/writetable", "CSV/Excel to table"],
+                            ["readmatrix/writematrix", "Numeric matrices"],
+                            ["readcell/writecell", "Mixed-type cell arrays"],
+                            ["detectImportOptions", "Control parsing and types" ]
+                        ]
+                    },
+                    "example": "T = readtable('data.csv');\nwritetable(T,'out.csv');"
+                },
+                {
+                    "title": "Text I/O",
+                    "description": "Lower-level file access.",
+                    "table": {
+                        "headers": ["Function", "Example"],
+                        "rows": [
+                            ["fopen/fclose", "fid = fopen('a.txt','r'); fclose(fid)"],
+                            ["fgetl", "line = fgetl(fid)"],
+                            ["fprintf", "fprintf(fid,'%s\n', str)"],
+                            ["fileread", "txt = fileread('a.txt')" ]
+                        ]
+                    },
+                    "example": "txt = fileread('README.md');"
+                }
+            ]
+        },
+        {
+            "title": "Plotting",
+            "description": "Core visualization patterns.",
+            "items": [
+                {
+                    "title": "Basic plots",
+                    "description": "Create a simple figure with labels and legend.",
+                    "table": {
+                        "headers": ["Plot", "Example"],
+                        "rows": [
+                            ["Line", "plot(x,y)"],
+                            ["Scatter", "scatter(x,y)"],
+                            ["Histogram", "histogram(x)"],
+                            ["Heatmap", "imagesc(A); colorbar" ]
+                        ]
+                    },
+                    "example": "x = 0:0.1:2*pi;\ny = sin(x);\nplot(x,y); xlabel('x'); ylabel('sin(x)'); grid on"
+                },
+                {
+                    "title": "Multiple plots and layout",
+                    "description": "Compose figures with subplot or tiledlayout.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["hold", "hold on; plot(...); hold off"],
+                            ["subplot", "subplot(2,1,1); ..."],
+                            ["tiledlayout", "tiledlayout(2,2); nexttile; ..." ]
+                        ]
+                    },
+                    "example": "tiledlayout(1,2);\nnexttile; plot(1:10);\nnexttile; histogram(randn(1000,1));"
+                },
+                {
+                    "title": "Export graphics",
+                    "description": "Save figures for reports.",
+                    "table": {
+                        "headers": ["Function", "Example"],
+                        "rows": [
+                            ["exportgraphics", "exportgraphics(gcf,'fig.png')"],
+                            ["saveas", "saveas(gcf,'fig.pdf')"],
+                            ["print", "print(gcf,'-dpng','-r300','fig.png')" ]
+                        ]
+                    },
+                    "example": "exportgraphics(gcf,'plot.png','Resolution',300)"
+                }
+            ]
+        },
+        {
+            "title": "Debugging and Testing",
+            "description": "Breakpoints, stack inspection, profiling, and unit testing.",
+            "items": [
+                {
+                    "title": "Debugger commands",
+                    "description": "Control execution from the command line.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["dbstop in file at line", "Set breakpoint"],
+                            ["dbclear all", "Clear breakpoints"],
+                            ["dbstack", "Show call stack"],
+                            ["dbstep", "Step"],
+                            ["dbcont", "Continue"],
+                            ["keyboard", "Enter debug mode" ]
+                        ]
+                    },
+                    "example": "% dbstop in myfunc at 10"
+                },
+                {
+                    "title": "Profiling and timing",
+                    "description": "Measure performance and identify bottlenecks.",
+                    "table": {
+                        "headers": ["Tool", "Example"],
+                        "rows": [
+                            ["timeit", "t = timeit(@() myfunc(x))"],
+                            ["tic/toc", "tic; myfunc(x); toc"],
+                            ["profile", "profile on; myfunc(x); profile viewer" ]
+                        ]
+                    },
+                    "example": "t = timeit(@() sum(rand(1e6,1)));"
+                },
+                {
+                    "title": "Unit testing framework",
+                    "description": "MATLAB includes a unit test framework (matlab.unittest).",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Create tests", "classdef MyTest < matlab.unittest.TestCase"],
+                            ["Run tests", "results = runtests('MyTest')"],
+                            ["Assertions", "verifyEqual, verifyTrue, assertTrue" ]
+                        ]
+                    },
+                    "example": "% results = runtests('tests');\n% table(results)"
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequent error messages and typical fixes.",
+            "items": [
+                {
+                    "title": "Index exceeds array bounds",
+                    "description": "Indexing past the end of an array (remember 1-based indexing and size(A)).",
+                    "table": {
+                        "headers": ["Symptom", "Typical fix"],
+                        "rows": [
+                            ["Index exceeds the number of array elements", "Check size/length/numel; validate indices."],
+                            ["Index in position 2 exceeds array bounds", "Check matrix dimensions and indexing order." ]
+                        ]
+                    },
+                    "example": "A = rand(2,2);\nA(3,1)  % error"
+                },
+                {
+                    "title": "Undefined function or variable",
+                    "description": "Often a path issue, misspelling, or name shadowing.",
+                    "table": {
+                        "headers": ["Check", "Command"],
+                        "rows": [
+                            ["Where MATLAB resolves name", "which name -all"],
+                            ["Path contains folder", "path"],
+                            ["Clear shadowing", "clear name"],
+                            ["Refresh cache", "rehash" ]
+                        ]
+                    },
+                    "example": "which myfunc -all"
+                },
+                {
+                    "title": "Matrix dimensions must agree",
+                    "description": "Occurs when using element-wise operations without matching shapes.",
+                    "table": {
+                        "headers": ["Cause", "Fix"],
+                        "rows": [
+                            ["Using * instead of .*", "Use element-wise operators for per-element math."],
+                            ["Mismatched sizes", "Use implicit expansion or reshape/permute to align sizes." ]
+                        ]
+                    },
+                    "example": "A = rand(3,1);\nB = rand(1,3);\nC = A .* B  % implicit expansion"
+                },
+                {
+                    "title": "Cell vs matrix indexing",
+                    "description": "Using () vs {} incorrectly is a common source of bugs.",
+                    "table": {
+                        "headers": ["Symptom", "Fix"],
+                        "rows": [
+                            ["Cell contents reference from a non-cell array object", "Use {} only for cell arrays"],
+                            ["Cannot convert from cell to double", "Extract contents with {} before numeric ops" ]
+                        ]
+                    },
+                    "example": "C = {1,2};\nC(1)   % cell\nC{1}  % value"
+                }
+            ]
+        }
+    ]
+}

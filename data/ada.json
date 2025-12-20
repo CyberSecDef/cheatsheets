@@ -1,0 +1,633 @@
+{
+    "title": "Ada",
+    "description": "A robust Ada quick reference covering core syntax, strong typing, packages, procedures/functions, arrays, control flow, generics, tasking/concurrency, I/O, regex (GNAT), date/time, tooling (GNAT), and common pitfalls.",
+    "language": "ada",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Toolchain basics (GNAT), building, running, and project layout.",
+            "items": [
+                {
+                    "title": "Common toolchain commands (GNAT)",
+                    "description": "GNAT is the most common Ada toolchain; exact command availability depends on distribution.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["gnatmake main.adb", "Compile + link a simple program"],
+                            ["gnatmake -g main.adb", "Build with debug symbols"],
+                            ["gnatmake -gnatwa main.adb", "Enable most warnings"],
+                            ["gnatmake -O2 main.adb", "Optimize build"],
+                            ["gnat clean", "Clean build artifacts (when using gnat tools)"],
+                            ["gnatbind main.ali", "Binder step (usually invoked by gnatmake)"],
+                            ["gnatlink main.ali", "Link step (usually invoked by gnatmake)"],
+                            ["gnatls -a", "List Ada library information"],
+                            ["gnatpp file.adb", "Pretty-print source" ]
+                        ]
+                    },
+                    "example": "gnatmake -gnatwa -g main.adb\n./main"
+                },
+                {
+                    "title": "Project build (GPRbuild / gpr)",
+                    "description": "Many Ada projects use project files (.gpr) for multi-unit builds.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["gprbuild -P project.gpr", "Build project"],
+                            ["gprclean -P project.gpr", "Clean project"],
+                            ["gprconfig", "Configure toolchain/targets (when available)" ]
+                        ]
+                    },
+                    "example": "gprbuild -P app.gpr"
+                },
+                {
+                    "title": "Ada compilation units",
+                    "description": "Ada code is organized into packages/specs/bodies. Filenames often follow unit names.",
+                    "table": {
+                        "headers": ["Unit", "File extension (common)"],
+                        "rows": [
+                            ["Package spec", ".ads"],
+                            ["Package body", ".adb"],
+                            ["Subprogram body", ".adb" ]
+                        ]
+                    },
+                    "example": "-- my_pkg.ads (spec) and my_pkg.adb (body)"
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "Core Ada syntax, types, declarations, and I/O fundamentals.",
+            "items": [
+                {
+                    "title": "Hello world (Ada.Text_IO)",
+                    "description": "A minimal program with Text_IO.",
+                    "example": "with Ada.Text_IO; use Ada.Text_IO;\n\nprocedure Main is\nbegin\n   Put_Line(\"Hello, Ada!\");\nend Main;",
+                    "table": null
+                },
+                {
+                    "title": "Declarations and assignment",
+                    "description": "Ada is strongly typed; variables must be declared with types.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Declare variable", "X : Integer := 0;"],
+                            ["Constant", "Pi : constant Float := 3.14159;"],
+                            ["Assignment", "X := X + 1;"],
+                            ["Subtype", "subtype Small is Integer range 1 .. 10;"],
+                            ["Type conversion", "Integer(3.0), Float(3)" ]
+                        ]
+                    },
+                    "example": "X : Integer := 0;\nX := X + 1;"
+                },
+                {
+                    "title": "Strong typing and ranges",
+                    "description": "Ranges and subtypes are common; constraints can raise Constraint_Error.",
+                    "table": {
+                        "headers": ["Feature", "Notes"],
+                        "rows": [
+                            ["Range constraints", "type Age is range 0 .. 130;"],
+                            ["Subtype constraints", "subtype Weekday is Integer range 1 .. 7;"],
+                            ["Constraint checks", "Runtime checks can raise Constraint_Error" ]
+                        ]
+                    },
+                    "example": "type Age is range 0 .. 130;\nA : Age := 200; -- raises Constraint_Error"
+                },
+                {
+                    "title": "Strings and characters",
+                    "description": "Ada has fixed-length String, Character, and common support packages for unbounded strings.",
+                    "table": {
+                        "headers": ["Type/Package", "Use"],
+                        "rows": [
+                            ["String", "Fixed-length array of Character"],
+                            ["Character", "Single character"],
+                            ["Ada.Strings.Unbounded", "Unbounded_String for dynamic text"],
+                            ["Ada.Strings.Fixed", "Utilities for fixed strings" ]
+                        ]
+                    },
+                    "example": "with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;\nS : Unbounded_String := To_Unbounded_String(\"hi\");"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Arithmetic, relational, boolean, and concatenation operators (and operator overloading via functions).",
+            "items": [
+                {
+                    "title": "Common operators",
+                    "description": "Operator set includes arithmetic, comparisons, boolean operators, and concatenation.",
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["+ - * /", "Arithmetic"],
+                            ["**", "Exponentiation"],
+                            ["mod rem", "Modulo / remainder"],
+                            ["= /= < <= > >=", "Relational"],
+                            ["and or xor not", "Boolean"],
+                            ["&", "Concatenation (strings/arrays)" ]
+                        ]
+                    },
+                    "example": "A := 7 mod 3; -- 1\nS := \"a\" & \"b\";"
+                },
+                {
+                    "title": "Short-circuit boolean operators",
+                    "description": "Ada supports short-circuit forms for boolean operations.",
+                    "table": {
+                        "headers": ["Operator", "Notes"],
+                        "rows": [
+                            ["and then", "Short-circuit AND"],
+                            ["or else", "Short-circuit OR" ]
+                        ]
+                    },
+                    "example": "if X /= 0 and then (Y / X) > 1 then null; end if;"
+                },
+                {
+                    "title": "Operator overloading",
+                    "description": "You can overload operators by defining functions with operator symbol names.",
+                    "example": "function \"+\" (L, R : My_Type) return My_Type is ...;",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "Branching with if/case and guarded logic.",
+            "items": [
+                {
+                    "title": "if / elsif / else",
+                    "description": "Standard conditional form.",
+                    "example": "if X < 0 then\n   Sign := -1;\nelsif X = 0 then\n   Sign := 0;\nelse\n   Sign := 1;\nend if;",
+                    "table": null
+                },
+                {
+                    "title": "case statement",
+                    "description": "case is often used with discrete types (integers, enums).",
+                    "example": "case Day is\n   when Mon | Tue | Wed | Thu | Fri => Work;\n   when Sat | Sun => Rest;\nend case;",
+                    "table": null
+                },
+                {
+                    "title": "Exceptions in conditions",
+                    "description": "Use exception handlers when needed; prefer validating constraints earlier.",
+                    "table": {
+                        "headers": ["Exception", "Common cause"],
+                        "rows": [
+                            ["Constraint_Error", "Range check failure, index check failure"],
+                            ["Program_Error", "Elaboration issues, accessibility checks"],
+                            ["Storage_Error", "Out of memory / stack overflow" ]
+                        ]
+                    },
+                    "example": "begin\n   X := Arr(Idx);\nexception\n   when Constraint_Error => X := 0;\nend;"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "Loop constructs: loop/exit, while, and for loops (including ranges and iterators).",
+            "items": [
+                {
+                    "title": "Basic loop with exit",
+                    "description": "Use exit or exit when condition.",
+                    "example": "loop\n   exit when Done;\n   -- work\nend loop;",
+                    "table": null
+                },
+                {
+                    "title": "while loop",
+                    "description": "while condition loop ... end loop.",
+                    "example": "while X < 10 loop\n   X := X + 1;\nend loop;",
+                    "table": null
+                },
+                {
+                    "title": "for loop over range",
+                    "description": "for I in 1 .. N loop ... end loop.",
+                    "example": "for I in 1 .. 10 loop\n   Sum := Sum + I;\nend loop;",
+                    "table": null
+                },
+                {
+                    "title": "Reverse for loop",
+                    "description": "Iterate backwards using reverse.",
+                    "example": "for I in reverse 1 .. 10 loop\n   null;\nend loop;",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Arrays",
+            "description": "Ada arrays can be constrained or unconstrained; indices need not start at 1.",
+            "items": [
+                {
+                    "title": "Array types",
+                    "description": "Define array types with index range and element type.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Constrained", "type A is array (1 .. 10) of Integer;"],
+                            ["Unconstrained", "type A is array (Positive range <>) of Integer;"],
+                            ["Custom index", "type A is array (0 .. 15) of Boolean;" ]
+                        ]
+                    },
+                    "example": "type Vec is array (Positive range <>) of Float;\nV : Vec(1 .. 3) := (1.0, 2.0, 3.0);"
+                },
+                {
+                    "title": "Attributes for bounds",
+                    "description": "Use 'First, 'Last, and 'Range to iterate safely.",
+                    "table": {
+                        "headers": ["Attribute", "Meaning"],
+                        "rows": [
+                            ["A'First", "First index"],
+                            ["A'Last", "Last index"],
+                            ["A'Range", "Index range"],
+                            ["A'Length", "Number of elements" ]
+                        ]
+                    },
+                    "example": "for I in A'Range loop\n   Sum := Sum + A(I);\nend loop;"
+                },
+                {
+                    "title": "Array aggregates",
+                    "description": "Initialize arrays with aggregates.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["Positional", "A := (1, 2, 3);"],
+                            ["Named", "A := (1 => 10, 3 => 30, others => 0);"],
+                            ["Others", "others => 0" ]
+                        ]
+                    },
+                    "example": "A : array (1 .. 5) of Integer := (others => 0);"
+                }
+            ]
+        },
+        {
+            "title": "Functions",
+            "description": "Procedures and functions, parameters, returns, scope, anonymous-like patterns, and common predefined units.",
+            "items": [
+                {
+                    "title": "Procedures vs functions",
+                    "description": "Procedures do not return values; functions return a value.",
+                    "table": {
+                        "headers": ["Kind", "Example"],
+                        "rows": [
+                            ["Procedure", "procedure P (X : in Integer);"],
+                            ["Function", "function F (X : Integer) return Integer;" ]
+                        ]
+                    },
+                    "example": "function Square (X : Integer) return Integer is\nbegin\n   return X * X;\nend Square;"
+                },
+                {
+                    "title": "Parameters (modes)",
+                    "description": "Ada supports parameter modes: in, out, in out.",
+                    "table": {
+                        "headers": ["Mode", "Meaning"],
+                        "rows": [
+                            ["in", "Read-only input"],
+                            ["out", "Write-only output"],
+                            ["in out", "Read/write" ]
+                        ]
+                    },
+                    "example": "procedure Swap (A, B : in out Integer) is\n   T : Integer := A;\nbegin\n   A := B;\n   B := T;\nend Swap;"
+                },
+                {
+                    "title": "Returns",
+                    "description": "Functions return a value; can also return records and access types.",
+                    "table": {
+                        "headers": ["Return", "Notes"],
+                        "rows": [
+                            ["Scalar", "Integer, Float, Boolean, etc."],
+                            ["Composite", "Record, array"],
+                            ["Access", "Pointers (access types)" ]
+                        ]
+                    },
+                    "example": "function Is_Even (X : Integer) return Boolean is\nbegin\n   return (X mod 2) = 0;\nend Is_Even;"
+                },
+                {
+                    "title": "Scope",
+                    "description": "Ada uses declarative regions; nested subprograms are allowed.",
+                    "example": "procedure Outer is\n   X : Integer := 0;\n   procedure Inner is\n   begin\n      X := X + 1;\n   end Inner;\nbegin\n   Inner;\nend Outer;",
+                    "table": null
+                },
+                {
+                    "title": "Anonymous functions (closest patterns)",
+                    "description": "Ada does not have anonymous functions like many scripting languages; common alternatives are access-to-subprogram (callbacks) and generics.",
+                    "table": {
+                        "headers": ["Pattern", "Idea"],
+                        "rows": [
+                            ["Access-to-subprogram", "Pass a subprogram pointer as a callback"],
+                            ["Generic formal subprogram", "Pass a subprogram as a generic parameter"],
+                            ["Expression functions (Ada 2012+)", "Short single-expression function bodies" ]
+                        ]
+                    },
+                    "example": "type Pred is access function (X : Integer) return Boolean;\nfunction Apply (P : Pred; X : Integer) return Boolean is (P.all(X));"
+                },
+                {
+                    "title": "Built-in / predefined functions (common units)",
+                    "description": "Ada provides many standard packages (Ada.*) for strings, containers, numerics, etc.",
+                    "table": {
+                        "headers": ["Unit", "Examples"],
+                        "rows": [
+                            ["Ada.Text_IO", "Put, Put_Line, Get"],
+                            ["Ada.Integer_Text_IO", "Put/Get for integers"],
+                            ["Ada.Float_Text_IO", "Put/Get for floats"],
+                            ["Ada.Strings", "Fixed/Unbounded, trimming, searching"],
+                            ["Ada.Containers", "Vectors, Maps, Sets"],
+                            ["Ada.Numerics", "Elementary functions"],
+                            ["Ada.Calendar", "Time, splitting/formatting (basic)"],
+                            ["Ada.Real_Time", "Monotonic time and delays" ]
+                        ]
+                    },
+                    "example": "with Ada.Containers.Vectors;\n-- Use containers for dynamic sequences instead of raw arrays"
+                }
+            ]
+        },
+        {
+            "title": "Filters",
+            "description": "Filtering patterns: selecting elements from arrays/containers using loops and predicates.",
+            "items": [
+                {
+                    "title": "Filter using loops",
+                    "description": "Create a new container/array with elements that match a condition.",
+                    "example": "-- Conceptual: filter even numbers\n-- for I in A'Range loop\n--   if Is_Even(A(I)) then ... end if;\n-- end loop;",
+                    "table": null
+                },
+                {
+                    "title": "Using Ada.Containers",
+                    "description": "Containers provide iterators and operations; filtering is typically manual or via iterator loops.",
+                    "table": {
+                        "headers": ["Container", "Typical use"],
+                        "rows": [
+                            ["Vectors", "Dynamic array-like sequences"],
+                            ["Hashed_Maps/Ordered_Maps", "Key/value maps"],
+                            ["Hashed_Sets/Ordered_Sets", "Membership sets" ]
+                        ]
+                    },
+                    "example": "-- Iterate over a vector and select elements into a new vector"
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Global state in Ada is typically package-level variables (use cautiously).",
+            "items": [
+                {
+                    "title": "Package-level variables",
+                    "description": "Variables declared in a package body can act as global state for that package.",
+                    "example": "package body Config is\n   Debug : Boolean := False;\nend Config;",
+                    "table": null
+                },
+                {
+                    "title": "Initialization/elaboration",
+                    "description": "Package elaboration order matters; avoid depending on uninitialized globals.",
+                    "table": {
+                        "headers": ["Issue", "Tip"],
+                        "rows": [
+                            ["Elaboration order", "Avoid side effects in elaboration; use initialization procedures"],
+                            ["Program_Error", "Can occur on elaboration problems" ]
+                        ]
+                    },
+                    "example": "-- Prefer explicit Init() calls rather than elaborate-time side effects"
+                }
+            ]
+        },
+        {
+            "title": "Packages/Modules",
+            "description": "Packages are Ada’s primary modularization tool. Specs define interfaces; bodies define implementations.",
+            "items": [
+                {
+                    "title": "Package spec and body",
+                    "description": "Spec (.ads) declares; body (.adb) implements.",
+                    "table": {
+                        "headers": ["File", "Contains"],
+                        "rows": [
+                            ["mypkg.ads", "package MyPkg is ... end MyPkg;"],
+                            ["mypkg.adb", "package body MyPkg is ... end MyPkg;" ]
+                        ]
+                    },
+                    "example": "-- mypkg.ads\npackage MyPkg is\n   function Add (A, B : Integer) return Integer;\nend MyPkg;\n\n-- mypkg.adb\npackage body MyPkg is\n   function Add (A, B : Integer) return Integer is (A + B);\nend MyPkg;"
+                },
+                {
+                    "title": "with and use",
+                    "description": "with imports a unit; use brings names into direct visibility.",
+                    "table": {
+                        "headers": ["Clause", "Effect"],
+                        "rows": [
+                            ["with P;", "Make package P visible"],
+                            ["use P;", "Bring P’s identifiers into current scope"],
+                            ["use type T;", "Bring operators for type T into scope" ]
+                        ]
+                    },
+                    "example": "with Ada.Text_IO; use Ada.Text_IO;"
+                },
+                {
+                    "title": "Generics",
+                    "description": "Generics provide reusable components parameterized by types/values/subprograms.",
+                    "example": "generic\n   type T is private;\npackage Gen is\n   procedure Swap (A, B : in out T);\nend Gen;",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "Ada standard library does not include a portable full regex engine; GNAT provides GNAT.Regpat for regex-like matching.",
+            "items": [
+                {
+                    "title": "GNAT.Regpat (when available)",
+                    "description": "GNAT includes a regex package used in many GNAT-based projects.",
+                    "table": {
+                        "headers": ["Concept", "Notes"],
+                        "rows": [
+                            ["Compile", "Compile a pattern into a matcher"],
+                            ["Match", "Test input strings"],
+                            ["Captures", "Some APIs support match locations" ]
+                        ]
+                    },
+                    "example": "-- with GNAT.Regpat; use GNAT.Regpat;\n-- See GNAT docs for Pattern_Matcher usage"
+                },
+                {
+                    "title": "Alternative: bind to PCRE/RE2",
+                    "description": "For portable regex across toolchains, call a C library via Ada bindings.",
+                    "table": {
+                        "headers": ["Approach", "Notes"],
+                        "rows": [
+                            ["Ada bindings", "Use Interfaces.C to call C regex libs"],
+                            ["External tool", "Shell out to grep/sed if appropriate" ]
+                        ]
+                    },
+                    "example": null
+                }
+            ]
+        },
+        {
+            "title": "Date and Time",
+            "description": "Wall-clock time (Ada.Calendar) and monotonic time (Ada.Real_Time).",
+            "items": [
+                {
+                    "title": "Ada.Calendar",
+                    "description": "Basic wall-clock time and splitting components.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Now", "T : Ada.Calendar.Time := Ada.Calendar.Clock;"],
+                            ["Split", "Ada.Calendar.Split(T, Y, M, D, Secs);"],
+                            ["Duration", "Ada.Calendar.Time - Ada.Calendar.Time" ]
+                        ]
+                    },
+                    "example": "with Ada.Calendar; use Ada.Calendar;\nT : Time := Clock;"
+                },
+                {
+                    "title": "Ada.Real_Time",
+                    "description": "Monotonic time for timing and delays.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Now", "Now : Time := Clock;"],
+                            ["Delay", "delay until Now + Milliseconds(10);"],
+                            ["Span", "Time_Span operations" ]
+                        ]
+                    },
+                    "example": "with Ada.Real_Time; use Ada.Real_Time;\nStart : Time := Clock;\ndelay until Start + Milliseconds(100);"
+                }
+            ]
+        },
+        {
+            "title": "Database Interactions",
+            "description": "Ada typically interacts with databases via bindings to C libraries (SQLite, ODBC) or via services.",
+            "items": [
+                {
+                    "title": "SQLite via bindings",
+                    "description": "Use an Ada SQLite binding or call sqlite3 C API through Interfaces.C.",
+                    "table": {
+                        "headers": ["Approach", "Notes"],
+                        "rows": [
+                            ["Native Ada binding", "Preferred when available"],
+                            ["Interfaces.C", "Wrap sqlite3_open/prepare/step/finalize"],
+                            ["External service", "Call a DB microservice via HTTP" ]
+                        ]
+                    },
+                    "example": "-- Practical approach: wrap DB calls in a small Ada package and keep SQL at the boundary"
+                },
+                {
+                    "title": "ODBC/JDBC style approaches",
+                    "description": "On some platforms you can use ODBC bindings; Ada is often used in safety-critical environments with well-defined interfaces.",
+                    "example": "-- Consider using ODBC bindings if your environment standardizes on ODBC",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequent compile/runtime issues and typical fixes.",
+            "items": [
+                {
+                    "title": "Constraint_Error",
+                    "description": "Raised on bounds/range check failures.",
+                    "table": {
+                        "headers": ["Cause", "Fix"],
+                        "rows": [
+                            ["Out-of-range assignment", "Validate inputs; use subtypes carefully"],
+                            ["Index out of bounds", "Iterate with 'Range; check bounds"],
+                            ["Slice bounds", "Ensure slice indices are valid" ]
+                        ]
+                    },
+                    "example": "A : array (1 .. 3) of Integer := (1,2,3);\nX := A(0); -- raises Constraint_Error"
+                },
+                {
+                    "title": "Program_Error",
+                    "description": "Often from elaboration/accessibility issues.",
+                    "table": {
+                        "headers": ["Cause", "Tip"],
+                        "rows": [
+                            ["Elaboration", "Avoid side effects at elaboration; ensure proper order"],
+                            ["Accessibility", "Be careful returning access values to locals" ]
+                        ]
+                    },
+                    "example": null
+                },
+                {
+                    "title": "Compilation unit not found",
+                    "description": "The compiler cannot find a required package/unit.",
+                    "table": {
+                        "headers": ["Check", "Fix"],
+                        "rows": [
+                            ["Search paths", "Use project files (.gpr) or -I flags"],
+                            ["Naming", "Ensure unit name matches file name conventions"],
+                            ["with clauses", "Confirm imports and dependencies" ]
+                        ]
+                    },
+                    "example": "-- If you see \"file not found\", verify build/project includes the source directory"
+                },
+                {
+                    "title": "Tasking deadlocks/timeouts",
+                    "description": "Concurrency issues when tasks rendezvous or share protected objects.",
+                    "table": {
+                        "headers": ["Issue", "Mitigation"],
+                        "rows": [
+                            ["Deadlock", "Avoid circular waits; design rendezvous carefully"],
+                            ["Priority inversion", "Use priority ceiling / protected objects where appropriate"],
+                            ["Timing assumptions", "Use Ada.Real_Time and explicit timeouts" ]
+                        ]
+                    },
+                    "example": null
+                }
+            ]
+        },
+        {
+            "title": "Tasking and Concurrency",
+            "description": "Ada has built-in concurrency with tasks, rendezvous, and protected objects.",
+            "items": [
+                {
+                    "title": "Tasks (overview)",
+                    "description": "Define tasks for concurrent activities.",
+                    "example": "task type Worker is\n   entry Start;\nend Worker;",
+                    "table": null
+                },
+                {
+                    "title": "Rendezvous (entry calls)",
+                    "description": "Tasks synchronize via entry calls and accept statements.",
+                    "example": "task body Worker is\nbegin\n   accept Start do\n      null;\n   end Start;\nend Worker;",
+                    "table": null
+                },
+                {
+                    "title": "Protected objects",
+                    "description": "Protected types provide synchronized access to shared data.",
+                    "example": "protected type Counter is\n   procedure Inc;\n   function Get return Integer;\nprivate\n   N : Integer := 0;\nend Counter;",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Scripting and Administration",
+            "description": "Command-line args, environment, and operational patterns.",
+            "items": [
+                {
+                    "title": "Command-line arguments",
+                    "description": "Use Ada.Command_Line for arguments.",
+                    "table": {
+                        "headers": ["Function", "Use"],
+                        "rows": [
+                            ["Argument_Count", "Number of args"],
+                            ["Argument(I)", "Get arg by index"],
+                            ["Command_Name", "Program name" ]
+                        ]
+                    },
+                    "example": "with Ada.Command_Line; use Ada.Command_Line;\nfor I in 1 .. Argument_Count loop\n   null;\nend loop;"
+                },
+                {
+                    "title": "Environment variables",
+                    "description": "Use Ada.Environment_Variables for env access.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Get", "Value(\"HOME\")"],
+                            ["Exists", "Exists(\"PATH\")"],
+                            ["Set", "Set(\"K\", \"V\")" ]
+                        ]
+                    },
+                    "example": "with Ada.Environment_Variables; use Ada.Environment_Variables;\nHome : constant String := Value(\"HOME\");"
+                },
+                {
+                    "title": "Exit status",
+                    "description": "Set exit status via Ada.Command_Line.",
+                    "example": "with Ada.Command_Line;\nAda.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);",
+                    "table": null
+                }
+            ]
+        }
+    ]
+}

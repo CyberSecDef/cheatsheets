@@ -1,0 +1,772 @@
+{
+    "title": "Lua",
+    "description": "A robust Lua quick reference covering core syntax, tables, functions, modules, operators, control flow, patterns (Lua regex-like), date/time, I/O, tooling, and common pitfalls.",
+    "language": "lua",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Installing Lua and common tooling like LuaRocks.",
+            "items": [
+                {
+                    "title": "Lua versions and runtime",
+                    "description": "Lua is commonly used as an embedded language; behavior can differ by version (5.1/5.2/5.3/5.4, LuaJIT).",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["lua -v", "Print Lua version"],
+                            ["luac -v", "Print Lua bytecode compiler version"],
+                            ["luac -p file.lua", "Parse-only (syntax check)"],
+                            ["lua -e 'print(2+2)'", "Run a one-liner"],
+                            ["lua -i", "Interactive REPL (if supported by your build)" ]
+                        ]
+                    },
+                    "example": "lua -v\nluac -p script.lua"
+                },
+                {
+                    "title": "LuaRocks (package manager)",
+                    "description": "LuaRocks installs Lua modules (“rocks”) and manages Lua module search paths.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["luarocks --version", "Check LuaRocks version"],
+                            ["luarocks search name", "Search for a rock"],
+                            ["luarocks install name", "Install a rock"],
+                            ["luarocks list", "List installed rocks"],
+                            ["luarocks path", "Show environment variables for module paths" ]
+                        ]
+                    },
+                    "example": "luarocks search luasocket\nluarocks install luasocket"
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "Core language basics: values, variables, strings, and basic I/O.",
+            "items": [
+                {
+                    "title": "Values and types",
+                    "description": "Lua is dynamically typed. Use type() and tostring() for debugging.",
+                    "table": {
+                        "headers": ["Type", "Notes"],
+                        "rows": [
+                            ["nil", "Represents absence; missing table keys yield nil"],
+                            ["boolean", "true/false"],
+                            ["number", "Usually double; Lua 5.3+ can distinguish integers"],
+                            ["string", "Immutable byte sequences"],
+                            ["table", "The universal data structure (arrays, maps, objects)"],
+                            ["function", "First-class functions/closures"],
+                            ["userdata", "Opaque host objects (common in embeddings)"],
+                            ["thread", "Coroutine objects" ]
+                        ]
+                    },
+                    "example": "print(type(nil), type(true), type(1), type('x'), type({}), type(function() end))"
+                },
+                {
+                    "title": "Variables and scope",
+                    "description": "Use local by default. Globals live in _G (or _ENV in newer Lua).",
+                    "table": {
+                        "headers": ["Pattern", "Meaning"],
+                        "rows": [
+                            ["local x = 1", "Local variable"],
+                            ["x = 1", "Global (unless in a different _ENV)"],
+                            ["do ... end", "Block scope"],
+                            ["local function f() end", "Local function (preferred)" ]
+                        ]
+                    },
+                    "example": "local x = 1\ndo\n  local x = 2\n  print(x)\nend\nprint(x)"
+                },
+                {
+                    "title": "Comments and printing",
+                    "description": "Use -- for single-line and --[[ ... ]] for block comments.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["Single-line", "-- comment"],
+                            ["Block", "--[[ block comment ]]"],
+                            ["Print", "print('hello')"],
+                            ["Formatted", "string.format('x=%d', x)" ]
+                        ]
+                    },
+                    "example": "-- hello\nprint(string.format('pi=%.3f', math.pi))"
+                },
+                {
+                    "title": "Strings",
+                    "description": "Strings are immutable; use concatenation or table.concat for many pieces.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Concatenate", "s = 'a' .. 'b'"],
+                            ["Length", "#s"],
+                            ["Substring", "string.sub(s, 1, 3)"],
+                            ["Find", "string.find(s, 'pat')"],
+                            ["Replace", "string.gsub(s, 'pat', 'repl')"],
+                            ["Split (pattern)", "for part in string.gmatch(s, '[^,]+') do ... end" ]
+                        ]
+                    },
+                    "example": "local s = 'a,b,c'\nfor part in string.gmatch(s, '[^,]+') do\n  print(part)\nend"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Arithmetic, comparison, logical, concatenation, length, and bitwise (Lua 5.3+).",
+            "items": [
+                {
+                    "title": "Core operators",
+                    "description": "Lua uses ~= for not-equal and .. for concatenation.",
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["+ - * / // % ^", "Arithmetic (// is integer division in Lua 5.3+)"],
+                            ["== ~= < <= > >=", "Comparison"],
+                            ["and or not", "Logical"],
+                            ["..", "String concatenation"],
+                            ["#", "Length (strings and sequences; nuanced for tables)" ]
+                        ]
+                    },
+                    "example": "print(5 // 2, 5 % 2, 'a'..'b')"
+                },
+                {
+                    "title": "Truthiness",
+                    "description": "Only false and nil are falsey; 0 and '' are truthy.",
+                    "table": {
+                        "headers": ["Value", "Boolean context"],
+                        "rows": [
+                            ["false", "falsey"],
+                            ["nil", "falsey"],
+                            ["0", "truthy"],
+                            ["''", "truthy"],
+                            ["{}", "truthy" ]
+                        ]
+                    },
+                    "example": "if 0 then print('0 is truthy') end"
+                },
+                {
+                    "title": "Bitwise operators (Lua 5.3+)",
+                    "description": "Available in Lua 5.3+. In LuaJIT use bit/bit32 libraries.",
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["& | ~", "AND / OR / XOR"],
+                            ["~x", "Bitwise NOT"],
+                            ["<< >>", "Shift left/right" ]
+                        ]
+                    },
+                    "example": "print((5 & 3), (1 << 4))"
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "Branching and boolean patterns.",
+            "items": [
+                {
+                    "title": "if / elseif / else",
+                    "description": "Lua uses then/end keywords.",
+                    "example": "local x = 5\nif x < 0 then\n  print('neg')\nelseif x == 0 then\n  print('zero')\nelse\n  print('pos')\nend",
+                    "table": null
+                },
+                {
+                    "title": "Ternary-like expression",
+                    "description": "Lua has no ternary operator; use and/or carefully.",
+                    "table": {
+                        "headers": ["Pattern", "Caveat"],
+                        "rows": [
+                            ["cond and a or b", "Fails if a is false/nil"],
+                            ["(cond and a) or b", "Same issue"],
+                            ["if cond then a else b end", "Use explicit if in function when correctness matters" ]
+                        ]
+                    },
+                    "example": "local function tern(cond, a, b)\n  if cond then return a else return b end\nend"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "for/while/repeat and iteration helpers.",
+            "items": [
+                {
+                    "title": "Numeric for",
+                    "description": "Loop from start to end with optional step.",
+                    "example": "for i = 1, 5 do\n  print(i)\nend\nfor i = 10, 0, -2 do\n  print(i)\nend",
+                    "table": null
+                },
+                {
+                    "title": "Generic for (pairs/ipairs)",
+                    "description": "Iterate tables (pairs for maps; ipairs for arrays until first nil).",
+                    "table": {
+                        "headers": ["Iterator", "Notes"],
+                        "rows": [
+                            ["pairs(t)", "Iterates all key/value pairs (unordered)"],
+                            ["ipairs(t)", "Iterates integer keys 1..n until nil (Lua 5.1/5.2 semantics)"],
+                            ["next(t)", "Primitive iterator used by pairs" ]
+                        ]
+                    },
+                    "example": "local t = {a=1, b=2}\nfor k,v in pairs(t) do print(k,v) end"
+                },
+                {
+                    "title": "while and repeat",
+                    "description": "repeat...until runs body at least once.",
+                    "example": "local x = 0\nwhile x < 3 do\n  x = x + 1\nend\nrepeat\n  x = x - 1\nuntil x == 0",
+                    "table": null
+                },
+                {
+                    "title": "break and goto",
+                    "description": "Use break to exit loops; goto is available (Lua 5.2+) but use sparingly.",
+                    "table": {
+                        "headers": ["Keyword", "Use"],
+                        "rows": [
+                            ["break", "Exit nearest loop"],
+                            ["goto label", "Jump to ::label::"],
+                            ["::label::", "Define label" ]
+                        ]
+                    },
+                    "example": "for i=1,10 do\n  if i==3 then break end\nend"
+                }
+            ]
+        },
+        {
+            "title": "Arrays",
+            "description": "Lua uses tables for arrays (sequence part).",
+            "items": [
+                {
+                    "title": "Array basics",
+                    "description": "Arrays are tables with integer keys. By convention start at 1.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Create", "a = {10, 20, 30}"],
+                            ["Append", "table.insert(a, 40)"],
+                            ["Remove", "table.remove(a, 2)"],
+                            ["Length", "#a (only reliable for sequences)"],
+                            ["Iterate", "for i,v in ipairs(a) do ... end" ]
+                        ]
+                    },
+                    "example": "local a = {10, 20, 30}\ntable.insert(a, 40)\nprint(#a, a[1])"
+                },
+                {
+                    "title": "The # operator caveat",
+                    "description": "#t is undefined for tables with holes (nil values in the sequence).",
+                    "table": {
+                        "headers": ["Table", "# result"],
+                        "rows": [
+                            ["{1,2,3}", "3"],
+                            ["{1,nil,3}", "undefined/implementation-dependent" ]
+                        ]
+                    },
+                    "example": "local t = {1, nil, 3}\nprint(#t) -- do not rely on this"
+                },
+                {
+                    "title": "Slicing/copying",
+                    "description": "Lua has no built-in slice; implement via loop.",
+                    "example": "local function slice(a, i, j)\n  local out = {}\n  for k = i, j do\n    out[#out+1] = a[k]\n  end\n  return out\nend",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Functions",
+            "description": "Parameters, returns, scope, anonymous functions, and common library functions.",
+            "items": [
+                {
+                    "title": "Defining functions",
+                    "description": "Functions are first-class values.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["Named", "function add(a,b) return a+b end"],
+                            ["Local named", "local function f() end"],
+                            ["Anonymous", "local f = function(x) return x*2 end"],
+                            ["Method call", "obj:method(x)  -- passes self" ]
+                        ]
+                    },
+                    "example": "local function add(a,b) return a+b end\nprint(add(2,3))"
+                },
+                {
+                    "title": "Parameters and varargs",
+                    "description": "Use ... for variable arguments.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Defaulting", "x = x or 0"],
+                            ["Varargs", "function f(...) end"],
+                            ["Pack varargs", "local args = {...}"],
+                            ["Select", "select('#', ...), select(i, ...)" ]
+                        ]
+                    },
+                    "example": "local function sum(...)\n  local s = 0\n  for _,v in ipairs({...}) do s = s + v end\n  return s\nend\nprint(sum(1,2,3))"
+                },
+                {
+                    "title": "Returns (multiple returns)",
+                    "description": "Lua can return multiple values.",
+                    "table": {
+                        "headers": ["Pattern", "Behavior"],
+                        "rows": [
+                            ["return a,b", "Multiple returns"],
+                            ["local x = f()", "Only first return is kept"],
+                            ["local x,y = f()", "Captures multiple returns"],
+                            ["table.unpack(t)", "Expands array elements as multiple returns" ]
+                        ]
+                    },
+                    "example": "local function f() return 1,2,3 end\nlocal a = f()\nlocal b,c = f()\nprint(a,b,c)"
+                },
+                {
+                    "title": "Scope and closures",
+                    "description": "Functions capture upvalues (lexical scope).",
+                    "example": "local function make_counter()\n  local n = 0\n  return function()\n    n = n + 1\n    return n\n  end\nend\nlocal c = make_counter()\nprint(c(), c())",
+                    "table": null
+                },
+                {
+                    "title": "Anonymous functions (common uses)",
+                    "description": "Used for callbacks and small transforms.",
+                    "example": "local t = {3,1,2}\ntable.sort(t, function(a,b) return a < b end)\nprint(table.concat(t, ','))",
+                    "table": null
+                },
+                {
+                    "title": "Built-in / predefined functions",
+                    "description": "Core globals and standard libraries available in most Lua environments.",
+                    "table": {
+                        "headers": ["Area", "Examples"],
+                        "rows": [
+                            ["Base", "assert, error, ipairs, pairs, next, pcall, xpcall, tostring, tonumber, type"],
+                            ["Math", "math.abs, math.floor, math.random, math.max, math.min"],
+                            ["String", "string.sub, string.find, string.match, string.gsub, string.gmatch"],
+                            ["Table", "table.insert, table.remove, table.sort, table.concat, table.unpack"],
+                            ["Coroutine", "coroutine.create, coroutine.resume, coroutine.yield"],
+                            ["OS", "os.date, os.time, os.exit, os.getenv" ]
+                        ]
+                    },
+                    "example": "local ok, err = pcall(function() error('boom') end)\nprint(ok, err)"
+                }
+            ]
+        },
+        {
+            "title": "Filters",
+            "description": "Filter, map, and reduce patterns over arrays and tables.",
+            "items": [
+                {
+                    "title": "Filter array",
+                    "description": "Select elements matching a predicate.",
+                    "example": "local function filter(a, pred)\n  local out = {}\n  for _,v in ipairs(a) do\n    if pred(v) then out[#out+1] = v end\n  end\n  return out\nend\nlocal evens = filter({1,2,3,4}, function(x) return x%2==0 end)",
+                    "table": null
+                },
+                {
+                    "title": "Map and reduce",
+                    "description": "Transform or fold arrays.",
+                    "table": {
+                        "headers": ["Operation", "Idea"],
+                        "rows": [
+                            ["map", "Apply function to each element"],
+                            ["reduce/fold", "Accumulate values into a single result" ]
+                        ]
+                    },
+                    "example": "local function map(a, f)\n  local out = {}\n  for i,v in ipairs(a) do out[i] = f(v) end\n  return out\nend\nlocal squares = map({1,2,3}, function(x) return x*x end)"
+                },
+                {
+                    "title": "Filtering strings with patterns",
+                    "description": "Use string.gmatch / string.match to extract tokens and filter text.",
+                    "example": "local s = 'a1 b22 c333'\nfor num in string.gmatch(s, '%d+') do\n  print(num)\nend",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Global environment, _G, and avoiding accidental globals.",
+            "items": [
+                {
+                    "title": "_G and _ENV",
+                    "description": "Globals are stored in _G; Lua 5.2+ uses _ENV for environment control.",
+                    "table": {
+                        "headers": ["Name", "Meaning"],
+                        "rows": [
+                            ["_G", "Global environment table"],
+                            ["_ENV", "Current environment (Lua 5.2+)"],
+                            ["rawget/rawset", "Bypass metatable __index/__newindex" ]
+                        ]
+                    },
+                    "example": "print(_G.print == print)"
+                },
+                {
+                    "title": "Prevent accidental globals (pattern)",
+                    "description": "In larger codebases, consider a strict mode or metatable on _G to detect writes.",
+                    "example": "setmetatable(_G, {\n  __newindex = function(_, k, _)\n    error('attempt to create global '..tostring(k), 2)\n  end\n})",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Packages/Modules",
+            "description": "require, module loading, and LuaRocks.",
+            "items": [
+                {
+                    "title": "require",
+                    "description": "Loads a module once and caches it in package.loaded.",
+                    "table": {
+                        "headers": ["Concept", "Notes"],
+                        "rows": [
+                            ["require('m')", "Searches package.path and package.cpath"],
+                            ["package.loaded", "Module cache"],
+                            ["package.preload", "Pre-registered loaders"],
+                            ["Return value", "Module should return a table/function" ]
+                        ]
+                    },
+                    "example": "local json = require('json')\nprint(json)"
+                },
+                {
+                    "title": "package.path and package.cpath",
+                    "description": "Control where Lua searches for .lua and native modules.",
+                    "table": {
+                        "headers": ["Field", "Purpose"],
+                        "rows": [
+                            ["package.path", "Lua source module search path"],
+                            ["package.cpath", "C module (shared library) search path" ]
+                        ]
+                    },
+                    "example": "print(package.path)\nprint(package.cpath)"
+                },
+                {
+                    "title": "Module structure pattern",
+                    "description": "Common pattern: return a table of functions.",
+                    "example": "-- mymod.lua\nlocal M = {}\nfunction M.add(a,b) return a+b end\nreturn M",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "Lua uses patterns (not full PCRE). For full regex, use a library like lrexlib/PCRE.",
+            "items": [
+                {
+                    "title": "Lua pattern basics",
+                    "description": "Patterns are used by string.find/match/gsub/gmatch.",
+                    "table": {
+                        "headers": ["Pattern", "Meaning"],
+                        "rows": [
+                            ["%d %a %s %w", "Digit / letter / space / alnum"],
+                            [".", "Any character"],
+                            ["+ * - ?", "Repetition (greedy/non-greedy depends on operator)"],
+                            ["^ $", "Anchor to start/end"],
+                            ["[abc] [a-z]", "Character classes"],
+                            ["()", "Capture" ]
+                        ]
+                    },
+                    "example": "local s = 'id=42'\nprint(string.match(s, 'id=(%d+)'))"
+                },
+                {
+                    "title": "Escape rules",
+                    "description": "Lua uses % for escaping magic characters in patterns.",
+                    "table": {
+                        "headers": ["Want to match", "Pattern"],
+                        "rows": [
+                            [".", "%."],
+                            ["%", "%%"],
+                            ["-", "%-"],
+                            ["(", "%("],
+                            [")", "%)" ]
+                        ]
+                    },
+                    "example": "print(string.match('a.b', 'a%.b'))"
+                },
+                {
+                    "title": "Full regex via libraries",
+                    "description": "If you need lookarounds, alternation, etc., use a regex library.",
+                    "table": {
+                        "headers": ["Option", "Notes"],
+                        "rows": [
+                            ["lrexlib (PCRE)", "Bindings to PCRE"],
+                            ["LPeg", "Powerful PEG parsing library (not regex but often a better fit)" ]
+                        ]
+                    },
+                    "example": "-- Example: use LPeg for structured parsing (library-dependent)"
+                }
+            ]
+        },
+        {
+            "title": "Date and Time",
+            "description": "Use os.time/os.date and be aware of time zones/locale.",
+            "items": [
+                {
+                    "title": "os.time and os.date",
+                    "description": "Convert between Unix timestamps and formatted strings.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Current timestamp", "t = os.time()"],
+                            ["Format local time", "os.date('%Y-%m-%d %H:%M:%S', t)"],
+                            ["UTC time", "os.date('!%Y-%m-%dT%H:%M:%SZ', t)"],
+                            ["Build from table", "os.time{year=2025, month=12, day=20}" ]
+                        ]
+                    },
+                    "example": "local t = os.time()\nprint(os.date('%Y-%m-%d', t))"
+                },
+                {
+                    "title": "Sleep and timers",
+                    "description": "Lua standard library has no portable sleep; use OS bindings (socket.sleep, posix, etc.).",
+                    "table": {
+                        "headers": ["Approach", "Notes"],
+                        "rows": [
+                            ["LuaSocket", "socket.sleep(seconds)"],
+                            ["POSIX bindings", "posix.sleep"],
+                            ["Embedder API", "Host app exposes timers" ]
+                        ]
+                    },
+                    "example": "-- socket = require('socket')\n-- socket.sleep(0.5)"
+                }
+            ]
+        },
+        {
+            "title": "Database Interactions",
+            "description": "Lua typically talks to databases via libraries (LuaSQL, lua-resty-*, sqlite bindings) or by calling external services.",
+            "items": [
+                {
+                    "title": "SQLite",
+                    "description": "Use a SQLite binding (e.g., lsqlite3) when available.",
+                    "table": {
+                        "headers": ["Step", "Concept"],
+                        "rows": [
+                            ["Open", "db = sqlite3.open('file.db')"],
+                            ["Exec", "db:exec('SQL')"],
+                            ["Iterate rows", "for row in db:nrows('SELECT ...') do ... end"],
+                            ["Close", "db:close()" ]
+                        ]
+                    },
+                    "example": "-- Requires sqlite3 binding\n-- local sqlite3 = require('sqlite3')\n-- local db = sqlite3.open('t.db')"
+                },
+                {
+                    "title": "LuaSQL (MySQL/Postgres/ODBC)",
+                    "description": "LuaSQL provides DB drivers via a consistent API.",
+                    "table": {
+                        "headers": ["Concept", "Notes"],
+                        "rows": [
+                            ["Environment", "env = luasql.mysql() / luasql.postgres()"],
+                            ["Connect", "con = env:connect(db, user, pass, host, port)"],
+                            ["Query", "cur = con:execute('SELECT ...')" ]
+                        ]
+                    },
+                    "example": "-- Library-dependent; prefer prepared statements when supported"
+                },
+                {
+                    "title": "Redis and HTTP APIs",
+                    "description": "Common in scripting: call Redis or web APIs using client libraries.",
+                    "table": {
+                        "headers": ["Area", "Typical libs"],
+                        "rows": [
+                            ["HTTP", "luasocket, lua-http, cqueues"],
+                            ["Redis", "redis-lua"],
+                            ["OpenResty", "lua-resty-redis, lua-resty-mysql" ]
+                        ]
+                    },
+                    "example": "-- Many Lua deployments use OpenResty (nginx+Lua) for DB/HTTP-heavy workloads"
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequent runtime errors and how to debug them.",
+            "items": [
+                {
+                    "title": "attempt to index a nil value",
+                    "description": "You accessed a missing table or a nil variable.",
+                    "table": {
+                        "headers": ["Cause", "Fix"],
+                        "rows": [
+                            ["Missing key", "Check for nil before indexing; initialize tables"],
+                            ["Wrong module return", "Ensure module returns expected table"],
+                            ["Typos", "Enable strict mode/metatable to catch globals" ]
+                        ]
+                    },
+                    "example": "local t = nil\nprint(t.x) -- error"
+                },
+                {
+                    "title": "attempt to call a nil value",
+                    "description": "Function value is nil (not defined, overwritten, or module failed to load).",
+                    "table": {
+                        "headers": ["Check", "Command/pattern"],
+                        "rows": [
+                            ["Confirm it's a function", "print(type(f))"],
+                            ["Protected call", "pcall(f, ...)"],
+                            ["Inspect module loading", "print(package.loaded['m'])" ]
+                        ]
+                    },
+                    "example": "local f = nil\nf() -- error"
+                },
+                {
+                    "title": "module 'x' not found",
+                    "description": "require could not find the module.",
+                    "table": {
+                        "headers": ["Cause", "Fix"],
+                        "rows": [
+                            ["Wrong package.path", "Adjust package.path or install via LuaRocks"],
+                            ["Wrong module name", "Match filesystem layout and require string"],
+                            ["Missing native deps", "For C modules, ensure shared libs exist and match Lua ABI" ]
+                        ]
+                    },
+                    "example": "print(package.path)\nprint(package.cpath)"
+                },
+                {
+                    "title": "bad argument #n",
+                    "description": "You called a function with an argument of the wrong type.",
+                    "table": {
+                        "headers": ["Fix", "Tip"],
+                        "rows": [
+                            ["Validate inputs", "Use assert/type checks at boundaries"],
+                            ["Read docs", "Check expected types and 1-based indices" ]
+                        ]
+                    },
+                    "example": "string.sub(123, 1, 2) -- error"
+                }
+            ]
+        },
+        {
+            "title": "Tables and Data Structures",
+            "description": "Tables are Lua’s primary data structure (maps, arrays, objects).",
+            "items": [
+                {
+                    "title": "Map/dictionary usage",
+                    "description": "Use string keys for maps.",
+                    "example": "local m = {a = 1, b = 2}\nprint(m.a, m['b'])",
+                    "table": null
+                },
+                {
+                    "title": "Metatables (overview)",
+                    "description": "Metatables customize behavior (operator overloading, fallback indexing, etc.).",
+                    "table": {
+                        "headers": ["Metamethod", "Purpose"],
+                        "rows": [
+                            ["__index", "Fallback for missing keys"],
+                            ["__newindex", "Intercept writes"],
+                            ["__tostring", "Customize tostring"],
+                            ["__add/__sub/...", "Operator overloading"],
+                            ["__call", "Make table callable" ]
+                        ]
+                    },
+                    "example": "local t = {}\nsetmetatable(t, { __index = function(_, k) return 'missing:'..k end })\nprint(t.x)"
+                }
+            ]
+        },
+        {
+            "title": "Coroutines",
+            "description": "Lua coroutines provide cooperative multitasking.",
+            "items": [
+                {
+                    "title": "create/resume/yield",
+                    "description": "Coroutines yield values back to the resumer.",
+                    "example": "local co = coroutine.create(function()\n  coroutine.yield('step1')\n  return 'done'\nend)\nprint(coroutine.resume(co))\nprint(coroutine.resume(co))",
+                    "table": null
+                },
+                {
+                    "title": "Coroutine states",
+                    "description": "Use coroutine.status to debug.",
+                    "table": {
+                        "headers": ["State", "Meaning"],
+                        "rows": [
+                            ["suspended", "Created or yielded"],
+                            ["running", "Currently executing"],
+                            ["dead", "Finished or errored" ]
+                        ]
+                    },
+                    "example": "print(coroutine.status(coroutine.running()))"
+                }
+            ]
+        },
+        {
+            "title": "Debugging and Testing",
+            "description": "Error handling, stack traces, and debugging helpers.",
+            "items": [
+                {
+                    "title": "pcall and xpcall",
+                    "description": "Catch errors without crashing the program.",
+                    "table": {
+                        "headers": ["Function", "Use"],
+                        "rows": [
+                            ["pcall(f, ...)", "Protected call: returns ok, result_or_err"],
+                            ["xpcall(f, errh)", "Protected call with custom error handler" ]
+                        ]
+                    },
+                    "example": "local ok, err = pcall(function() error('boom') end)\nprint(ok, err)"
+                },
+                {
+                    "title": "Stack traces",
+                    "description": "Use debug.traceback or xpcall error handler.",
+                    "example": "local function errh(e)\n  return debug.traceback(e, 2)\nend\nxpcall(function() error('fail') end, errh)",
+                    "table": null
+                },
+                {
+                    "title": "Assertions",
+                    "description": "assert(condition, message) is a common lightweight validation.",
+                    "example": "local x = 1\nassert(x > 0, 'x must be positive')",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Scripting and Administration",
+            "description": "CLI-style scripting patterns, environment variables, and executing commands.",
+            "items": [
+                {
+                    "title": "Command-line arguments",
+                    "description": "Many Lua runtimes expose args in the global table arg.",
+                    "table": {
+                        "headers": ["Index", "Meaning"],
+                        "rows": [
+                            ["arg[0]", "Script name (commonly)"],
+                            ["arg[1..n]", "Positional arguments" ]
+                        ]
+                    },
+                    "example": "for i,v in ipairs(arg) do print(i,v) end"
+                },
+                {
+                    "title": "Environment variables",
+                    "description": "Use os.getenv to read variables.",
+                    "example": "local home = os.getenv('HOME')\nprint(home)",
+                    "table": null
+                },
+                {
+                    "title": "Run shell commands",
+                    "description": "os.execute runs a command; io.popen captures output (availability varies).",
+                    "table": {
+                        "headers": ["Function", "Notes"],
+                        "rows": [
+                            ["os.execute(cmd)", "Return code; portable-ish"],
+                            ["io.popen(cmd)", "Read command output as a file handle" ]
+                        ]
+                    },
+                    "example": "local f = io.popen('uname -a')\nprint(f:read('*a'))\nf:close()"
+                }
+            ]
+        },
+        {
+            "title": "File I/O",
+            "description": "Read and write files using io and os libraries.",
+            "items": [
+                {
+                    "title": "Open/read/write",
+                    "description": "Use io.open for file handles.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Read all", "local s = assert(io.open('f','r')):read('*a')"],
+                            ["Read lines", "for line in io.lines('f') do ... end"],
+                            ["Write", "local f = assert(io.open('f','w')); f:write('x'); f:close()" ]
+                        ]
+                    },
+                    "example": "local f = assert(io.open('out.txt','w'))\nf:write('hello\n')\nf:close()"
+                },
+                {
+                    "title": "Std streams",
+                    "description": "Access stdin/stdout/stderr.",
+                    "table": {
+                        "headers": ["Stream", "Handle"],
+                        "rows": [
+                            ["stdin", "io.stdin"],
+                            ["stdout", "io.stdout"],
+                            ["stderr", "io.stderr" ]
+                        ]
+                    },
+                    "example": "io.stderr:write('error message\n')"
+                }
+            ]
+        }
+    ]
+}

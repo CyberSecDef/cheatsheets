@@ -1,0 +1,577 @@
+{
+	"title": "Rust",
+	"description": "A general Rust language quick reference covering fundamentals, functions, operators, modules/crates, collections, control flow, common compiler errors, regex and datetime crates, and practical workflows with cargo, tooling, and database libraries.",
+	"language": "rust",
+	"categories": [
+		{
+			"title": "Installation and Tooling",
+			"description": "Rust toolchain setup and day-to-day developer commands.",
+			"items": [
+				{
+					"title": "rustup, rustc, cargo",
+					"description": "Most Rust installs are managed via rustup.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["rustup --version", "Show rustup version"],
+							["rustc --version", "Show compiler version"],
+							["cargo --version", "Show cargo version"],
+							["rustup update", "Update toolchains"],
+							["rustup toolchain list", "List installed toolchains"],
+							["rustup default stable", "Set default toolchain"],
+							["rustup component add rustfmt clippy", "Install formatter and linter"],
+							["rustup target add wasm32-unknown-unknown", "Add a target" ]
+						]
+					},
+					"example": "rustc --version\ncargo --version\nrustup component add rustfmt clippy"
+				},
+				{
+					"title": "cargo essentials",
+					"description": "Common build/test/doc workflows.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["cargo new app", "Create a new binary crate"],
+							["cargo init", "Initialize a crate in an existing directory"],
+							["cargo build", "Build (debug)"],
+							["cargo build --release", "Optimized build"],
+							["cargo run -- <args>", "Run binary with args"],
+							["cargo test", "Run tests"],
+							["cargo fmt", "Format code"],
+							["cargo clippy", "Lint with Clippy"],
+							["cargo doc --open", "Build docs and open"],
+							["cargo clean", "Remove build artifacts" ]
+						]
+					},
+					"example": "cargo build\ncargo test\ncargo fmt\ncargo clippy"
+				}
+			]
+		},
+		{
+			"title": "Basic Functionality",
+			"description": "Core language basics: bindings, types, strings, printing, and ownership overview.",
+			"items": [
+				{
+					"title": "Bindings, mutability, and shadowing",
+					"description": "Bindings are immutable by default; use mut for mutation. Shadowing creates a new binding.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Immutable binding", "let x = 1;"],
+							["Mutable binding", "let mut x = 1; x += 1;"],
+							["Shadowing", "let x = 1; let x = x + 1;"],
+							["Const", "const MAX: usize = 1024;"],
+							["Static", "static APP: &str = \"svc\";" ]
+						]
+					},
+					"example": "fn main() {\n    let x = 1;\n    let x = x + 1;\n    let mut y = 10;\n    y += 5;\n    println!(\"x={x} y={y}\");\n}"
+				},
+				{
+					"title": "Common scalar and compound types",
+					"description": "Rust is statically typed; type inference works, but you can annotate.",
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["i32, i64, u32, usize", "Signed/unsigned integers; usize matches pointer width."],
+							["f32, f64", "Floating point."],
+							["bool", "true/false."],
+							["char", "Unicode scalar value (4 bytes)."],
+							["&str", "String slice, usually borrowed."],
+							["String", "Owned, growable UTF-8 string."],
+							["(T1, T2)", "Tuple."],
+							["[T; N]", "Fixed-size array."],
+							["Vec<T>", "Growable vector." ]
+						]
+					},
+					"example": "fn main() {\n    let n: i32 = 42;\n    let s: &str = \"hi\";\n    let owned: String = s.to_string();\n    let t: (i32, &str) = (n, s);\n    println!(\"{owned} {t:?}\");\n}"
+				},
+				{
+					"title": "Ownership (very short overview)",
+					"description": "Ownership is Rust's memory safety model: one owner, borrowing via references, and lifetimes checked by the compiler.",
+					"table": {
+						"headers": ["Concept", "What it means"],
+						"rows": [
+							["Move", "Assigning/passing an owned value transfers ownership (unless Copy)."],
+							["Copy types", "Simple scalars (e.g., i32) copy by value."],
+							["Borrow", "&T is a shared borrow; &mut T is exclusive."],
+							["Lifetimes", "Ensure references never outlive the data they reference."],
+							["Clone", "Explicitly duplicate heap data via .clone()." ]
+						]
+					},
+					"example": "fn main() {\n    let s = String::from(\"abc\");\n    let t = s; // moved\n    let u = t.clone();\n    println!(\"{t} {u}\");\n}"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Parameters, returns, scope, closures, and common standard library patterns.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "Functions return the last expression if it has no semicolon; use -> T for return types.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Typed parameters", "fn add(a: i32, b: i32) -> i32 { a + b }"],
+							["Unit return", "fn log(msg: &str) { println!(\"{msg}\"); }"],
+							["Multiple returns", "fn f() -> (i32, i32) { (1, 2) }"],
+							["Generic function", "fn id<T>(x: T) -> T { x }"],
+							["Borrowing", "fn len(s: &String) -> usize { s.len() }"],
+							["Mutable borrow", "fn push(v: &mut Vec<i32>, x: i32) { v.push(x); }" ]
+						]
+					},
+					"example": "fn add(a: i32, b: i32) -> i32 { a + b }\n\nfn main() {\n    println!(\"{}\", add(2, 3));\n}"
+				},
+				{
+					"title": "Scope and modules",
+					"description": "Rust scopes are lexical; items can be public with pub. Imports use use paths.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Block scope", "{ let x = 1; } // x ends here"],
+							["Module", "mod util { pub fn f() {} }"],
+							["Import", "use crate::util::f;"],
+							["Re-export", "pub use crate::util::f;"],
+							["Visibility", "pub(crate), pub(super), pub(in path)" ]
+						]
+					},
+					"example": "mod util {\n    pub fn hello() { println!(\"hi\"); }\n}\n\nfn main() {\n    util::hello();\n}"
+				},
+				{
+					"title": "Closures (anonymous functions)",
+					"description": "Closures can capture variables. Traits: Fn, FnMut, FnOnce.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Non-capturing", "let f = |x: i32| x * 2;"],
+							["Capturing by borrow", "let f = |x| x + base;"],
+							["Capturing by move", "let f = move |x| x + base;"],
+							["Iterator closure", "v.iter().map(|x| x + 1)"],
+							["Function pointer", "fn inc(x: i32) -> i32 { x + 1 }" ]
+						]
+					},
+					"example": "fn main() {\n    let base = 10;\n    let f = |x: i32| x + base;\n    println!(\"{}\", f(5));\n}"
+				},
+				{
+					"title": "Common built-ins (std) and macros",
+					"description": "Rust has macros like println! and format!; many utilities are in std::{fmt,fs,env}.",
+					"table": {
+						"headers": ["Name", "Purpose"],
+						"rows": [
+							["println!", "Print to stdout with newline."],
+							["eprintln!", "Print to stderr."],
+							["format!", "Build a String via formatting."],
+							["dbg!", "Debug-print and return the value."],
+							["assert!, assert_eq!", "Assertions."],
+							["include_str!", "Embed a file as a string at compile time."],
+							["std::fs", "Filesystem operations."],
+							["std::env", "Args and environment variables." ]
+						]
+					},
+					"example": "fn main() {\n    let x = 3 * 7;\n    dbg!(x);\n    println!(\"x={x}\");\n}"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering and transforming data (iterator adapters and collection helpers).",
+			"items": [
+				{
+					"title": "Iterator filter/map/reduce",
+					"description": "Iterators are lazy; call collect/sum/count/etc to realize results.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["filter", "v.iter().filter(|x| **x > 0)"],
+							["map", "v.iter().map(|x| x + 1)"],
+							["filter_map", "it.filter_map(|s| s.parse::<i32>().ok())"],
+							["find", "it.find(|x| **x == 42)"],
+							["any/all", "it.any(|x| x > 0), it.all(|x| x > 0)"],
+							["fold", "it.fold(0, |acc, x| acc + x)" ]
+						]
+					},
+					"example": "fn main() {\n    let v = vec![1, -2, 3, 4];\n    let sum_pos: i32 = v.iter().copied().filter(|x| *x > 0).sum();\n    println!(\"{sum_pos}\");\n}"
+				},
+				{
+					"title": "Sorting and dedup",
+					"description": "Sorting is in-place; use sort_by for custom order.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["sort", "v.sort();"],
+							["sort_by", "v.sort_by(|a, b| a.len().cmp(&b.len()));"],
+							["dedup", "v.dedup(); // after sorting"],
+							["retain", "v.retain(|x| *x > 0);" ]
+						]
+					},
+					"example": "fn main() {\n    let mut v = vec![3, 1, 2, 2, 1];\n    v.sort();\n    v.dedup();\n    println!(\"{v:?}\");\n}"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Global state and constants (use sparingly).",
+			"items": [
+				{
+					"title": "const and static",
+					"description": "const is inlined; static is a fixed memory location. Mutable global state requires synchronization.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["const", "const TIMEOUT_MS: u64 = 5000;"],
+							["static", "static APP_NAME: &str = \"api\";"],
+							["static mut (avoid)", "static mut X: i32 = 0; // unsafe"],
+							["Lazy init", "once_cell::sync::Lazy"],
+							["Atomics", "static CNT: AtomicU64 = AtomicU64::new(0);" ]
+						]
+					},
+					"example": "use std::sync::atomic::{AtomicU64, Ordering};\n\nstatic CNT: AtomicU64 = AtomicU64::new(0);\n\nfn main() {\n    CNT.fetch_add(1, Ordering::Relaxed);\n    println!(\"{}\", CNT.load(Ordering::Relaxed));\n}"
+				},
+				{
+					"title": "Environment variables",
+					"description": "Use std::env for runtime env vars; use env! macro for compile-time env values.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Read env var", "std::env::var(\"RUST_LOG\")"],
+							["Iter env", "std::env::vars()"],
+							["Read CLI args", "std::env::args()"],
+							["Compile-time env", "env!(\"CARGO_PKG_VERSION\")" ]
+						]
+					},
+					"example": "fn main() {\n    let v = std::env::var(\"RUST_LOG\").unwrap_or_else(|_| \"info\".to_string());\n    println!(\"{v}\");\n}"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "Crates, modules, workspaces, dependencies, and features.",
+			"items": [
+				{
+					"title": "Cargo.toml basics",
+					"description": "Dependencies live in Cargo.toml; cargo resolves and downloads crates.",
+					"table": {
+						"headers": ["Section", "Meaning"],
+						"rows": [
+							["[package]", "Name/version/edition metadata."],
+							["[dependencies]", "Normal runtime dependencies."],
+							["[dev-dependencies]", "Test/bench-only dependencies."],
+							["[features]", "Optional dependency toggles and cfg flags."],
+							["[workspace]", "Multi-crate workspace configuration." ]
+						]
+					},
+					"example": "# Cargo.toml\n[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nserde = { version = \"1\", features = [\"derive\"] }"
+				},
+				{
+					"title": "Modules and paths",
+					"description": "Use mod to declare modules and use to import symbols.",
+					"table": {
+						"headers": ["Item", "Example"],
+						"rows": [
+							["Declare module", "mod api;"],
+							["Nested module", "mod api { pub mod v1 { } }"],
+							["Import", "use crate::api::v1::Handler;"],
+							["Alias import", "use std::collections::HashMap as Map;"],
+							["Public module", "pub mod api;" ]
+						]
+					},
+					"example": "use std::collections::HashMap;\n\nfn main() {\n    let mut m: HashMap<String, i32> = HashMap::new();\n    m.insert(\"a\".to_string(), 1);\n    println!(\"{}\", m[\"a\"]);\n}"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Arithmetic, comparison, logical, ranges, and Rust-specific operators.",
+			"items": [
+				{
+					"title": "Common operators",
+					"description": null,
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["+ - * / %", "Arithmetic"],
+							["== != < <= > >=", "Comparison"],
+							["&& || !", "Boolean ops"],
+							["& | ^ << >>", "Bitwise ops"],
+							[".. ..=", "Ranges (exclusive/inclusive end)"],
+							["as", "Cast (explicit)"],
+							["?", "Propagate errors (Result/Option)"],
+							["* (deref)", "Dereference a pointer/reference"],
+							["& (borrow)", "Take a reference; &mut for mutable reference" ]
+						]
+					},
+					"example": "fn div(a: i32, b: i32) -> Result<i32, String> {\n    if b == 0 { return Err(\"divide by zero\".to_string()); }\n    Ok(a / b)\n}\n\nfn main() -> Result<(), String> {\n    let x = div(10, 2)?;\n    println!(\"{x}\");\n    Ok(())\n}"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequently encountered Rust compiler errors and what they usually mean.",
+			"items": [
+				{
+					"title": "Borrow checker and ownership",
+					"description": null,
+					"table": {
+						"headers": ["Error pattern", "Typical fix"],
+						"rows": [
+							["borrowed value does not live long enough", "Adjust lifetimes/scope; store owned data instead of references."],
+							["cannot borrow as mutable more than once", "Restructure code to avoid overlapping mutable borrows (split scopes)."],
+							["use of moved value", "Borrow instead of move; clone if necessary; use Copy types."],
+							["cannot move out of borrowed content", "Avoid moving out of &T; use .cloned(), .to_owned(), or redesign." ]
+						]
+					},
+					"example": "# Tip: run with explanations\nrustc --explain E0382"
+				},
+				{
+					"title": "Type and trait errors",
+					"description": null,
+					"table": {
+						"headers": ["Error pattern", "Typical fix"],
+						"rows": [
+							["mismatched types", "Add type annotations, convert types (.into(), as), or fix generics."],
+							["the trait bound ... is not satisfied", "Ensure the type implements the required trait; add where bounds or derive."],
+							["cannot infer type", "Provide turbofish ::<T> or explicit variable type."],
+							["use of undeclared crate or module", "Add dependency in Cargo.toml or fix module path/use." ]
+						]
+					},
+					"example": "# Show full type names\nRUSTFLAGS='-Z verbose' cargo +nightly build"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Arrays and common collections (Vec, HashMap, slices).",
+			"items": [
+				{
+					"title": "Arrays vs Vec vs slices",
+					"description": null,
+					"table": {
+						"headers": ["Type", "When to use"],
+						"rows": [
+							["[T; N]", "Fixed size known at compile time."],
+							["&[T]", "Borrowed slice view into an array/Vec."],
+							["Vec<T>", "Growable list."],
+							["HashMap<K, V>", "Key/value map."],
+							["BTreeMap<K, V>", "Sorted map." ]
+						]
+					},
+					"example": "use std::collections::HashMap;\n\nfn main() {\n    let a: [i32; 3] = [1, 2, 3];\n    let s: &[i32] = &a;\n    let mut v = vec![1, 2, 3];\n    v.push(4);\n    let mut m: HashMap<&str, i32> = HashMap::new();\n    m.insert(\"k\", 1);\n    println!(\"{s:?} {v:?} {m:?}\");\n}"
+				},
+				{
+					"title": "Indexing and safe access",
+					"description": "Prefer get() to avoid panics; indexing [] panics if out of bounds.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Index (panic if OOB)", "v[0]"],
+							["Safe get", "v.get(0)"],
+							["Iterate", "for x in v.iter() { }"],
+							["Mutable iterate", "for x in v.iter_mut() { }"],
+							["Drain", "v.drain(0..2)" ]
+						]
+					},
+					"example": "fn main() {\n    let v = vec![10, 20];\n    println!(\"{:?}\", v.get(99));\n}"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "Looping constructs and iterator-based loops.",
+			"items": [
+				{
+					"title": "for/while/loop",
+					"description": "loop can return a value via break expr; labels can break outer loops.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["for", "for x in 0..10 { }"],
+							["while", "while cond { }"],
+							["loop", "loop { break; }"],
+							["labeled loops", "'outer: for ... { break 'outer; }"],
+							["while let", "while let Some(x) = it.next() { }" ]
+						]
+					},
+					"example": "fn main() {\n    let mut i = 0;\n    let x = loop {\n        i += 1;\n        if i == 3 { break i * 10; }\n    };\n    println!(\"{x}\");\n}"
+				},
+				{
+					"title": "Enumerate and zip",
+					"description": "Iterator adapters help avoid indexing.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["enumerate", "for (i, x) in v.iter().enumerate() { }"],
+							["zip", "for (a, b) in a.iter().zip(b.iter()) { }"],
+							["chunks", "for c in v.chunks(4) { }" ]
+						]
+					},
+					"example": "fn main() {\n    let a = vec![\"a\", \"b\"];\n    for (i, x) in a.iter().enumerate() {\n        println!(\"{i}:{x}\");\n    }\n}"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "if/else, match, if let, and pattern matching helpers.",
+			"items": [
+				{
+					"title": "if/else and match",
+					"description": "if and match are expressions and can return values.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["if expression", "let x = if ok { 1 } else { 2 };"],
+							["match", "match v { 0 => \"zero\", _ => \"other\" }"],
+							["if let", "if let Some(x) = opt { }"],
+							["matches!", "matches!(x, 1 | 2 | 3)" ]
+						]
+					},
+					"example": "fn main() {\n    let n = 2;\n    let s = match n {\n        0 => \"zero\",\n        1 | 2 => \"one or two\",\n        _ => \"many\",\n    };\n    println!(\"{s}\");\n}"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "Rust regex support is typically via the regex crate (std does not include a regex engine).",
+			"items": [
+				{
+					"title": "regex crate basics",
+					"description": "Compile patterns once and reuse. Beware: Rust regex is not backtracking and has limitations (no look-around).",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Add dependency", "regex = \"1\""],
+							["Compile", "let re = Regex::new(r\"^\\d+$\").unwrap();"],
+							["Test", "re.is_match(s)"],
+							["Captures", "re.captures(s)"],
+							["Replace", "re.replace_all(s, \"X\")" ]
+						]
+					},
+					"example": "use regex::Regex;\n\nfn main() {\n    let re = Regex::new(r\"^(\\w+)-(\\d+)$\").unwrap();\n    let caps = re.captures(\"item-42\").unwrap();\n    println!(\"{} {}\", &caps[1], &caps[2]);\n}"
+				}
+			]
+		},
+		{
+			"title": "Data and Time",
+			"description": "Date/time handling is typically via crates like chrono or time.",
+			"items": [
+				{
+					"title": "chrono crate quick patterns",
+					"description": "chrono is widely used; time is another popular choice.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Add dependency", "chrono = { version = \"0.4\", features = [\"clock\"] }"],
+							["Now (UTC)", "Utc::now()"],
+							["Format", "dt.format(\"%Y-%m-%dT%H:%M:%SZ\")"],
+							["Parse", "DateTime::parse_from_rfc3339(s)"],
+							["Duration", "chrono::Duration::minutes(5)" ]
+						]
+					},
+					"example": "use chrono::Utc;\n\nfn main() {\n    let now = Utc::now();\n    println!(\"{}\", now.to_rfc3339());\n}"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "Common Rust approaches to databases: async (sqlx) or ORM (diesel).",
+			"items": [
+				{
+					"title": "sqlx (async, compile-time checked queries)",
+					"description": "sqlx supports Postgres/MySQL/SQLite. Many workflows use a connection pool.",
+					"table": {
+						"headers": ["Task", "Command/Snippet"],
+						"rows": [
+							["Add dependency", "sqlx = { version = \"0.8\", features = [\"runtime-tokio\", \"postgres\"] }"],
+							["Set DATABASE_URL", "export DATABASE_URL=postgres://user:pass@host/db"],
+							["Run migrations (sqlx-cli)", "cargo install sqlx-cli && sqlx migrate run"],
+							["Pool connect", "let pool = PgPoolOptions::new().connect(&url).await?;" ]
+						]
+					},
+					"example": "# Example dependencies: tokio + sqlx\n# export DATABASE_URL=...\n# sqlx migrate run"
+				},
+				{
+					"title": "diesel (ORM)",
+					"description": "diesel is a synchronous ORM with a schema-driven workflow and a CLI for migrations.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Install diesel CLI", "cargo install diesel_cli --no-default-features --features postgres"],
+							["Setup", "diesel setup"],
+							["Create migration", "diesel migration generate create_users"],
+							["Run migrations", "diesel migration run" ]
+						]
+					},
+					"example": "cargo install diesel_cli --no-default-features --features postgres\ndiesel setup"
+				}
+			]
+		},
+		{
+			"title": "Error Handling",
+			"description": "Option/Result, custom errors, and error propagation.",
+			"items": [
+				{
+					"title": "Option and Result patterns",
+					"description": "Use ? to propagate errors; use match/if let for control flow.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Return Result", "fn f() -> Result<T, E> { ... }"],
+							["Propagate", "let x = fallible()?;"],
+							["Map error", "res.map_err(|e| e.to_string())"],
+							["Convert Option", "opt.ok_or_else(|| err)?"],
+							["Early return", "if !ok { return Err(err); }" ]
+						]
+					},
+					"example": "fn parse_i32(s: &str) -> Result<i32, String> {\n    s.parse::<i32>().map_err(|e| e.to_string())\n}\n\nfn main() -> Result<(), String> {\n    let n = parse_i32(\"42\")?;\n    println!(\"{n}\");\n    Ok(())\n}"
+				},
+				{
+					"title": "Popular error crates",
+					"description": "These are common ecosystem choices for ergonomic errors.",
+					"table": {
+						"headers": ["Crate", "Use"],
+						"rows": [
+							["thiserror", "Derive Error for library error enums."],
+							["anyhow", "Ergonomic error handling in applications."],
+							["eyre", "Similar to anyhow with reporting." ]
+						]
+					},
+					"example": "# Cargo.toml\nanyhow = \"1\"\nthiserror = \"2\""
+				}
+			]
+		},
+		{
+			"title": "Concurrency and Async",
+			"description": "Threads/channels and async runtimes.",
+			"items": [
+				{
+					"title": "Threads and channels (std)",
+					"description": "Use std::thread and std::sync::mpsc for simple concurrency.",
+					"table": {
+						"headers": ["Tool", "Example"],
+						"rows": [
+							["Spawn thread", "std::thread::spawn(|| { ... })"],
+							["Join", "handle.join().unwrap()"],
+							["Channel", "let (tx, rx) = std::sync::mpsc::channel();"],
+							["Mutex", "std::sync::Mutex<T>"],
+							["Arc", "std::sync::Arc<T>" ]
+						]
+					},
+					"example": "use std::sync::mpsc;\nuse std::thread;\n\nfn main() {\n    let (tx, rx) = mpsc::channel();\n    thread::spawn(move || { tx.send(42).unwrap(); });\n    println!(\"{}\", rx.recv().unwrap());\n}"
+				},
+				{
+					"title": "Async with tokio (ecosystem)",
+					"description": "tokio is a common async runtime. Async code requires an executor.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Add dependency", "tokio = { version = \"1\", features = [\"full\"] }"],
+							["Async main", "#[tokio::main] async fn main() { }"],
+							["Spawn task", "tokio::spawn(async move { ... })"],
+							["Timeout", "tokio::time::timeout(dur, fut).await" ]
+						]
+					},
+					"example": "#[tokio::main]\nasync fn main() {\n    let h = tokio::spawn(async { 1 + 1 });\n    println!(\"{}\", h.await.unwrap());\n}"
+				}
+			]
+		}
+	]
+}

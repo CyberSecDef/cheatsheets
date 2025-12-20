@@ -1,0 +1,688 @@
+{
+    "title": "Assembly Language",
+    "description": "A general-purpose Assembly language quick reference covering core concepts, instructions, memory, calling conventions, toolchains, debugging, and common pitfalls across popular assemblers/architectures (x86/x86-64, ARM/AArch64, etc.).",
+    "language": "assembly",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Toolchains, assemblers, linkers, and inspection tools.",
+            "items": [
+                {
+                    "title": "Common tools",
+                    "description": "Typical assembler toolchain components across platforms.",
+                    "table": {
+                        "headers": ["Tool", "What it does"],
+                        "rows": [
+                            ["nasm/yasm", "Intel-syntax assemblers (x86/x86-64)"],
+                            ["as (GNU assembler)", "Assembler used with GCC/Clang (often AT&T syntax on x86)"],
+                            ["ld", "Linker (creates executables/shared libs from object files)"],
+                            ["gcc/clang", "Driver that can assemble/link; also useful to link assembly"],
+                            ["objdump/readelf", "Inspect object files, sections, symbols, relocations"],
+                            ["nm", "List symbols"],
+                            ["gdb/lldb", "Debuggers"],
+                            ["strace/ltrace", "Trace syscalls/library calls (Linux)" ]
+                        ]
+                    },
+                    "example": "# Linux (examples):\n# Assemble + link (GAS via gcc):\n#   gcc -no-pie -g hello.s -o hello\n# Inspect:\n#   objdump -d hello\n#   readelf -S hello"
+                },
+                {
+                    "title": "Build patterns",
+                    "description": "Common ways to assemble and link.",
+                    "table": {
+                        "headers": ["Pattern", "Command"],
+                        "rows": [
+                            ["GAS assemble+link", "gcc -g file.s -o prog"],
+                            ["GAS assemble only", "as -g file.s -o file.o"],
+                            ["Link objects", "ld file.o -o prog"],
+                            ["NASM to ELF64", "nasm -f elf64 file.asm -o file.o"],
+                            ["Link NASM object", "gcc -no-pie file.o -o prog"],
+                            ["Static link (when available)", "gcc -static file.o -o prog" ]
+                        ]
+                    },
+                    "example": "# Example (NASM x86-64 on Linux)\n# nasm -f elf64 hello.asm -o hello.o\n# gcc -no-pie hello.o -o hello"
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "Core assembly concepts: instructions, registers, memory, and program structure.",
+            "items": [
+                {
+                    "title": "Basic structure (sections, labels)",
+                    "description": "Most assemblers organize code/data into sections and use labels as jump/call targets.",
+                    "table": {
+                        "headers": ["Concept", "Notes"],
+                        "rows": [
+                            [".text", "Code section"],
+                            [".data", "Initialized global data"],
+                            [".bss", "Uninitialized global data"],
+                            ["Label", "Symbolic address (e.g., loop_start:)"],
+                            ["Entry point", "Platform-specific (e.g., _start on ELF, main when linking with libc)" ]
+                        ]
+                    },
+                    "example": "; Pseudo-structure (assembler-specific)\nsection .text\nglobal _start\n_start:\n    ; ..."
+                },
+                {
+                    "title": "Registers and data sizes",
+                    "description": "Registers and operand sizes vary by architecture; be explicit about byte/word/dword/qword where required.",
+                    "table": {
+                        "headers": ["Size", "Common names"],
+                        "rows": [
+                            ["8-bit", "byte"],
+                            ["16-bit", "word"],
+                            ["32-bit", "dword"],
+                            ["64-bit", "qword"],
+                            ["Pointer", "Depends on mode/ABI (32/64)" ]
+                        ]
+                    },
+                    "example": "; Example intent: load a byte vs a qword\n; mov al, [rdi]     ; 8-bit\n; mov rax, [rdi]    ; 64-bit"
+                },
+                {
+                    "title": "Addressing modes (high level)",
+                    "description": "Most ISAs support register, immediate, and memory addressing; x86 also supports base+index*scale+disp.",
+                    "table": {
+                        "headers": ["Mode", "Example (conceptual)"],
+                        "rows": [
+                            ["Immediate", "mov rax, 42"],
+                            ["Register", "mov rax, rbx"],
+                            ["Memory", "mov rax, [addr]"],
+                            ["Base+offset", "mov rax, [rbp-8]"],
+                            ["Base+index*scale+disp", "mov rax, [rdi + rsi*8 + 16]" ]
+                        ]
+                    },
+                    "example": "; array[i] with 8-byte elements (x86-64 concept)\n; mov rax, [rdi + rsi*8]"
+                },
+                {
+                    "title": "Endianness",
+                    "description": "Byte order matters when reading multi-byte values from memory or files.",
+                    "table": {
+                        "headers": ["Type", "Notes"],
+                        "rows": [
+                            ["Little-endian", "Least significant byte at lowest address (x86, most ARM in LE mode)"],
+                            ["Big-endian", "Most significant byte at lowest address (network byte order)" ]
+                        ]
+                    },
+                    "example": "; LE memory: value 0x11223344 stored as 44 33 22 11"
+                },
+                {
+                    "title": "System calls vs libc",
+                    "description": "You can call OS syscalls directly or call higher-level C library functions when linking with libc.",
+                    "table": {
+                        "headers": ["Approach", "Notes"],
+                        "rows": [
+                            ["Syscalls", "Fast path to kernel; ABI is OS-specific (Linux vs Windows differ)"],
+                            ["libc calls", "Portable-ish but requires linking and calling convention compliance" ]
+                        ]
+                    },
+                    "example": "; Linux: syscalls use specific registers (arch-specific)\n; libc: call puts/printf etc (ABI-specific)"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Assembly doesn’t have operators in the same way as high-level languages; use instructions to implement arithmetic and bitwise operations.",
+            "items": [
+                {
+                    "title": "Arithmetic",
+                    "description": "Add/sub/mul/div (exact mnemonics and operand rules vary by ISA).",
+                    "table": {
+                        "headers": ["Operation", "Common mnemonics"],
+                        "rows": [
+                            ["Add/Sub", "add, sub, inc, dec"],
+                            ["Multiply", "mul/imul (x86), mul (ARM)"],
+                            ["Divide", "div/idiv (x86), udiv/sdiv (AArch64)"],
+                            ["Negate", "neg"],
+                            ["Compare", "cmp (x86), cmp/subs (ARM)" ]
+                        ]
+                    },
+                    "example": "; Conceptual\n; add rax, 1\n; sub rbx, rcx"
+                },
+                {
+                    "title": "Bitwise and shifts",
+                    "description": "Masks and shifts are foundational for low-level work.",
+                    "table": {
+                        "headers": ["Operation", "Common mnemonics"],
+                        "rows": [
+                            ["AND/OR/XOR", "and, or, xor"],
+                            ["NOT", "not"],
+                            ["Shift left/right", "shl/sal, shr"],
+                            ["Arithmetic shift", "sar"],
+                            ["Rotate", "rol, ror" ]
+                        ]
+                    },
+                    "example": "; Clear lowest bit (mask)\n; and rax, -2"
+                },
+                {
+                    "title": "Flags and condition codes",
+                    "description": "Many instructions set flags (zero, carry, sign, overflow) used by conditional branches/moves.",
+                    "table": {
+                        "headers": ["Concept", "Notes"],
+                        "rows": [
+                            ["ZF", "Zero flag (result == 0)"],
+                            ["CF", "Carry/borrow (unsigned overflow)"],
+                            ["SF", "Sign flag"],
+                            ["OF", "Overflow flag (signed overflow)" ]
+                        ]
+                    },
+                    "example": "; cmp rax, rbx sets flags for subsequent conditional jump"
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "Conditional logic via compare/test + conditional branch, conditional move, or set-on-condition.",
+            "items": [
+                {
+                    "title": "Compare and branch",
+                    "description": "Typically: cmp/test then a conditional jump.",
+                    "table": {
+                        "headers": ["Pattern", "Meaning"],
+                        "rows": [
+                            ["cmp a,b; je label", "Jump if equal"],
+                            ["cmp a,b; jne label", "Jump if not equal"],
+                            ["cmp a,b; jl/jg", "Signed less/greater"],
+                            ["cmp a,b; jb/ja", "Unsigned below/above"],
+                            ["test r,r; jz", "Often used to test zero" ]
+                        ]
+                    },
+                    "example": "; if (x==0) goto done\n; test rax, rax\n; jz done"
+                },
+                {
+                    "title": "Conditional move / set",
+                    "description": "Avoid branches in some cases.",
+                    "table": {
+                        "headers": ["Technique", "Example (x86 concept)"],
+                        "rows": [
+                            ["cmovcc", "cmovz rax, rbx"],
+                            ["setcc", "sete al (sets byte to 0/1)" ]
+                        ]
+                    },
+                    "example": "; set al=1 if equal else 0\n; cmp rax, rbx\n; sete al"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "Loops are usually labels + conditional/unconditional jumps.",
+            "items": [
+                {
+                    "title": "Counted loops",
+                    "description": "Decrement a counter and branch until done.",
+                    "example": "; Conceptual\n; mov rcx, 10\n; loop_start:\n;   ; body\n;   dec rcx\n;   jnz loop_start",
+                    "table": null
+                },
+                {
+                    "title": "Pointer-walking loops",
+                    "description": "Iterate over arrays/strings by advancing a pointer.",
+                    "example": "; Conceptual: while (*p != 0) { ...; p++; }\n; loop:\n;   mov al, [rdi]\n;   test al, al\n;   jz done\n;   inc rdi\n;   jmp loop\n; done:",
+                    "table": null
+                },
+                {
+                    "title": "Loop pitfalls",
+                    "description": "Watch for off-by-one, wrong stride, and clobbered condition flags.",
+                    "table": {
+                        "headers": ["Pitfall", "Tip"],
+                        "rows": [
+                            ["Flags clobbered", "Some instructions change flags; branch immediately after cmp/test"],
+                            ["Wrong stride", "Scale index by element size"],
+                            ["Signed/unsigned mix", "Use the right conditional jump for signed vs unsigned" ]
+                        ]
+                    },
+                    "example": null
+                }
+            ]
+        },
+        {
+            "title": "Arrays",
+            "description": "Arrays are contiguous memory; indexing is address arithmetic.",
+            "items": [
+                {
+                    "title": "Indexing and strides",
+                    "description": "Compute address = base + index * element_size (+ offset).",
+                    "table": {
+                        "headers": ["Element type", "Size"],
+                        "rows": [
+                            ["byte", "1"],
+                            ["word", "2"],
+                            ["dword", "4"],
+                            ["qword", "8" ]
+                        ]
+                    },
+                    "example": "; a[i] (qword) at base=rdi, i=rsi\n; mov rax, [rdi + rsi*8]"
+                },
+                {
+                    "title": "2D arrays (row-major vs column-major)",
+                    "description": "Layout depends on language/runtime; C is row-major, Fortran is column-major.",
+                    "table": {
+                        "headers": ["Layout", "Address math (concept)"],
+                        "rows": [
+                            ["Row-major", "addr = base + (row*cols + col)*elem"],
+                            ["Column-major", "addr = base + (col*rows + row)*elem" ]
+                        ]
+                    },
+                    "example": "; Choose indexing math to match the producer/consumer language."
+                },
+                {
+                    "title": "Structures and alignment",
+                    "description": "Padding/alignment can change field offsets; match the ABI and packing rules.",
+                    "table": {
+                        "headers": ["Topic", "Notes"],
+                        "rows": [
+                            ["Alignment", "Objects often aligned to 2/4/8/16 bytes"],
+                            ["Padding", "Compilers insert gaps between fields"],
+                            ["Packed structs", "May be unaligned (slower / faulting on some ISAs)" ]
+                        ]
+                    },
+                    "example": "; When calling C, use compiler-produced headers/offsets if possible."
+                }
+            ]
+        },
+        {
+            "title": "Functions",
+            "description": "Calling conventions, parameters/returns, stack frames, scope/labels, and common callable APIs.",
+            "items": [
+                {
+                    "title": "Parameters (calling conventions)",
+                    "description": "How arguments are passed is defined by the ABI (registers vs stack).",
+                    "table": {
+                        "headers": ["ABI", "Typical parameter passing (high level)"],
+                        "rows": [
+                            ["System V AMD64 (Linux/macOS)", "First integer args in registers, spill to stack"],
+                            ["Microsoft x64 (Windows)", "First args in registers, shadow space on stack"],
+                            ["AArch64 (Linux)", "First args in x0-x7, spill to stack"],
+                            ["32-bit x86 cdecl", "Args on stack; caller cleans" ]
+                        ]
+                    },
+                    "example": "; Always consult the ABI doc for your platform/ISA."
+                },
+                {
+                    "title": "Returns",
+                    "description": "Return values are usually in a designated register (or registers).",
+                    "table": {
+                        "headers": ["Return kind", "Typical location"],
+                        "rows": [
+                            ["Integer/pointer", "One register (e.g., rax on x86-64, x0 on AArch64)"],
+                            ["Floating point", "FP register (varies)"],
+                            ["Large structs", "Hidden pointer parameter or memory return (ABI-specific)" ]
+                        ]
+                    },
+                    "example": "; x86-64 SysV: integer return in RAX"
+                },
+                {
+                    "title": "Scope (local labels vs global symbols)",
+                    "description": "Assemblers distinguish local labels/macros from exported global symbols.",
+                    "table": {
+                        "headers": ["Concept", "Assembler examples"],
+                        "rows": [
+                            ["Export symbol", "global foo (NASM), .globl foo (GAS)"],
+                            ["Local label", "Often starts with . or uses numeric labels (assembler-specific)"],
+                            ["File scope", "Symbols not exported are usually local to the object" ]
+                        ]
+                    },
+                    "example": "; NASM: global myfunc\n; myfunc: ...\n; .local_label: ..."
+                },
+                {
+                    "title": "Stack frames",
+                    "description": "Functions often establish a stack frame to save registers and allocate locals.",
+                    "table": {
+                        "headers": ["Step", "Concept"],
+                        "rows": [
+                            ["Prologue", "Save frame pointer, move SP, allocate locals"],
+                            ["Save callee-saved regs", "ABI defines which must be preserved"],
+                            ["Epilogue", "Restore regs, deallocate locals, return" ]
+                        ]
+                    },
+                    "example": "; Conceptual x86-64 style\n; push rbp\n; mov rbp, rsp\n; sub rsp, 32\n; ...\n; mov rsp, rbp\n; pop rbp\n; ret"
+                },
+                {
+                    "title": "Anonymous functions (patterns)",
+                    "description": "Assembly doesn’t have lambdas; similar patterns are trampolines, callbacks, and jump tables.",
+                    "table": {
+                        "headers": ["Pattern", "Use"],
+                        "rows": [
+                            ["Function pointer", "Pass address of code as a callback"],
+                            ["Trampoline", "Small stub that sets up context then jumps"],
+                            ["Jump table", "Computed jump for switch-like dispatch" ]
+                        ]
+                    },
+                    "example": "; Jump-table concept: jmp [table + index*PTR]"
+                },
+                {
+                    "title": "Built-in functions (instruction set primitives)",
+                    "description": "In assembly, “built-ins” are typically instructions and CPU features.",
+                    "table": {
+                        "headers": ["Category", "Examples"],
+                        "rows": [
+                            ["String/memory ops", "movs/stos/cmps/scas (x86), ldr/str loops (ARM)"],
+                            ["Atomic ops", "lock-prefixed ops (x86), ldaxr/stlxr (ARM)"],
+                            ["SIMD", "SSE/AVX (x86), NEON (ARM)"],
+                            ["Barriers", "mfence/lfence/sfence (x86), dmb/dsb/isb (ARM)" ]
+                        ]
+                    },
+                    "example": "; Many features are ISA/extensions specific."
+                },
+                {
+                    "title": "Predefined functions (OS/runtime)",
+                    "description": "Common callable APIs provided by OS/libc/runtime when you link against them.",
+                    "table": {
+                        "headers": ["Area", "Examples"],
+                        "rows": [
+                            ["C stdlib", "printf, puts, malloc, free, memcpy"],
+                            ["POSIX", "open/read/write/close, mmap, clock_gettime"],
+                            ["Windows", "GetProcAddress, VirtualAlloc, WriteFile" ]
+                        ]
+                    },
+                    "example": "; When calling external functions, follow ABI: stack alignment, preserved regs, varargs rules."
+                }
+            ]
+        },
+        {
+            "title": "Filters",
+            "description": "Common “filtering” patterns: bit masks, SIMD selection, and scanning/filtering buffers.",
+            "items": [
+                {
+                    "title": "Bitmask filtering",
+                    "description": "Use AND/OR/XOR to keep/clear/toggle bits.",
+                    "table": {
+                        "headers": ["Goal", "Pattern"],
+                        "rows": [
+                            ["Clear bit k", "x &= ~(1<<k)"],
+                            ["Set bit k", "x |= (1<<k)"],
+                            ["Toggle bit k", "x ^= (1<<k)"],
+                            ["Test bit k", "(x & (1<<k)) != 0" ]
+                        ]
+                    },
+                    "example": "; Conceptual (bit ops expressed as C-like)\n; and/or/xor implement these masks"
+                },
+                {
+                    "title": "Range filtering with compares",
+                    "description": "Filter values by comparing and branching (or using conditional moves).",
+                    "table": {
+                        "headers": ["Task", "Approach"],
+                        "rows": [
+                            ["Keep values >= min", "cmp x,min; jl skip"],
+                            ["Keep values <= max", "cmp x,max; jg skip"],
+                            ["Branchless select", "cmov/setcc + mask" ]
+                        ]
+                    },
+                    "example": "; Typically implemented as a loop over elements."
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Global variables and exported symbols.",
+            "items": [
+                {
+                    "title": "Data sections (.data/.bss)",
+                    "description": "Define initialized/uninitialized storage for global data.",
+                    "table": {
+                        "headers": ["Section", "Use"],
+                        "rows": [
+                            [".data", "Initialized globals/constants"],
+                            [".bss", "Uninitialized globals"],
+                            [".rodata", "Read-only constants (strings, tables)" ]
+                        ]
+                    },
+                    "example": "; Example (conceptual)\n; section .data\n; msg db 'hi',0\n; section .bss\n; buf resb 256"
+                },
+                {
+                    "title": "Export/import symbols",
+                    "description": "Expose a symbol to the linker, or reference an external symbol.",
+                    "table": {
+                        "headers": ["Action", "Examples"],
+                        "rows": [
+                            ["Export", "global foo (NASM), .globl foo (GAS)"],
+                            ["Declare external", "extern puts (NASM), .extern puts (GAS)"],
+                            ["Symbol visibility", "hidden/protected/default (toolchain/format-specific)" ]
+                        ]
+                    },
+                    "example": "; extern puts\n; global main"
+                }
+            ]
+        },
+        {
+            "title": "Packages/Modules",
+            "description": "Code organization via includes, macros, object files, libraries, and link units.",
+            "items": [
+                {
+                    "title": "Includes and macros",
+                    "description": "Assemblers provide include directives and macro systems.",
+                    "table": {
+                        "headers": ["Concept", "Notes"],
+                        "rows": [
+                            ["Include", "Insert another file’s contents (syntax varies)"],
+                            ["Macro", "Generate repeated instruction sequences"],
+                            ["Constants", "equ/define style directives" ]
+                        ]
+                    },
+                    "example": "; NASM: %include 'file.inc'\n; NASM: %define SYS_write 1"
+                },
+                {
+                    "title": "Object files and libraries",
+                    "description": "Modules compile to .o/.obj, then link into executables or .so/.dll.",
+                    "table": {
+                        "headers": ["Artifact", "Purpose"],
+                        "rows": [
+                            [".o/.obj", "Compiled module with symbols/relocations"],
+                            [".a/.lib", "Static library (archive of objects)"],
+                            [".so/.dll", "Shared library"],
+                            ["Relocations", "Linker patches addresses at link/load time" ]
+                        ]
+                    },
+                    "example": "# Create a static lib (Linux)\n# ar rcs libmylib.a a.o b.o\n# gcc main.o -L. -lmylib -o prog"
+                }
+            ]
+        },
+        {
+            "title": "Database Interactions",
+            "description": "Assembly typically interacts with databases by calling existing client libraries or making network/file I/O. There is no standard DB layer in assembly.",
+            "items": [
+                {
+                    "title": "Call a DB client library",
+                    "description": "Use the ABI to call C APIs like SQLite, libpq (Postgres), or MySQL client libraries.",
+                    "table": {
+                        "headers": ["DB", "Typical API surface"],
+                        "rows": [
+                            ["SQLite", "sqlite3_open, sqlite3_prepare_v2, sqlite3_step, sqlite3_finalize"],
+                            ["PostgreSQL", "PQconnectdb, PQexec, PQgetvalue, PQfinish"],
+                            ["MySQL/MariaDB", "mysql_init, mysql_real_connect, mysql_query" ]
+                        ]
+                    },
+                    "example": "; Practical approach: write a thin C wrapper, then call it from assembly."
+                },
+                {
+                    "title": "File-based data",
+                    "description": "Sometimes “DB” is just a file format (CSV/JSON) handled by your code or a library.",
+                    "table": {
+                        "headers": ["Method", "Notes"],
+                        "rows": [
+                            ["Parse format yourself", "Hard, error-prone"],
+                            ["Call a parser library", "Recommended"],
+                            ["Use OS tools", "Sometimes easiest: call external process" ]
+                        ]
+                    },
+                    "example": null
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "There is no native regex instruction set. Regex is typically implemented in a library or via custom pattern matching.",
+            "items": [
+                {
+                    "title": "Call a regex library",
+                    "description": "Use PCRE2, POSIX regex, or platform APIs via FFI (ABI calls).",
+                    "table": {
+                        "headers": ["Library/API", "Notes"],
+                        "rows": [
+                            ["PCRE2", "Feature-rich; common in many environments"],
+                            ["POSIX regex", "regex.h functions on many Unix-like systems"],
+                            [".NET/Windows", "Regex engines available through higher-level runtimes" ]
+                        ]
+                    },
+                    "example": "; Recommended: wrap regex calls in C and call from assembly."
+                },
+                {
+                    "title": "Simple pattern matching",
+                    "description": "Implement substring search (e.g., naive scan) when full regex is not needed.",
+                    "table": {
+                        "headers": ["Algorithm", "Use"],
+                        "rows": [
+                            ["Naive search", "Small strings, simplest"],
+                            ["Boyer–Moore", "Fast for longer patterns"],
+                            ["KMP", "Linear-time worst-case" ]
+                        ]
+                    },
+                    "example": "; Many standard library routines (memmem/strstr) already do this."
+                }
+            ]
+        },
+        {
+            "title": "Date and Time",
+            "description": "Timekeeping is OS- and ISA-dependent. Use syscalls/APIs or CPU counters.",
+            "items": [
+                {
+                    "title": "OS APIs",
+                    "description": "Most reliable: call operating system time APIs.",
+                    "table": {
+                        "headers": ["Platform", "API examples"],
+                        "rows": [
+                            ["Linux/POSIX", "clock_gettime, gettimeofday"],
+                            ["Windows", "GetSystemTimeAsFileTime, QueryPerformanceCounter" ]
+                        ]
+                    },
+                    "example": "; Call into libc/kernel APIs via ABI."
+                },
+                {
+                    "title": "CPU counters",
+                    "description": "Cycle counters are good for profiling but need calibration and are not wall time.",
+                    "table": {
+                        "headers": ["ISA", "Example"],
+                        "rows": [
+                            ["x86", "rdtsc/rdtscp"],
+                            ["AArch64", "cntvct_el0 (when accessible)" ]
+                        ]
+                    },
+                    "example": "; Beware: frequency scaling, core migration, virtualization."
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequent assembler/linker/runtime issues and typical fixes.",
+            "items": [
+                {
+                    "title": "Operand size mismatch",
+                    "description": "Mixing 32/64-bit registers or memory operands without proper size specifiers.",
+                    "table": {
+                        "headers": ["Symptom", "Fix"],
+                        "rows": [
+                            ["Assembler error: operand size mismatch", "Use correct register size and explicit size directives"],
+                            ["Unexpected sign/zero extension", "Use movzx/movsx (x86) or explicit widening/narrowing" ]
+                        ]
+                    },
+                    "example": "; Example: specify byte/word/dword/qword loads where required"
+                },
+                {
+                    "title": "Undefined reference / unresolved symbol",
+                    "description": "Linker can’t find a symbol (missing object/library or wrong name/mangling).",
+                    "table": {
+                        "headers": ["Check", "Tip"],
+                        "rows": [
+                            ["Symbol name", "Use nm/objdump to inspect; beware leading underscores on some platforms"],
+                            ["Link order", "Some linkers require libs after objects"],
+                            ["Calling convention", "Name decoration differs (especially 32-bit Windows)" ]
+                        ]
+                    },
+                    "example": "# Inspect symbols\n# nm -g your.o | head"
+                },
+                {
+                    "title": "Segmentation fault / access violation",
+                    "description": "Invalid memory access: bad pointer, wrong stack pointer, missing alignment, or incorrect bounds.",
+                    "table": {
+                        "headers": ["Cause", "Debug approach"],
+                        "rows": [
+                            ["Bad pointer", "Inspect registers and memory in debugger"],
+                            ["Stack misalignment", "Follow ABI alignment rules (often 16-byte on x86-64)"],
+                            ["Out-of-bounds", "Validate indices/lengths" ]
+                        ]
+                    },
+                    "example": "# Debug with gdb/lldb; use backtrace and disassembly around crash"
+                },
+                {
+                    "title": "Relocation overflow / PIE issues",
+                    "description": "Mixing position-dependent code with position-independent linking, or address too large for relocation.",
+                    "table": {
+                        "headers": ["Symptom", "Fix"],
+                        "rows": [
+                            ["relocation R_X86_64_32 against...", "Use RIP-relative addressing or compile/link with correct flags"],
+                            ["PIE defaults", "Use -no-pie when appropriate, or write PIC/PIE-safe assembly" ]
+                        ]
+                    },
+                    "example": "# gcc -no-pie file.s -o prog  (when appropriate)"
+                }
+            ]
+        },
+        {
+            "title": "Debugging and Profiling",
+            "description": "Inspect binaries, step through code, and validate assumptions.",
+            "items": [
+                {
+                    "title": "Binary inspection commands",
+                    "description": "Fast ways to see what you built.",
+                    "table": {
+                        "headers": ["Command", "Purpose"],
+                        "rows": [
+                            ["objdump -d prog", "Disassemble"],
+                            ["objdump -t prog", "Symbol table"],
+                            ["readelf -h prog", "ELF header"],
+                            ["readelf -S prog", "Sections"],
+                            ["readelf -r obj.o", "Relocations"],
+                            ["nm -n prog", "Symbols sorted by address"],
+                            ["strings prog", "Extract printable strings" ]
+                        ]
+                    },
+                    "example": "objdump -d -Mintel prog | less"
+                },
+                {
+                    "title": "Debugger basics",
+                    "description": "Step, inspect registers, view memory.",
+                    "table": {
+                        "headers": ["Debugger", "Common commands"],
+                        "rows": [
+                            ["gdb", "break, run, stepi, x/i $pc, info reg, bt"],
+                            ["lldb", "b, run, si, disassemble -p, register read, bt" ]
+                        ]
+                    },
+                    "example": "# gdb ./prog\n# (gdb) b *main\n# (gdb) run\n# (gdb) stepi\n# (gdb) info registers"
+                }
+            ]
+        },
+        {
+            "title": "Scripting and Automation",
+            "description": "Build scripts, repeatable builds, cross-compilation, and CI-friendly patterns.",
+            "items": [
+                {
+                    "title": "Makefile basics",
+                    "description": "Automate assemble/link steps.",
+                    "example": "# Makefile (concept)\n# prog: a.o b.o\n#\t$(CC) -no-pie $^ -o $@\n# a.o: a.s\n#\t$(CC) -c -g $< -o $@",
+                    "table": null
+                },
+                {
+                    "title": "Cross compilation (concept)",
+                    "description": "Use a target toolchain (e.g., aarch64-linux-gnu-gcc) and matching assembler/linker.",
+                    "table": {
+                        "headers": ["Target", "Example tool"],
+                        "rows": [
+                            ["AArch64 Linux", "aarch64-linux-gnu-gcc"],
+                            ["ARMv7 Linux", "arm-linux-gnueabihf-gcc"],
+                            ["RISC-V", "riscv64-linux-gnu-gcc" ]
+                        ]
+                    },
+                    "example": "# aarch64-linux-gnu-gcc -c file.s -o file.o"
+                }
+            ]
+        }
+    ]
+}

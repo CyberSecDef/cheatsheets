@@ -1,0 +1,569 @@
+{
+    "title": "Ruby",
+    "description": "A general Ruby language quick reference covering fundamentals, methods/blocks/lambdas, modules/gems, operators, common errors, arrays/hashes/enumerables, control flow, regex, date/time, and practical scripting and database patterns.",
+    "language": "ruby",
+    "categories": [
+        {
+            "title": "Installation and Tooling",
+            "description": "Ruby runtime, version managers, and common CLI workflows.",
+            "items": [
+                {
+                    "title": "ruby / irb / gem / bundler",
+                    "description": "Use ruby for scripts, irb for interactive sessions, gem for packages, and bundler for dependency management.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["ruby -v", "Show Ruby version"],
+                            ["irb", "Interactive Ruby REPL"],
+                            ["ruby -e 'puts 2+2'", "Run a one-liner"],
+                            ["ruby script.rb", "Run a Ruby script"],
+                            ["gem --version", "Show RubyGems version"],
+                            ["gem list", "List installed gems"],
+                            ["bundle -v", "Show Bundler version"],
+                            ["bundle init", "Create a Gemfile"],
+                            ["bundle install", "Install dependencies"],
+                            ["bundle exec ruby script.rb", "Run using Gemfile-resolved gems"],
+                            ["bundle update", "Update dependencies"],
+                            ["bundle exec rake -T", "List Rake tasks" ]
+                        ]
+                    },
+                    "example": "ruby -v\nirb\nruby -e 'puts RUBY_VERSION'"
+                },
+                {
+                    "title": "Common dev tools",
+                    "description": "Typical Ruby project hygiene: formatting, linting, and testing.",
+                    "table": {
+                        "headers": ["Tool", "Purpose"],
+                        "rows": [
+                            ["rubocop", "Lint and style checks"],
+                            ["rspec", "Testing framework"],
+                            ["minitest", "Built-in-ish testing option"],
+                            ["rake", "Task runner"],
+                            ["yard", "Documentation generator" ]
+                        ]
+                    },
+                    "example": "bundle exec rubocop\nbundle exec rspec"
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "Core Ruby basics: variables, types, strings, output, and common patterns.",
+            "items": [
+                {
+                    "title": "Variables and types",
+                    "description": "Ruby is dynamically typed. Everything is an object.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Assignment", "x = 1"],
+                            ["Nil", "nil"],
+                            ["Symbols", ":ok, :user_id"],
+                            ["Type check", "x.is_a?(Integer)"],
+                            ["Inspect", "p obj, obj.class"],
+                            ["Freeze (immutability hint)", "s = 'a'.freeze" ]
+                        ]
+                    },
+                    "example": "x = 42\nname = 'Ada'\np [x.class, name.class, nil]"
+                },
+                {
+                    "title": "Strings",
+                    "description": "Single quotes are mostly literal; double quotes support interpolation and escapes.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Interpolation", "\"Hello #{name}\""],
+                            ["Concatenate", "a + b, a << b"],
+                            ["Length", "s.length"],
+                            ["Substring", "s[0, 3], s[0..2]"],
+                            ["Trim", "s.strip"],
+                            ["Split/join", "s.split(','), arr.join(',')"],
+                            ["Multiline", "<<~TEXT ... TEXT" ]
+                        ]
+                    },
+                    "example": "name = 'World'\nputs \"Hello #{name}\"\nputs 'No interpolation: #{name}'"
+                },
+                {
+                    "title": "I/O and files (quick patterns)",
+                    "description": "Ruby has simple stdio and file APIs for scripting.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Print", "puts 'hi'; print 'hi'"],
+                            ["Read all stdin", "input = STDIN.read"],
+                            ["Read file", "File.read('file.txt')"],
+                            ["Write file", "File.write('out.txt', data)"],
+                            ["Line iteration", "File.foreach('file.txt') { |line| ... }"],
+                            ["ARGV", "ARGV[0]" ]
+                        ]
+                    },
+                    "example": "path = ARGV[0] || 'file.txt'\nFile.foreach(path).with_index { |line, i| puts \"#{i+1}: #{line}\" }"
+                }
+            ]
+        },
+        {
+            "title": "Functions (Methods)",
+            "description": "Parameters, returns, scope, anonymous functions (blocks/procs/lambdas), and common built-ins.",
+            "items": [
+                {
+                    "title": "Parameters and returns",
+                    "description": "Ruby returns the last expression implicitly; use return for early exits.",
+                    "table": {
+                        "headers": ["Feature", "Example"],
+                        "rows": [
+                            ["Define method", "def add(a, b) a + b end"],
+                            ["Default args", "def f(x = 10) x * 2 end"],
+                            ["Keyword args", "def f(a:, b: 1) a + b end"],
+                            ["Splat args", "def f(*xs) xs.sum end"],
+                            ["Double splat", "def f(**opts) opts end"],
+                            ["Block arg", "def f(&blk) blk.call end" ]
+                        ]
+                    },
+                    "example": "def greet(name = 'World')\n  \"Hello #{name}\"\nend\n\nputs greet\nputs greet('Ada')"
+                },
+                {
+                    "title": "Scope",
+                    "description": "Ruby has local variables, instance/class variables, and constants; closures capture locals.",
+                    "table": {
+                        "headers": ["Name", "Scope"],
+                        "rows": [
+                            ["local", "x"],
+                            ["instance variable", "@x (per object)"],
+                            ["class variable", "@@x (shared; often discouraged)"],
+                            ["constant", "X (lexically scoped to modules/classes)"],
+                            ["global", "$x (avoid when possible)" ]
+                        ]
+                    },
+                    "example": "class C\n  X = 1\n  def initialize\n    @n = 2\n  end\nend\n\nc = C.new\np c.instance_variables"
+                },
+                {
+                    "title": "Anonymous functions: blocks, Proc, lambda",
+                    "description": "Blocks are most common; Proc and lambda are objects. lambda enforces arity and has different return behavior.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["Block", "[1,2].map { |x| x * 2 }"],
+                            ["Proc", "p = Proc.new { |x| x * 2 }"],
+                            ["lambda", "l = ->(x) { x * 2 }"],
+                            ["Yield", "def f; yield 1; end"],
+                            ["& conversion", "arr.map(&method(:to_s))" ]
+                        ]
+                    },
+                    "example": "def twice\n  yield 2\nend\n\nputs twice { |x| x * 2 }\n\nl = ->(x) { x * 3 }\nputs l.call(4)"
+                },
+                {
+                    "title": "Built-in / predefined functions (selected)",
+                    "description": "High-value Ruby core/stdlib methods commonly used in day-to-day scripting.",
+                    "table": {
+                        "headers": ["Name", "Purpose"],
+                        "rows": [
+                            ["puts / p / pp", "Output / inspect / pretty print"],
+                            ["require", "Load a library"],
+                            ["require_relative", "Load relative to current file"],
+                            ["raise", "Raise exception"],
+                            ["sleep", "Pause"],
+                            ["Time.now", "Current time"],
+                            ["ENV", "Environment variables"],
+                            ["Kernel.system", "Run a command (returns true/false)"],
+                            ["Kernel.`cmd`", "Backticks: capture command output" ]
+                        ]
+                    },
+                    "example": "puts ENV['HOME']\nputs `uname -a`.lines.first"
+                }
+            ]
+        },
+        {
+            "title": "Filters",
+            "description": "Filtering and transformation via Enumerable.",
+            "items": [
+                {
+                    "title": "Enumerable essentials",
+                    "description": "Most collection transformations come from Enumerable.",
+                    "table": {
+                        "headers": ["Method", "Example"],
+                        "rows": [
+                            ["map", "xs.map { |x| x * 2 }"],
+                            ["select", "xs.select { |x| x > 0 }"],
+                            ["reject", "xs.reject { |x| x.nil? }"],
+                            ["filter_map", "xs.filter_map { |x| x if x > 0 }"],
+                            ["reduce (inject)", "xs.reduce(0, :+)"],
+                            ["any?/all?", "xs.any? { |x| x > 0 }"],
+                            ["find", "xs.find { |x| x.id == 1 }"],
+                            ["group_by", "xs.group_by { |x| x.kind }" ],
+                            ["sort / sort_by", "xs.sort_by { |x| x.name }" ]
+                        ]
+                    },
+                    "example": "xs = [1, -2, 3, nil]\np xs.compact.select { |x| x > 0 }.map { |x| x * 10 }"
+                },
+                {
+                    "title": "Lazy enumerators",
+                    "description": "Enumerator::Lazy helps with large or infinite sequences.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Create lazy chain", "(1..).lazy.select { |x| x.even? }.take(5).to_a"],
+                            ["Lazy map", "(1..10).lazy.map { |x| x * 2 }.force" ]
+                        ]
+                    },
+                    "example": "p (1..).lazy.select(&:even?).take(5).to_a"
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Global variables, constants, ENV, and configuration.",
+            "items": [
+                {
+                    "title": "Global variables and ENV",
+                    "description": "Global variables exist but are usually avoided; ENV is commonly used for configuration.",
+                    "table": {
+                        "headers": ["Item", "Meaning"],
+                        "rows": [
+                            ["$stdout/$stderr", "Standard IO objects"],
+                            ["$LOAD_PATH", "Where require searches"],
+                            ["$0", "Program name"],
+                            ["ENV", "Environment variable hash"],
+                            ["ARGV", "Command-line args array" ]
+                        ]
+                    },
+                    "example": "puts ARGV.inspect\nputs ENV.fetch('HOME', '')"
+                },
+                {
+                    "title": "Constants",
+                    "description": "Constants are lexically scoped under modules/classes; mutation is possible but discouraged.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Define", "TIMEOUT = 5"],
+                            ["Namespace", "MyApp::TIMEOUT"],
+                            ["Freeze deep", "CONFIG = {a: 1}.freeze" ]
+                        ]
+                    },
+                    "example": "module MyApp\n  TIMEOUT = 5\nend\nputs MyApp::TIMEOUT"
+                }
+            ]
+        },
+        {
+            "title": "Packages/Modules",
+            "description": "Gems, Bundler, modules, classes, and require/load.",
+            "items": [
+                {
+                    "title": "Gems and Bundler",
+                    "description": "Use Gemfile + bundler for reproducible dependencies.",
+                    "table": {
+                        "headers": ["Task", "Command"],
+                        "rows": [
+                            ["Install gem", "gem install <name>"],
+                            ["Uninstall gem", "gem uninstall <name>"],
+                            ["Create Gemfile", "bundle init"],
+                            ["Install deps", "bundle install"],
+                            ["Add gem (edit Gemfile)", "# gem 'httparty'"],
+                            ["Run under bundle", "bundle exec ruby script.rb"],
+                            ["Show dependency tree", "bundle list"],
+                            ["Update", "bundle update" ]
+                        ]
+                    },
+                    "example": "bundle init\n# edit Gemfile\nbundle install"
+                },
+                {
+                    "title": "Modules and mixins",
+                    "description": "Modules provide namespacing and mixins (include/extend).",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Namespace", "module MyApp; end"],
+                            ["Include instance methods", "include Comparable"],
+                            ["Extend class methods", "extend self"],
+                            ["Module function", "module M; def self.f; end; end" ]
+                        ]
+                    },
+                    "example": "module M\n  def hi = 'hi'\nend\n\nclass C\n  include M\nend\n\nputs C.new.hi"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Arithmetic, comparison, logical, and Ruby-specific operators.",
+            "items": [
+                {
+                    "title": "Common operators",
+                    "description": null,
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["+ - * / % **", "Arithmetic"],
+                            ["== != < <= > >= <=>", "Comparison and spaceship"],
+                            ["&& || !", "Logical"],
+                            ["and or not", "Low-precedence logical keywords"],
+                            [".. ...", "Inclusive/exclusive ranges"],
+                            ["=~ !~", "Regex match/non-match"],
+                            ["?:", "Ternary"],
+                            ["&. (safe navigation)", "Call method if receiver not nil"],
+                            ["||=", "Assign if nil/false" ]
+                        ]
+                    },
+                    "example": "x = nil\nputs x&.upcase\nx ||= 'default'\nputs x"
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequently encountered Ruby exceptions and fixes.",
+            "items": [
+                {
+                    "title": "Common exceptions",
+                    "description": null,
+                    "table": {
+                        "headers": ["Exception", "Typical cause / fix"],
+                        "rows": [
+                            ["NoMethodError", "Calling method on nil or wrong type; check object, use &. or guard clauses."],
+                            ["NameError", "Undefined variable/constant; check scope/spelling."],
+                            ["ArgumentError", "Wrong number of args or invalid args; check method signature."],
+                            ["TypeError", "Wrong type; convert/cast appropriately."],
+                            ["LoadError", "require failed; check gem install, Bundler, $LOAD_PATH."],
+                            ["SyntaxError", "Parser error; run ruby -c file.rb." ]
+                        ]
+                    },
+                    "example": "ruby -c script.rb\n# bundle exec ruby script.rb"
+                },
+                {
+                    "title": "Exception handling",
+                    "description": "Use begin/rescue/ensure; prefer specific exception classes.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Rescue", "begin; ...; rescue StandardError => e; warn e.message; end"],
+                            ["Ensure", "ensure; cleanup; end"],
+                            ["Raise", "raise ArgumentError, 'bad arg'" ]
+                        ]
+                    },
+                    "example": "def parse_int(s)\n  Integer(s)\nrescue ArgumentError\n  nil\nend\n\np parse_int('12')\np parse_int('x')"
+                }
+            ]
+        },
+        {
+            "title": "Arrays and Hashes",
+            "description": "Core collections and common idioms.",
+            "items": [
+                {
+                    "title": "Array basics",
+                    "description": null,
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Create", "a = [1,2,3]"],
+                            ["Append", "a << 4, a.push(4)"],
+                            ["Prepend", "a.unshift(0)"],
+                            ["Access", "a[0], a[-1], a.at(0)"],
+                            ["Slice", "a[1,2], a[1..2]"],
+                            ["Remove", "a.pop, a.shift, a.delete(2)"],
+                            ["Uniq", "a.uniq"],
+                            ["Compact", "a.compact" ]
+                        ]
+                    },
+                    "example": "a = [1, nil, 2, 2]\np a.compact.uniq"
+                },
+                {
+                    "title": "Hash basics",
+                    "description": "Hashes map keys to values. Symbols are common keys.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Create", "h = {a: 1, 'b' => 2}"],
+                            ["Access", "h[:a], h.fetch(:a)"],
+                            ["Default", "h = Hash.new(0)"],
+                            ["Update", "h[:c] = 3"],
+                            ["Merge", "h.merge(other)"],
+                            ["Keys/values", "h.keys, h.values" ]
+                        ]
+                    },
+                    "example": "h = Hash.new(0)\n%w[a b a].each { |k| h[k] += 1 }\np h"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "Iteration constructs and idiomatic looping.",
+            "items": [
+                {
+                    "title": "Loop constructs",
+                    "description": "Ruby favors iterators (each/map) over manual loops.",
+                    "table": {
+                        "headers": ["Construct", "Example"],
+                        "rows": [
+                            ["each", "xs.each { |x| ... }"],
+                            ["times", "10.times { |i| ... }"],
+                            ["while", "while cond; ...; end"],
+                            ["until", "until cond; ...; end"],
+                            ["loop", "loop do ... break end"],
+                            ["break/next", "break, next" ]
+                        ]
+                    },
+                    "example": "3.times { |i| puts i }\nxs = [1,2,3]\nxs.each { |x| puts x }"
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "if/unless, case, pattern matching basics, and guard-style idioms.",
+            "items": [
+                {
+                    "title": "if/unless and case",
+                    "description": "Only nil and false are falsy.",
+                    "table": {
+                        "headers": ["Construct", "Example"],
+                        "rows": [
+                            ["if/elsif/else", "if x > 0; ...; elsif x == 0; ...; else; ...; end"],
+                            ["unless", "unless ok; ...; end"],
+                            ["case", "case x; when 1; ...; else; ...; end"],
+                            ["case ranges", "when 1..10 then ..."],
+                            ["Guard clause", "return if x.nil?" ]
+                        ]
+                    },
+                    "example": "def classify(x)\n  return 'nil' if x.nil?\n  case x\n  when 0 then 'zero'\n  when 1..9 then 'small'\n  else 'big'\n  end\nend\n\nputs classify(3)"
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "Ruby has built-in regex support; use Regexp, match, scan, gsub, etc.",
+            "items": [
+                {
+                    "title": "Regex basics",
+                    "description": "Use /.../ literals, named captures, and safe navigation when matches can be nil.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Match", "'abc' =~ /b/"],
+                            ["Match object", "m = /(?<k>\\w+)-(\\d+)/.match('item-42')"],
+                            ["Captures", "m[1], m[:k]"],
+                            ["Scan", "'a1b2'.scan(/\\d+/)"],
+                            ["Replace", "'a  b'.gsub(/\\s+/, ' ')"],
+                            ["Split", "'a,b'.split(/,/)" ]
+                        ]
+                    },
+                    "example": "m = /(?<name>\\w+)-(\\d+)/.match('item-42')\nputs m[:name]\nputs m[2]"
+                }
+            ]
+        },
+        {
+            "title": "Data and Time",
+            "description": "Time, Date, DateTime, formatting/parsing, and time zones.",
+            "items": [
+                {
+                    "title": "Time (core)",
+                    "description": "Time is in core Ruby; Date/DateTime are in stdlib (require 'date').",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Now", "Time.now"],
+                            ["UTC", "Time.now.utc"],
+                            ["Epoch", "Time.at(0)"],
+                            ["Parse (Time)", "Time.parse('2025-12-20T12:00:00Z') # require 'time'"],
+                            ["Format", "t.strftime('%Y-%m-%d %H:%M:%S')"],
+                            ["Add seconds", "t + 60" ]
+                        ]
+                    },
+                    "example": "require 'time'\nt = Time.parse('2025-12-20T12:00:00Z')\nputs t.utc.strftime('%Y-%m-%dT%H:%M:%SZ')"
+                },
+                {
+                    "title": "Date/DateTime (stdlib)",
+                    "description": "Date arithmetic is useful for calendar operations.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Require", "require 'date'"],
+                            ["Today", "Date.today"],
+                            ["Parse", "Date.parse('2025-12-20')"],
+                            ["Add days", "Date.today + 7"],
+                            ["DateTime", "DateTime.parse('2025-12-20T12:00:00+00:00')" ]
+                        ]
+                    },
+                    "example": "require 'date'\nd = Date.parse('2025-12-20')\nputs (d + 7).to_s"
+                }
+            ]
+        },
+        {
+            "title": "Database Interactions",
+            "description": "Common Ruby DB access patterns (sqlite3/pg) and higher-level ORMs.",
+            "items": [
+                {
+                    "title": "SQLite (sqlite3 gem)",
+                    "description": "For small scripts, sqlite3 is a pragmatic default.",
+                    "table": {
+                        "headers": ["Task", "Snippet"],
+                        "rows": [
+                            ["Add gem", "gem 'sqlite3'"],
+                            ["Connect", "db = SQLite3::Database.new('file.db')"],
+                            ["Execute", "db.execute('CREATE TABLE t(x INTEGER)')"],
+                            ["Query", "db.execute('SELECT x FROM t')"],
+                            ["Bind params", "db.execute('INSERT INTO t(x) VALUES (?)', [1])" ]
+                        ]
+                    },
+                    "example": "require 'sqlite3'\ndb = SQLite3::Database.new(':memory:')\ndb.execute('CREATE TABLE t(x INTEGER)')\ndb.execute('INSERT INTO t(x) VALUES (?)', [1])\np db.execute('SELECT x FROM t')"
+                },
+                {
+                    "title": "PostgreSQL (pg gem)",
+                    "description": "Use parameterized queries to avoid SQL injection.",
+                    "table": {
+                        "headers": ["Task", "Snippet"],
+                        "rows": [
+                            ["Add gem", "gem 'pg'"],
+                            ["Connect", "conn = PG.connect(dbname: 'db', user: 'u', password: 'p')"],
+                            ["Query", "conn.exec_params('SELECT $1::int AS x', [1])"],
+                            ["Close", "conn.close" ]
+                        ]
+                    },
+                    "example": "require 'pg'\n# conn = PG.connect(dbname: 'db')\n# res = conn.exec_params('SELECT $1::int AS x', [1])\n# p res[0]['x']\n# conn.close"
+                },
+                {
+                    "title": "ORMs and query builders",
+                    "description": "Common higher-level choices in the Ruby ecosystem.",
+                    "table": {
+                        "headers": ["Library", "Notes"],
+                        "rows": [
+                            ["ActiveRecord", "Rails ORM; can be used standalone."],
+                            ["Sequel", "Popular ORM with explicit dataset API."],
+                            ["ROM", "Composable data-mapping toolkit." ]
+                        ]
+                    },
+                    "example": "# Bundler Gemfile examples vary by project"
+                }
+            ]
+        },
+        {
+            "title": "Scripting and Administration",
+            "description": "Practical Ruby patterns for automation and OS integration.",
+            "items": [
+                {
+                    "title": "Process execution",
+                    "description": "Choose the right primitive: system for exit status, backticks/Open3 for captured output.",
+                    "table": {
+                        "headers": ["Approach", "Example"],
+                        "rows": [
+                            ["system", "system('ls', '-lah')"],
+                            ["backticks", "out = `ls -1`"],
+                            ["Open3 capture", "stdout, stderr, st = Open3.capture3('cmd')"],
+                            ["Exit status", "$?.exitstatus" ]
+                        ]
+                    },
+                    "example": "require 'open3'\nstdout, stderr, st = Open3.capture3('sh', '-lc', 'echo hi && echo err 1>&2')\nputs stdout\nwarn stderr\nputs st.success?"
+                },
+                {
+                    "title": "JSON and HTTP (common gems)",
+                    "description": "json is in stdlib; HTTP is commonly via net/http (stdlib) or faraday/httparty (gems).",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Parse JSON", "require 'json'; JSON.parse(str)"],
+                            ["Generate JSON", "JSON.generate(obj)"],
+                            ["HTTP GET (net/http)", "Net::HTTP.get(URI('https://example.com'))"],
+                            ["Common HTTP gems", "faraday, httparty" ]
+                        ]
+                    },
+                    "example": "require 'json'\nobj = {ok: true, n: 1}\nputs JSON.generate(obj)"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,795 @@
+{
+    "title": "Godot (GDScript)",
+    "description": "A robust Godot Engine cheatsheet focused on GDScript and practical engine workflows: project structure, nodes/scenes, signals, input, resources, file I/O, HTTP/JSON, debugging, exporting, and core language features.",
+    "language": "godot",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Editor, CLI, project layout, and common workflows.",
+            "items": [
+                {
+                    "title": "Editor and command-line (Godot 4)",
+                    "description": "Useful for headless CI runs, exports, and quick environment checks.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["godot --version", "Show version"],
+                            ["godot -e", "Open editor"],
+                            ["godot --path . -e", "Open editor for project at path"],
+                            ["godot --headless --path .", "Run without a window"],
+                            ["godot --headless --path . --quit", "Load project and quit (sanity check)"],
+                            ["godot --path . --export-release \"Windows Desktop\" build/game.exe", "Export a release preset"],
+                            ["godot --path . --export-pack \"Windows Desktop\" build/game.pck", "Export pack only"],
+                            ["godot --help", "Show CLI help" ]
+                        ]
+                    },
+                    "example": "godot --version\ngodot --headless --path . --quit"
+                },
+                {
+                    "title": "Project structure essentials",
+                    "description": "Key files/folders you’ll commonly touch.",
+                    "table": {
+                        "headers": ["Path", "Purpose"],
+                        "rows": [
+                            ["project.godot", "Project settings + main scene"],
+                            ["addons/", "Editor plugins and third-party addons"],
+                            [".godot/", "Editor cache/import metadata"],
+                            ["*.tscn", "Scene files (text)"],
+                            ["*.gd", "GDScript files"],
+                            ["res://", "Resource path prefix (project root)"],
+                            ["user://", "Writable per-user data path" ]
+                        ]
+                    },
+                    "example": "# Common conventions (optional)\nscenes/\nscripts/\nassets/\naddons/"
+                },
+                {
+                    "title": "Useful editor actions",
+                    "description": "Common everyday actions (names can differ slightly by platform/version).",
+                    "table": {
+                        "headers": ["Action", "Notes"],
+                        "rows": [
+                            ["Run project", "Play the main scene"],
+                            ["Run current scene", "Play the scene open in editor"],
+                            ["Search in files", "Quickly find scripts/resources"],
+                            ["Remote scene tree", "Inspect a running game" ]
+                        ]
+                    },
+                    "example": null
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "GDScript basics: types, variables, strings, null, printing.",
+            "items": [
+                {
+                    "title": "Variables, types, and casting",
+                    "description": "GDScript supports optional typing (recommended for larger projects).",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Declare", "var x = 1"],
+                            ["Constant", "const SPEED := 200.0"],
+                            ["Typed variable", "var hp: int = 100"],
+                            ["Typed array", "var xs: Array[int] = [1,2,3]"],
+                            ["Type check", "if x is int: ..."],
+                            ["Cast", "int(\"42\"), float(\"3.14\"), str(123)"],
+                            ["Null", "var v = null" ]
+                        ]
+                    },
+                    "example": "extends Node\n\nconst SPEED := 200.0\nvar hp: int = 100\n\nfunc _ready():\n\tprint(\"hp=\", hp, \" speed=\", SPEED)"
+                },
+                {
+                    "title": "Strings",
+                    "description": "Formatting with % is common; many helpers are on String.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Concatenate", "var s = \"a\" + \"b\""],
+                            ["Format", "var s = \"Hello %s\" % name"],
+                            ["Split", "\"a,b\".split(\",\")"],
+                            ["Replace", "\"a_b\".replace(\"_\", \"-\")"],
+                            ["Trim", "s.strip_edges()"],
+                            ["Join", "\",\".join([\"a\", \"b\"])" ]
+                        ]
+                    },
+                    "example": "var name := \"World\"\nprint(\"Hello %s\" % name)"
+                },
+                {
+                    "title": "Printing, warnings, errors",
+                    "description": "Prefer push_warning/push_error for editor-visible messages.",
+                    "table": {
+                        "headers": ["Call", "Meaning"],
+                        "rows": [
+                            ["print(...) ", "Log to output"],
+                            ["print_debug(...) ", "Debug output"],
+                            ["push_warning(msg)", "Show warning"],
+                            ["push_error(msg)", "Show error"],
+                            ["assert(cond)", "Assertion (debug)" ]
+                        ]
+                    },
+                    "example": "print_debug(\"loading...\")\nassert(1 + 1 == 2)\npush_warning(\"careful\")"
+                }
+            ]
+        },
+        {
+            "title": "Nodes and Scenes",
+            "description": "The core of Godot: compose gameplay from nodes, saved as scenes.",
+            "items": [
+                {
+                    "title": "Node paths and binding",
+                    "description": "Use $Path for quick access; prefer typed @onready bindings for robustness.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Get node (shorthand)", "var s = $Sprite2D"],
+                            ["Typed onready", "@onready var sprite: Sprite2D = $Sprite2D"],
+                            ["Get by NodePath", "get_node(NodePath(\"Sprite2D\"))"],
+                            ["SceneTree", "get_tree()"],
+                            ["Change scene", "get_tree().change_scene_to_file(\"res://scenes/main.tscn\")" ]
+                        ]
+                    },
+                    "example": "extends Node2D\n\n@onready var sprite: Sprite2D = $Sprite2D\n\nfunc _ready():\n\tsprite.visible = true"
+                },
+                {
+                    "title": "Instancing scenes",
+                    "description": "Load a PackedScene then instantiate and add it to the tree.",
+                    "table": {
+                        "headers": ["Step", "Code"],
+                        "rows": [
+                            ["Load", "var ps: PackedScene = load(\"res://scenes/enemy.tscn\")"],
+                            ["Instantiate", "var enemy = ps.instantiate()"],
+                            ["Add", "add_child(enemy)"],
+                            ["Position", "enemy.global_position = Vector2(100, 200)" ]
+                        ]
+                    },
+                    "example": "const EnemyScene: PackedScene = preload(\"res://scenes/enemy.tscn\")\n\nfunc spawn():\n\tadd_child(EnemyScene.instantiate())"
+                },
+                {
+                    "title": "Groups",
+                    "description": "Groups tag nodes and make it easy to fetch or broadcast calls.",
+                    "table": {
+                        "headers": ["Action", "Example"],
+                        "rows": [
+                            ["Add", "add_to_group(\"enemies\")"],
+                            ["Get nodes", "get_tree().get_nodes_in_group(\"enemies\")"],
+                            ["Call group", "get_tree().call_group(\"enemies\", \"freeze\")" ]
+                        ]
+                    },
+                    "example": "for n in get_tree().get_nodes_in_group(\"enemies\"):\n\t(n as Node).queue_free()"
+                }
+            ]
+        },
+        {
+            "title": "Signals",
+            "description": "Godot’s event/callback system; great for decoupling nodes.",
+            "items": [
+                {
+                    "title": "Connecting signals",
+                    "description": "Connect built-in signals or custom signals.",
+                    "table": {
+                        "headers": ["Method", "Example"],
+                        "rows": [
+                            ["Connect to method", "button.pressed.connect(Callable(self, \"_on_pressed\"))"],
+                            ["Connect to lambda", "button.pressed.connect(func(): print(\"clicked\"))"],
+                            ["Disconnect", "button.pressed.disconnect(Callable(self, \"_on_pressed\"))" ]
+                        ]
+                    },
+                    "example": "@onready var button: Button = $Button\n\nfunc _ready():\n\tbutton.pressed.connect(Callable(self, \"_on_pressed\"))\n\nfunc _on_pressed():\n\tprint(\"pressed\")"
+                },
+                {
+                    "title": "Custom signals",
+                    "description": "Declare with signal; emit with signal.emit().",
+                    "table": {
+                        "headers": ["Step", "Example"],
+                        "rows": [
+                            ["Declare", "signal died(who: Node)"],
+                            ["Emit", "died.emit(self)"],
+                            ["Connect", "died.connect(Callable(self, \"_on_died\"))" ]
+                        ]
+                    },
+                    "example": "signal died(who: Node)\n\nfunc kill():\n\tdied.emit(self)"
+                }
+            ]
+        },
+        {
+            "title": "Input",
+            "description": "Handle player input via actions and events.",
+            "items": [
+                {
+                    "title": "Actions (InputMap)",
+                    "description": "Define actions in Project Settings → Input Map.",
+                    "table": {
+                        "headers": ["Check", "Example"],
+                        "rows": [
+                            ["Pressed", "Input.is_action_pressed(\"move_left\")"],
+                            ["Just pressed", "Input.is_action_just_pressed(\"jump\")"],
+                            ["Just released", "Input.is_action_just_released(\"fire\")"],
+                            ["Axis", "Input.get_axis(\"move_left\", \"move_right\")" ]
+                        ]
+                    },
+                    "example": "func _physics_process(_dt):\n\tvar x := Input.get_axis(\"move_left\", \"move_right\")\n\tvelocity.x = x * 200.0"
+                },
+                {
+                    "title": "Input events",
+                    "description": "Use _input(event) or _unhandled_input(event) for fine-grained control.",
+                    "table": {
+                        "headers": ["Hook", "Notes"],
+                        "rows": [
+                            ["_input(event)", "First chance to handle input"],
+                            ["_unhandled_input(event)", "After UI and other handlers"],
+                            ["InputEventKey", "Keyboard events"],
+                            ["InputEventMouseButton", "Mouse clicks" ]
+                        ]
+                    },
+                    "example": "func _unhandled_input(event):\n\tif event is InputEventKey and event.pressed:\n\t\tprint(event.keycode)"
+                }
+            ]
+        },
+        {
+            "title": "Functions",
+            "description": "Parameters, returns, scope, anonymous, built-in functions, predefined engine callbacks.",
+            "items": [
+                {
+                    "title": "Parameters and defaults",
+                    "description": "Use optional types and default values.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Untyped", "func add(a, b): return a + b"],
+                            ["Typed", "func add(a: int, b: int) -> int: return a + b"],
+                            ["Default", "func greet(name := \"World\"): print(name)" ]
+                        ]
+                    },
+                    "example": "func add(a: int, b: int) -> int:\n\treturn a + b\n\nfunc greet(name := \"World\"):\n\tprint(\"Hello %s\" % name)"
+                },
+                {
+                    "title": "Returns",
+                    "description": "Use -> Type for typed returns; return null or Variant types when untyped.",
+                    "table": {
+                        "headers": ["Return", "Example"],
+                        "rows": [
+                            ["Typed return", "func hp() -> int: return 100"],
+                            ["Void", "func tick() -> void: pass"],
+                            ["Return Dictionary", "return {\"min\": a, \"max\": b}" ]
+                        ]
+                    },
+                    "example": "func bounds(xs: Array[int]) -> Dictionary:\n\treturn {\"min\": xs.min(), \"max\": xs.max()}"
+                },
+                {
+                    "title": "Scope and onready",
+                    "description": "Use member variables for state; use @onready for node bindings.",
+                    "table": {
+                        "headers": ["Feature", "Example"],
+                        "rows": [
+                            ["Member var", "var score := 0"],
+                            ["Local var", "var tmp := 123"],
+                            ["Onready", "@onready var sprite: Sprite2D = $Sprite2D"],
+                            ["Static", "static func util() -> int: return 1" ]
+                        ]
+                    },
+                    "example": "extends Node2D\n\nvar score := 0\n@onready var sprite: Sprite2D = $Sprite2D\n\nfunc _ready():\n\tprint(score)"
+                },
+                {
+                    "title": "Anonymous functions and Callables",
+                    "description": "Use lambdas (Godot 4) or Callable for method references.",
+                    "table": {
+                        "headers": ["Use", "Example"],
+                        "rows": [
+                            ["Lambda connect", "button.pressed.connect(func(): print(\"clicked\"))"],
+                            ["Callable", "var c = Callable(self, \"_on_done\")"],
+                            ["Call", "c.call(123)"],
+                            ["Bind args", "var c2 = c.bind(\"extra\")" ]
+                        ]
+                    },
+                    "example": "func _ready():\n\tvar c = Callable(self, \"_on_done\")\n\tc.call()\n\nfunc _on_done():\n\tprint(\"done\")"
+                },
+                {
+                    "title": "Predefined callbacks",
+                    "description": "Engine-invoked methods (override on your scripts).",
+                    "table": {
+                        "headers": ["Callback", "When it runs"],
+                        "rows": [
+                            ["_ready()", "Node enters the scene tree"],
+                            ["_process(delta)", "Every frame"],
+                            ["_physics_process(delta)", "Fixed timestep"],
+                            ["_input(event)", "Input event"],
+                            ["_unhandled_input(event)", "After UI"],
+                            ["_exit_tree()", "Before leaving the tree" ]
+                        ]
+                    },
+                    "example": "func _physics_process(dt):\n\t# physics tick\n\tpass"
+                },
+                {
+                    "title": "Common built-in functions",
+                    "description": "A few frequently used global helpers.",
+                    "table": {
+                        "headers": ["Function", "Use"],
+                        "rows": [
+                            ["print()", "Output"],
+                            ["str(x)", "Convert to string"],
+                            ["int(x), float(x)", "Cast"],
+                            ["min(a,b), max(a,b)", "Min/max"],
+                            ["clamp(x, lo, hi)", "Clamp range"],
+                            ["lerp(a, b, t)", "Linear interpolation"],
+                            ["is_instance_valid(obj)", "Check node reference" ]
+                        ]
+                    },
+                    "example": "var x := clamp(10, 0, 5)\nprint(x)"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Arithmetic, comparison, boolean, membership, type checks.",
+            "items": [
+                {
+                    "title": "Core operators",
+                    "description": "Most operators behave like other scripting languages.",
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["+ - * /", "Arithmetic"],
+                            ["%", "Modulo"],
+                            ["== != < <= > >=", "Comparisons"],
+                            ["and or not", "Boolean logic"],
+                            ["in", "Membership test"],
+                            ["is", "Type check"],
+                            ["as", "Cast (safe)" ]
+                        ]
+                    },
+                    "example": "if node is CharacterBody2D:\n\tvar p := node as CharacterBody2D\n\tif p != null:\n\t\tprint(p.velocity)"
+                },
+                {
+                    "title": "Assignment shortcuts",
+                    "description": "Compound assignments for arithmetic and concatenation.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["Add", "x += 1"],
+                            ["Multiply", "x *= 2"],
+                            ["Divide", "x /= 10"],
+                            ["String", "s += \"!\"" ]
+                        ]
+                    },
+                    "example": "var s := \"hi\"\ns += \"!\"\nprint(s)"
+                }
+            ]
+        },
+        {
+            "title": "Arrays",
+            "description": "Arrays and Dictionaries are the most common collections.",
+            "items": [
+                {
+                    "title": "Array basics",
+                    "description": "Create, index, append, remove.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Create", "var xs = [1, 2, 3]"],
+                            ["Typed", "var ys: Array[int] = [1,2,3]"],
+                            ["Append", "xs.append(4)"],
+                            ["Remove", "xs.erase(2)"],
+                            ["Contains", "if 3 in xs: ..."],
+                            ["Slice", "xs.slice(0, 2)" ]
+                        ]
+                    },
+                    "example": "var xs := [1,2,3]\nxs.append(4)\nprint(xs[0])"
+                },
+                {
+                    "title": "Dictionary basics",
+                    "description": "Key/value storage; keys are often strings.",
+                    "table": {
+                        "headers": ["Operation", "Example"],
+                        "rows": [
+                            ["Create", "var d = {\"a\": 1, \"b\": 2}"],
+                            ["Get", "var v = d.get(\"a\", 0)"],
+                            ["Set", "d[\"c\"] = 3"],
+                            ["Has", "d.has(\"a\")"],
+                            ["Keys/values", "d.keys(), d.values()" ]
+                        ]
+                    },
+                    "example": "var d := {\"hp\": 10}\nd[\"hp\"] += 5\nprint(d.get(\"hp\", 0))"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "for/while, iterating arrays/dicts, and patterns.",
+            "items": [
+                {
+                    "title": "for loops",
+                    "description": "Iterate ranges, arrays, and dictionaries.",
+                    "table": {
+                        "headers": ["Loop", "Example"],
+                        "rows": [
+                            ["Range", "for i in range(10): ..."],
+                            ["Array", "for x in xs: ..."],
+                            ["Dict keys", "for k in d.keys(): ..."],
+                            ["Dict items", "for k in d: print(k, d[k])" ]
+                        ]
+                    },
+                    "example": "for i in range(3):\n\tprint(i)\n\nvar d := {\"a\": 1}\nfor k in d:\n\tprint(k, d[k])"
+                },
+                {
+                    "title": "while loops",
+                    "description": "Avoid infinite loops (especially in _process).",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Basic", "while cond: ..."],
+                            ["Break", "break"],
+                            ["Continue", "continue" ]
+                        ]
+                    },
+                    "example": "var i := 0\nwhile i < 3:\n\tprint(i)\n\ti += 1"
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "if/elif/else and match.",
+            "items": [
+                {
+                    "title": "if / elif / else",
+                    "description": "Standard conditional branching.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["If", "if hp <= 0: die()"],
+                            ["Else", "else: heal()"],
+                            ["Elif", "elif hp < 10: warn()" ]
+                        ]
+                    },
+                    "example": "if hp <= 0:\n\tqueue_free()\nelif hp < 10:\n\tpush_warning(\"low hp\")"
+                },
+                {
+                    "title": "match",
+                    "description": "Pattern matching / switch-like branching.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Value", "match state: \"idle\": ..."],
+                            ["Default", "_: ..." ]
+                        ]
+                    },
+                    "example": "match state:\n\t\"idle\":\n\t\tprint(\"idle\")\n\t\"run\":\n\t\tprint(\"run\")\n\t_:\n\t\tprint(\"other\")"
+                }
+            ]
+        },
+        {
+            "title": "Filters",
+            "description": "Filtering/mapping collections.",
+            "items": [
+                {
+                    "title": "Array functional helpers",
+                    "description": "Use filter/map/reduce style operations for concise transforms.",
+                    "table": {
+                        "headers": ["Method", "Example"],
+                        "rows": [
+                            ["filter", "xs.filter(func(x): return x > 0)"],
+                            ["map", "xs.map(func(x): return x * 2)"],
+                            ["reduce", "xs.reduce(func(acc, x): return acc + x, 0)"],
+                            ["sort", "xs.sort()" ]
+                        ]
+                    },
+                    "example": "var xs := [-2, 0, 3, 5]\nvar pos := xs.filter(func(x): return x > 0)\nprint(pos)"
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Common engine singletons and helpers.",
+            "items": [
+                {
+                    "title": "Frequently used singletons",
+                    "description": "Most are available without importing anything.",
+                    "table": {
+                        "headers": ["Global", "Use"],
+                        "rows": [
+                            ["OS", "Environment info and shell/system interactions"],
+                            ["Engine", "Engine state"],
+                            ["ProjectSettings", "Read/write project settings"],
+                            ["Input", "Input actions and events"],
+                            ["Time", "Date/time utilities"],
+                            ["ResourceLoader", "Load resources"],
+                            ["Performance", "Performance monitors" ]
+                        ]
+                    },
+                    "example": "print(OS.get_name())\nprint(Engine.get_frames_per_second())"
+                },
+                {
+                    "title": "SceneTree helpers",
+                    "description": "Many workflows start from get_tree().",
+                    "table": {
+                        "headers": ["Call", "Description"],
+                        "rows": [
+                            ["get_tree().paused = true", "Pause the game"],
+                            ["get_tree().reload_current_scene()", "Reload current scene"],
+                            ["get_tree().quit()", "Quit application" ]
+                        ]
+                    },
+                    "example": "if Input.is_action_just_pressed(\"ui_cancel\"):\n\tget_tree().quit()"
+                }
+            ]
+        },
+        {
+            "title": "Packages/Modules",
+            "description": "Addons, autoload singletons, resources, and script organization.",
+            "items": [
+                {
+                    "title": "Autoload (singleton)",
+                    "description": "Project Settings → Autoload to register a script/scene as a global singleton.",
+                    "table": {
+                        "headers": ["Concept", "Notes"],
+                        "rows": [
+                            ["Autoload script", "Use for global state/services (save system, config)."],
+                            ["Access", "Use the autoload name as a global, e.g. SaveGame.save()"],
+                            ["Order", "Autoloads load before the first scene." ]
+                        ]
+                    },
+                    "example": "# If you autoload scripts/save_game.gd as SaveGame\nSaveGame.save()"
+                },
+                {
+                    "title": "load vs preload",
+                    "description": "preload is compile-time (fast at runtime); load is runtime (can fail).",
+                    "table": {
+                        "headers": ["Call", "Behavior"],
+                        "rows": [
+                            ["preload(\"res://x.tscn\")", "Loads at script parse time"],
+                            ["load(\"res://x.tscn\")", "Loads when executed"],
+                            ["ResourceLoader.load(path)", "Explicit loader API" ]
+                        ]
+                    },
+                    "example": "const EnemyScene: PackedScene = preload(\"res://scenes/enemy.tscn\")\n\nfunc spawn():\n\tadd_child(EnemyScene.instantiate())"
+                },
+                {
+                    "title": "Addons (plugins)",
+                    "description": "Third-party/custom plugins live under addons/ and can be enabled in the editor.",
+                    "table": {
+                        "headers": ["Path", "Meaning"],
+                        "rows": [
+                            ["addons/<plugin>/plugin.cfg", "Plugin metadata"],
+                            ["Project Settings → Plugins", "Enable/disable plugin"],
+                            ["Asset Library", "Install community addons" ]
+                        ]
+                    },
+                    "example": "# Addons are usually installed under res://addons/"
+                }
+            ]
+        },
+        {
+            "title": "File I/O and Persistence",
+            "description": "Read/write files, JSON, and config storage.",
+            "items": [
+                {
+                    "title": "FileAccess basics",
+                    "description": "Use user:// for writable paths; res:// is read-only at runtime on many platforms.",
+                    "table": {
+                        "headers": ["Action", "Example"],
+                        "rows": [
+                            ["Write text", "FileAccess.open(\"user://save.txt\", FileAccess.WRITE)"],
+                            ["Read text", "FileAccess.open(\"user://save.txt\", FileAccess.READ)"],
+                            ["Exists", "FileAccess.file_exists(\"user://save.txt\")"],
+                            ["Dirs", "DirAccess.open(\"user://\")" ]
+                        ]
+                    },
+                    "example": "func write_text(path: String, text: String) -> void:\n\tvar f := FileAccess.open(path, FileAccess.WRITE)\n\tf.store_string(text)\n\nfunc read_text(path: String) -> String:\n\tvar f := FileAccess.open(path, FileAccess.READ)\n\treturn f.get_as_text()"
+                },
+                {
+                    "title": "JSON",
+                    "description": "Serialize/parse dictionaries and arrays.",
+                    "table": {
+                        "headers": ["Call", "Use"],
+                        "rows": [
+                            ["JSON.stringify(data)", "Serialize"],
+                            ["JSON.parse_string(text)", "Parse to Variant"],
+                            ["typeof(x)", "Validate parsed type" ]
+                        ]
+                    },
+                    "example": "var data := {\"hp\": 10, \"items\": [\"key\"]}\nvar text := JSON.stringify(data)\nvar obj = JSON.parse_string(text)\nif typeof(obj) == TYPE_DICTIONARY:\n\tprint(obj[\"hp\"])"
+                },
+                {
+                    "title": "ConfigFile",
+                    "description": "INI-like persistent settings.",
+                    "table": {
+                        "headers": ["Call", "Example"],
+                        "rows": [
+                            ["cfg.set_value(section, key, value)", "cfg.set_value(\"video\", \"fullscreen\", true)"],
+                            ["cfg.get_value(section, key, default)", "cfg.get_value(\"video\", \"fullscreen\", false)"],
+                            ["cfg.save(path)", "cfg.save(\"user://settings.cfg\")"],
+                            ["cfg.load(path)", "cfg.load(\"user://settings.cfg\")" ]
+                        ]
+                    },
+                    "example": "var cfg := ConfigFile.new()\ncfg.set_value(\"video\", \"fullscreen\", true)\ncfg.save(\"user://settings.cfg\")"
+                }
+            ]
+        },
+        {
+            "title": "HTTP and Networking",
+            "description": "Common client-side patterns with HTTPRequest and JSON.",
+            "items": [
+                {
+                    "title": "HTTPRequest basics",
+                    "description": "Add an HTTPRequest node; connect request_completed.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["JSON header", "[\"Content-Type: application/json\"]"],
+                            ["POST", "http.request(url, headers, HTTPClient.METHOD_POST, body)"],
+                            ["GET", "http.request(url)"],
+                            ["Callback", "func _on_request_completed(result, code, headers, body): ..." ]
+                        ]
+                    },
+                    "example": "@onready var http: HTTPRequest = $HTTPRequest\n\nfunc post_score(score: int) -> void:\n\tvar body := JSON.stringify({\"score\": score})\n\thttp.request(\"https://example.invalid/api/score\", [\"Content-Type: application/json\"], HTTPClient.METHOD_POST, body)"
+                }
+            ]
+        },
+        {
+            "title": "Database interactions",
+            "description": "Godot doesn’t ship a built-in SQL database API; common patterns are file-based persistence, SQLite addons, or HTTP to a backend.",
+            "items": [
+                {
+                    "title": "Common approaches",
+                    "description": "Choose based on platform targets and complexity.",
+                    "table": {
+                        "headers": ["Approach", "Notes"],
+                        "rows": [
+                            ["File-based (JSON/ConfigFile)", "Great for settings/saves; simplest and cross-platform."],
+                            ["SQLite addon/plugin", "Use a maintained addon if you need local relational data."],
+                            ["HTTP to backend", "Use a web API for multi-user or authoritative server data."],
+                            ["GDExtension", "For native integrations when needed." ]
+                        ]
+                    },
+                    "example": "# Many games only need file-based saves."
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "Use RegEx for searching and replacing text.",
+            "items": [
+                {
+                    "title": "Compile and search",
+                    "description": "Compile once, then search multiple times.",
+                    "table": {
+                        "headers": ["Call", "Description"],
+                        "rows": [
+                            ["var re = RegEx.new()", "Create"],
+                            ["re.compile(pattern)", "Compile a pattern"],
+                            ["re.search(text)", "First match"],
+                            ["re.search_all(text)", "All matches" ]
+                        ]
+                    },
+                    "example": "var re := RegEx.new()\nre.compile(\"\\\\b[a-z]+\\\\b\")\nvar m := re.search(\"hi there 123\")\nif m != null:\n\tprint(m.get_string())"
+                },
+                {
+                    "title": "Replace",
+                    "description": "Use sub/subn for replacement.",
+                    "table": {
+                        "headers": ["Call", "Example"],
+                        "rows": [
+                            ["re.sub(text, repl)", "re.sub(\"a1 b2\", \"#\")"],
+                            ["re.subn(text, repl)", "Returns [new_text, count]" ]
+                        ]
+                    },
+                    "example": "var re := RegEx.new()\nre.compile(\"\\\\d+\")\nprint(re.sub(\"a1 b22\", \"#\"))"
+                }
+            ]
+        },
+        {
+            "title": "Date and Time",
+            "description": "Use Time (Godot 4) for system time and conversions.",
+            "items": [
+                {
+                    "title": "System time",
+                    "description": "Get current system datetime and unix time.",
+                    "table": {
+                        "headers": ["Call", "Result"],
+                        "rows": [
+                            ["Time.get_unix_time_from_system()", "Unix timestamp (seconds)"],
+                            ["Time.get_datetime_dict_from_system()", "Dictionary with date/time parts"],
+                            ["Time.get_time_dict_from_system()", "Dictionary with time parts" ]
+                        ]
+                    },
+                    "example": "var ts := Time.get_unix_time_from_system()\nvar dt := Time.get_datetime_dict_from_system()\nprint(ts)\nprint(dt)"
+                },
+                {
+                    "title": "Simple formatting",
+                    "description": "Format strings yourself for logs/filenames.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Zero-pad", "\"%02d\" % dt.hour"],
+                            ["Timestamp", "\"%04d-%02d-%02d\" % [y,m,d]" ]
+                        ]
+                    },
+                    "example": "var dt := Time.get_datetime_dict_from_system()\nvar s := \"%04d-%02d-%02d_%02d-%02d-%02d\" % [dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second]\nprint(s)"
+                }
+            ]
+        },
+        {
+            "title": "Debugging and Profiling",
+            "description": "Practical debugging in editor and runtime.",
+            "items": [
+                {
+                    "title": "Common techniques",
+                    "description": "Use the editor debugger and Remote scene tree.",
+                    "table": {
+                        "headers": ["Technique", "Notes"],
+                        "rows": [
+                            ["Breakpoints", "Set in script editor"],
+                            ["Remote inspector", "Inspect nodes while running"],
+                            ["Monitors", "Performance monitors and profiler"],
+                            ["print_debug", "Lightweight logging" ]
+                        ]
+                    },
+                    "example": null
+                }
+            ]
+        },
+        {
+            "title": "Exporting and Deployment",
+            "description": "Common export and release workflows.",
+            "items": [
+                {
+                    "title": "Export presets",
+                    "description": "Configure in editor; then export via UI or CLI.",
+                    "table": {
+                        "headers": ["Action", "Notes"],
+                        "rows": [
+                            ["Export presets", "Project → Export"],
+                            ["Export release", "Use export-release for shipping builds"],
+                            ["Headless export", "Use CLI in CI" ]
+                        ]
+                    },
+                    "example": "godot --path . --export-release \"Windows Desktop\" build/game.exe"
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequent runtime/editor errors and what they usually mean.",
+            "items": [
+                {
+                    "title": "Null instance / invalid get index",
+                    "description": "Often caused by missing nodes, wrong node paths, or using a node before it exists.",
+                    "table": {
+                        "headers": ["Error", "Typical fix"],
+                        "rows": [
+                            ["Invalid get index 'x' (on base: 'Nil')", "Check that the variable/node isn’t null before accessing it."],
+                            ["Node not found", "Verify the path and scene structure; prefer @onready bindings."],
+                            ["Attempt to call function on a null instance", "Guard with if obj != null, or fix initialization order." ]
+                        ]
+                    },
+                    "example": "@onready var label: Label = $HUD/Label\n\nfunc _ready():\n\tif label == null:\n\t\tpush_error(\"HUD/Label not found\")"
+                },
+                {
+                    "title": "Freed instance / invalid call",
+                    "description": "Happens when you keep a reference after queue_free().",
+                    "table": {
+                        "headers": ["Error", "Typical fix"],
+                        "rows": [
+                            ["Previously freed instance", "Don’t use a node after queue_free(); check is_instance_valid(node)."],
+                            ["Invalid call. Nonexistent function", "Check method name, node type, and that the script is attached."],
+                            ["Signal signature mismatch", "Ensure your callback parameters match the signal." ]
+                        ]
+                    },
+                    "example": "if is_instance_valid(enemy):\n\tenemy.queue_free()"
+                },
+                {
+                    "title": "Autoload not found",
+                    "description": "A global name isn’t defined unless you added it as an Autoload.",
+                    "table": {
+                        "headers": ["Symptom", "Fix"],
+                        "rows": [
+                            ["Identifier not declared", "Add script/scene in Project Settings → Autoload."],
+                            ["Wrong name", "Autoload name is case-sensitive." ]
+                        ]
+                    },
+                    "example": "# Project Settings → Autoload: add scripts/save_game.gd as SaveGame"
+                }
+            ]
+        }
+    ]
+}

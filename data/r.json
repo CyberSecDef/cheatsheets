@@ -1,0 +1,570 @@
+{
+	"title": "R",
+	"description": "A general R language quick reference covering fundamentals, functions, packages, operators, common errors, vectors/lists/data frames, control flow, regex, date/time, database access, and practical workflows with Rscript and the tidyverse.",
+	"language": "r",
+	"categories": [
+		{
+			"title": "Installation and Tooling",
+			"description": "R runtimes, package tooling, and script execution.",
+			"items": [
+				{
+					"title": "R and Rscript basics",
+					"description": "Use R for an interactive session and Rscript for batch execution.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["R --version", "Show R version"],
+							["R", "Start interactive R session"],
+							["Rscript script.R", "Run a script"],
+							["Rscript -e 'print(2+2)'", "Run a one-liner"],
+							["R CMD BATCH script.R", "Run script and write .Rout output"],
+							["R CMD check <pkg.tar.gz>", "Check a package"],
+							["R CMD build <pkgdir>", "Build a source package" ]
+						]
+					},
+					"example": "Rscript -e 'cat(Sys.time(), \"\\n\")'"
+				},
+				{
+					"title": "Install and update packages",
+					"description": "CRAN packages are installed with install.packages(); use update.packages() to update.",
+					"table": {
+						"headers": ["Task", "R"],
+						"rows": [
+							["Install from CRAN", "install.packages(\"dplyr\")"],
+							["Install many", "install.packages(c(\"ggplot2\", \"readr\"))"],
+							["Install with options", "install.packages(\"xml2\", repos=\"https://cloud.r-project.org\")"],
+							["Update installed", "update.packages(ask=FALSE)"],
+							["List installed", "installed.packages()[, c(\"Package\", \"Version\")]"],
+							["Session info", "sessionInfo()" ]
+						]
+					},
+					"example": "install.packages(c(\"tidyverse\", \"data.table\"))\nsessionInfo()"
+				}
+			]
+		},
+		{
+			"title": "Basic Functionality",
+			"description": "Core language basics: variables, types, printing, and common data types.",
+			"items": [
+				{
+					"title": "Assignments and basic types",
+					"description": "Common assignment operators are <- and = (within calls).",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Assignment", "x <- 1; y = 2"],
+							["Atomic vectors", "logical, integer, double, character, complex, raw"],
+							["NA / NaN / Inf", "Missing/undefined/infinite values"],
+							["Type checks", "is.numeric(x), is.character(x), is.na(x)"],
+							["Coercion", "as.integer(x), as.numeric(x), as.character(x)"],
+							["Inspect", "str(x), typeof(x), class(x)" ]
+						]
+					},
+					"example": "x <- 42\ns <- 'hi'\nprint(typeof(x))\nstr(list(x=x, s=s))"
+				},
+				{
+					"title": "Printing and formatting",
+					"description": "print() prints objects; cat() concatenates and prints strings; sprintf() formats strings.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["print", "print(x)"],
+							["cat", "cat('a', 1, '\\n')"],
+							["sprintf", "sprintf('n=%d', n)"],
+							["paste", "paste('a', 'b', sep='-')"],
+							["paste0", "paste0('a', 'b')"],
+							["message/warning/stop", "message('x'); warning('x'); stop('x')" ]
+						]
+					},
+					"example": "n <- 7\ncat(sprintf('n=%d\\n', n))\nmessage('done')"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Parameters, returns, scope, anonymous functions, and common built-ins.",
+			"items": [
+				{
+					"title": "Defining functions and returns",
+					"description": "R returns the last evaluated expression implicitly; use return() for early returns.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Define", "f <- function(x) { x + 1 }"],
+							["Default args", "f <- function(x=10) x * 2"],
+							["Named args", "f(x=1, y=2)"],
+							["Variadic", "f <- function(...) list(...)"],
+							["Early return", "if (bad) return(NA)"],
+							["Return list", "list(a=1, b=2)" ]
+						]
+					},
+					"example": "add <- function(a, b=1) {\n  a + b\n}\nprint(add(2))"
+				},
+				{
+					"title": "Scope and environments",
+					"description": "R uses lexical scoping; environments store bindings.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Lexical scope", "x <- 1; f <- function() x"],
+							["Local vars", "local({ x <- 2; x })"],
+							["Global assignment (avoid)", "x <<- 3"],
+							["Current env", "environment()"],
+							["Parent env", "parent.env(environment())"],
+							["Create env", "e <- new.env(parent=emptyenv())" ]
+						]
+					},
+					"example": "x <- 10\nf <- function() x + 1\nprint(f())"
+				},
+				{
+					"title": "Anonymous functions",
+					"description": "Anonymous functions are often used with apply/lapply or purrr.",
+					"table": {
+						"headers": ["Use", "Example"],
+						"rows": [
+							["lapply", "lapply(1:3, function(x) x^2)"],
+							["sapply", "sapply(1:3, function(x) x^2)"],
+							["Map (purrr)", "purrr::map(1:3, ~ .x^2)"],
+							["Inline function", "(function(x) x+1)(41)" ]
+						]
+					},
+					"example": "print(lapply(1:5, function(x) x * 2))"
+				},
+				{
+					"title": "Built-in and predefined functions (high value)",
+					"description": "A small sampling of heavily used base R utilities.",
+					"table": {
+						"headers": ["Function", "Purpose"],
+						"rows": [
+							["c", "Combine into a vector."],
+							["seq", "Create sequences."],
+							["rep", "Repeat values."],
+							["length", "Length of vector/list."],
+							["names", "Get/set names."],
+							["sum/mean/sd", "Common statistics."],
+							["unique", "Unique values."],
+							["table", "Frequency table."],
+							["subset", "Filter data frames (legacy; dplyr preferred)."],
+							["merge", "Join data frames." ]
+						]
+					},
+					"example": "x <- c(1,2,2,3)\nprint(unique(x))\nprint(table(x))"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering and transforming data (base R and tidyverse patterns).",
+			"items": [
+				{
+					"title": "Base R subsetting",
+					"description": "Use logical vectors to filter; remember NA handling.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Vector filter", "x[x > 0]"],
+							["Data frame rows", "df[df$col == 'a', ]"],
+							["Data frame cols", "df[, c('a','b')]"],
+							["Which indices", "which(x > 0)"],
+							["Drop NAs", "x[!is.na(x)]" ]
+						]
+					},
+					"example": "x <- c(1, -1, NA, 2)\nprint(x[x > 0])\nprint(x[!is.na(x)])"
+				},
+				{
+					"title": "dplyr filtering and selection",
+					"description": "dplyr is the common tidyverse data manipulation library.",
+					"table": {
+						"headers": ["Verb", "Example"],
+						"rows": [
+							["filter", "dplyr::filter(df, col > 0)"],
+							["select", "dplyr::select(df, a, b)"],
+							["mutate", "dplyr::mutate(df, z = a + b)"],
+							["summarise", "dplyr::summarise(df, m = mean(x))"],
+							["group_by", "dplyr::group_by(df, key)"],
+							["arrange", "dplyr::arrange(df, desc(x))" ]
+						]
+					},
+					"example": "library(dplyr)\ndf %>% filter(x > 0) %>% summarise(m = mean(x))"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Global variables, options, and environment configuration.",
+			"items": [
+				{
+					"title": "Global environment and search path",
+					"description": "R uses environments; the global environment is .GlobalEnv.",
+					"table": {
+						"headers": ["Task", "R"],
+						"rows": [
+							["List objects", "ls()"],
+							["Remove objects", "rm(x, y)"],
+							["Clear workspace", "rm(list = ls())"],
+							["Global env", ".GlobalEnv"],
+							["Search path", "search()"],
+							["Get/set option", "getOption('stringsAsFactors'); options(stringsAsFactors=FALSE)" ]
+						]
+					},
+					"example": "options(stringsAsFactors = FALSE)\nprint(search())"
+				},
+				{
+					"title": "Environment variables",
+					"description": "Use Sys.getenv/Sys.setenv for process env vars.",
+					"table": {
+						"headers": ["Task", "R"],
+						"rows": [
+							["Read env var", "Sys.getenv('HOME')"],
+							["Set env var", "Sys.setenv(HTTP_PROXY='http://proxy:8080')"],
+							["List all env", "Sys.getenv()" ]
+						]
+					},
+					"example": "print(Sys.getenv('HOME'))"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "Installing, loading, and authoring packages.",
+			"items": [
+				{
+					"title": "Loading and inspecting packages",
+					"description": "Use library() to attach a package; use :: to access without attaching.",
+					"table": {
+						"headers": ["Task", "R"],
+						"rows": [
+							["Attach package", "library(ggplot2)"],
+							["Load package (no attach)", "requireNamespace('dplyr')"],
+							["Call without attach", "dplyr::filter(df, x > 0)"],
+							["List attached", "search()"],
+							["List package exports", "ls('package:stats')"],
+							["Find function", "getAnywhere('lm')" ]
+						]
+					},
+					"example": "library(stats)\nprint(ls('package:stats')[1:10])"
+				},
+				{
+					"title": "Create packages (developer workflow)",
+					"description": "Common modern package workflow uses usethis/devtools/roxygen2.",
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["usethis", "Create scaffolding (DESCRIPTION, R/, tests/, etc.)."],
+							["devtools", "Build/install/test/check locally."],
+							["roxygen2", "Generate NAMESPACE + docs from comments."],
+							["testthat", "Testing framework." ]
+						]
+					},
+					"example": "# Typical: install.packages(c('usethis','devtools','roxygen2','testthat'))"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Arithmetic, logical, comparison, indexing, and special operators.",
+			"items": [
+				{
+					"title": "Common operators",
+					"description": null,
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["+ - * / ^", "Arithmetic"],
+							["%% %/%", "Modulo and integer division"],
+							["< <= > >= == !=", "Comparison"],
+							["& && | || !", "Logical (vectorized vs short-circuit)"],
+							[":", "Sequence (1:10)"],
+							["%in%", "Membership"],
+							["<-", "Assignment"],
+							["$", "List/data frame field access"],
+							["[ ] / [[ ]]", "Subset (vectorized) / element"],
+							["%>%", "Pipe (magrittr/dplyr)" ]
+						]
+					},
+					"example": "x <- 1:5\nprint(x[x %in% c(2,4)])"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequently encountered errors and their usual causes.",
+			"items": [
+				{
+					"title": "Common messages and fixes",
+					"description": null,
+					"table": {
+						"headers": ["Error", "Typical fix"],
+						"rows": [
+							["object 'x' not found", "Check spelling/scope; ensure variable exists in current environment."],
+							["could not find function", "Load the package (library) or use pkg::fun."],
+							["subscript out of bounds", "Check indexing; remember 1-based indexing in R."],
+							["missing value where TRUE/FALSE needed", "Handle NA in conditions (is.na, na.rm, explicit checks)."],
+							["non-numeric argument to binary operator", "Coercion needed; check types with str() and as.numeric/as.integer."],
+							["cannot open the connection", "File path/permissions; working directory; network/URL issues." ]
+						]
+					},
+					"example": "tryCatch({\n  stop('bad')\n}, error=function(e) { message(e$message) })"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Vectors, lists, matrices, arrays, and data frames.",
+			"items": [
+				{
+					"title": "Vectors, lists, data frames",
+					"description": "Most base types are vectors; lists can hold mixed types; data frames are lists of equal-length vectors.",
+					"table": {
+						"headers": ["Type", "Example"],
+						"rows": [
+							["Vector", "x <- c(1, 2, 3)"],
+							["List", "l <- list(a=1, b='x')"],
+							["Matrix", "m <- matrix(1:6, nrow=2)"],
+							["Array", "a <- array(1:8, dim=c(2,2,2))"],
+							["Data frame", "df <- data.frame(a=1:3, b=c('x','y','z'))"],
+							["Tibble", "tibble::tibble(a=1:3, b=c('x','y','z'))" ]
+						]
+					},
+					"example": "df <- data.frame(a=1:3, b=c('x','y','z'))\nstr(df)"
+				},
+				{
+					"title": "Apply family",
+					"description": "apply works on arrays/matrices; lapply/sapply operate on lists/vectors.",
+					"table": {
+						"headers": ["Function", "Use"],
+						"rows": [
+							["apply", "Apply function over matrix margins (rows/cols)."],
+							["lapply", "Apply over list, returns list."],
+							["sapply", "Simplify result to vector/matrix if possible."],
+							["tapply", "Apply over subsets defined by a factor."],
+							["mapply", "Multivariate apply." ]
+						]
+					},
+					"example": "m <- matrix(1:6, nrow=2)\nprint(apply(m, 1, sum))"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "for/while/repeat and vectorized alternatives.",
+			"items": [
+				{
+					"title": "Loop constructs",
+					"description": "In R, vectorized code and apply/purrr are often preferred for performance and clarity.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["for", "for (i in 1:3) print(i)"],
+							["while", "while (cond) { ... }"],
+							["repeat", "repeat { if (done) break }"],
+							["break/next", "break; next" ]
+						]
+					},
+					"example": "for (i in 1:3) {\n  cat(i, '\\n')\n}"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "if/else, switch, and NA-safe condition handling.",
+			"items": [
+				{
+					"title": "if/else and switch",
+					"description": "if requires a single TRUE/FALSE; be careful with vectors and NA.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["if/else", "if (x > 0) 'pos' else 'neg'"],
+							["else if", "if (x==0) 'zero' else if (x>0) 'pos' else 'neg'"],
+							["switch", "switch(key, a='A', b='B', 'default')"],
+							["Vectorized if", "ifelse(x > 0, 'pos', 'neg')"],
+							["NA-safe checks", "if (!is.na(x) && x > 0) ..." ]
+						]
+					},
+					"example": "x <- NA\nif (!is.na(x) && x > 0) {\n  print('pos')\n} else {\n  print('not-pos-or-na')\n}"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "Base R regex via grep/gsub/regexpr and stringr for tidyverse-style string operations.",
+			"items": [
+				{
+					"title": "Base regex functions",
+					"description": "R uses ICU/PCRE depending on function and options. Escaping backslashes is common (\\\\d in strings).",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Detect", "grepl('^a', x)"],
+							["Find indices", "grep('^a', x)"],
+							["Replace", "gsub('\\\\s+', ' ', s)"],
+							["Extract match", "regmatches(s, regexpr('\\\\d+', s))"],
+							["Split", "strsplit(s, ',')" ]
+						]
+					},
+					"example": "s <- 'id=42'\nprint(regmatches(s, regexpr('\\\\d+', s)))"
+				},
+				{
+					"title": "stringr (tidyverse)",
+					"description": "stringr wraps stringi and provides consistent APIs.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["str_detect", "stringr::str_detect(x, '^a')"],
+							["str_replace_all", "stringr::str_replace_all(s, '\\\\s+', ' ')"],
+							["str_extract", "stringr::str_extract(s, '\\\\d+')"],
+							["str_split", "stringr::str_split(s, ',')" ]
+						]
+					},
+					"example": "library(stringr)\nprint(str_extract('id=42', '\\\\d+'))"
+				}
+			]
+		},
+		{
+			"title": "Data and Time",
+			"description": "Base R date/time and common packages for parsing and time zones.",
+			"items": [
+				{
+					"title": "Base date/time",
+					"description": "Date is a calendar day; POSIXct is a timestamp.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Now", "Sys.time()"],
+							["Today", "Sys.Date()"],
+							["Parse date", "as.Date('2025-12-20')"],
+							["Parse timestamp", "as.POSIXct('2025-12-20 12:34:56', tz='UTC')"],
+							["Format", "format(Sys.time(), '%Y-%m-%dT%H:%M:%SZ')"],
+							["Difftime", "difftime(t2, t1, units='secs')" ]
+						]
+					},
+					"example": "t1 <- Sys.time()\nSys.sleep(0.1)\nt2 <- Sys.time()\nprint(difftime(t2, t1, units='secs'))"
+				},
+				{
+					"title": "lubridate (common package)",
+					"description": "lubridate provides convenient parsing and arithmetic.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Install", "install.packages('lubridate')"],
+							["Parse", "lubridate::ymd('2025-12-20')"],
+							["Now", "lubridate::now(tzone='UTC')"],
+							["Add days", "lubridate::ymd('2025-12-20') + lubridate::days(7)" ]
+						]
+					},
+					"example": "library(lubridate)\nprint(ymd('2025-12-20') + days(7))"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "Common DB access patterns via DBI and backends (RSQLite, RPostgres, odbc).",
+			"items": [
+				{
+					"title": "DBI basics (portable API)",
+					"description": "DBI defines a common interface; choose a backend package per database.",
+					"table": {
+						"headers": ["Task", "R"],
+						"rows": [
+							["Install", "install.packages(c('DBI','RSQLite','RPostgres','odbc'))"],
+							["Connect (SQLite)", "con <- DBI::dbConnect(RSQLite::SQLite(), 'file.db')"],
+							["Query", "DBI::dbGetQuery(con, 'SELECT 1 AS x')"],
+							["Execute", "DBI::dbExecute(con, 'CREATE TABLE t(x INT)')"],
+							["Write table", "DBI::dbWriteTable(con, 'df', df, overwrite=TRUE)"],
+							["Disconnect", "DBI::dbDisconnect(con)" ]
+						]
+					},
+					"example": "library(DBI)\ncon <- dbConnect(RSQLite::SQLite(), ':memory:')\ndbExecute(con, 'CREATE TABLE t(x INT)')\ndbExecute(con, 'INSERT INTO t VALUES (1), (2)')\nprint(dbGetQuery(con, 'SELECT * FROM t'))\ndbDisconnect(con)"
+				},
+				{
+					"title": "dplyr + dbplyr (SQL pushdown)",
+					"description": "dbplyr translates dplyr verbs to SQL for supported databases.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["tbl(con, 'table')", "Lazy reference to a remote table."],
+							["filter/select/mutate", "Translated into SQL where possible."],
+							["collect()", "Execute and bring results into R memory."],
+							["show_query()", "Inspect generated SQL." ]
+						]
+					},
+					"example": "# library(dplyr)\n# library(dbplyr)\n# remote <- tbl(con, 't')\n# remote %>% filter(x > 1) %>% show_query()"
+				}
+			]
+		},
+		{
+			"title": "Data Frames and I/O",
+			"description": "Reading/writing common file formats and working with data frames.",
+			"items": [
+				{
+					"title": "Read/write CSV",
+					"description": "Base read.csv/write.csv are common; readr is faster and more consistent.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Base read", "df <- read.csv('file.csv')"],
+							["Base write", "write.csv(df, 'out.csv', row.names=FALSE)"],
+							["readr read", "df <- readr::read_csv('file.csv')"],
+							["readr write", "readr::write_csv(df, 'out.csv')"],
+							["RDS serialize", "saveRDS(df, 'df.rds'); df2 <- readRDS('df.rds')" ]
+						]
+					},
+					"example": "df <- data.frame(a=1:3, b=c('x','y','z'))\nwrite.csv(df, 'out.csv', row.names=FALSE)\nprint(read.csv('out.csv'))"
+				},
+				{
+					"title": "Working directory and paths",
+					"description": "Paths are often relative to getwd(); use here package for project roots.",
+					"table": {
+						"headers": ["Task", "R"],
+						"rows": [
+							["Current dir", "getwd()"],
+							["Set dir", "setwd('/path')"],
+							["List files", "list.files('.', recursive=TRUE)"],
+							["Create dir", "dir.create('data', recursive=TRUE)"],
+							["Normalize path", "normalizePath('file.csv')" ]
+						]
+					},
+					"example": "print(getwd())\nprint(list.files('.', all.files=FALSE))"
+				}
+			]
+		},
+		{
+			"title": "Performance and Debugging",
+			"description": "Profiling, vectorization, and debugging tools.",
+			"items": [
+				{
+					"title": "Debugging helpers",
+					"description": "Use traceback() after errors; browser() to break; options(error=...) for global hooks.",
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["traceback", "Show call stack after error."],
+							["browser", "Interactive breakpoint inside a function."],
+							["debug/undebug", "Turn debugging on/off for a function."],
+							["str", "Compact structure view."],
+							["system.time", "Time expression."],
+							["Rprof", "CPU profiling (base)." ]
+						]
+					},
+					"example": "f <- function(x) { browser(); x + 1 }\n# f(1)"
+				},
+				{
+					"title": "data.table (fast data manipulation)",
+					"description": "data.table is a high-performance alternative for large data.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Convert", "DT <- data.table::as.data.table(df)"],
+							["Filter", "DT[x > 0]"],
+							["Select", "DT[, .(a, b)]"],
+							["Group", "DT[, .(m=mean(x)), by=key]"],
+							["Update by ref", "DT[, z := x + 1]" ]
+						]
+					},
+					"example": "library(data.table)\nDT <- data.table(x=c(1,2,3), g=c('a','a','b'))\nprint(DT[, .(m=mean(x)), by=g])"
+				}
+			]
+		}
+	]
+}

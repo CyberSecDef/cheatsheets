@@ -1,0 +1,635 @@
+{
+  "title": "Dart",
+  "description": "A general Dart quick reference covering core syntax, functions, collections, control flow, operators, async, regex, date/time, packages, CLI tooling, common errors, and practical scripting patterns.",
+  "language": "dart",
+  "categories": [
+    {
+      "title": "Installation and Tooling",
+      "description": "SDK basics, project commands, formatting, analysis, and running scripts.",
+      "items": [
+        {
+          "title": "Dart SDK commands",
+          "description": "Common `dart` CLI commands.",
+          "table": {
+            "headers": ["Command", "Description"],
+            "rows": [
+              ["dart --version", "Show Dart SDK version"],
+              ["dart create my_app", "Create a new Dart project"],
+              ["dart run", "Run the default entrypoint"],
+              ["dart run bin/main.dart", "Run a specific entrypoint"],
+              ["dart compile exe bin/main.dart", "Compile to a native executable"],
+              ["dart format .", "Format code"],
+              ["dart analyze", "Static analysis"],
+              ["dart test", "Run tests (package:test)"],
+              ["dart doc", "Generate API docs (dartdoc via tool integration)" ]
+            ]
+          },
+          "example": "dart --version\ndart create my_app\ncd my_app\ndart run\ndart format .\ndart analyze"
+        },
+        {
+          "title": "pub / packages",
+          "description": "Dependencies are managed via pub in `pubspec.yaml`.",
+          "table": {
+            "headers": ["Task", "Command"],
+            "rows": [
+              ["Get dependencies", "dart pub get"],
+              ["Add dependency", "dart pub add http"],
+              ["Add dev dependency", "dart pub add --dev lints"],
+              ["Upgrade", "dart pub upgrade"],
+              ["Outdated", "dart pub outdated"],
+              ["Global activate", "dart pub global activate <package>" ]
+            ]
+          },
+          "example": "dart pub add http\ndart pub add --dev lints\ndart pub get"
+        }
+      ]
+    },
+    {
+      "title": "Basic Functionality",
+      "description": "Core language basics: types, variables, strings, null safety, and basic I/O.",
+      "items": [
+        {
+          "title": "Variables and types",
+          "description": "Dart is sound null-safe. Prefer explicit types or `final`/`const` when possible.",
+          "table": {
+            "headers": ["Concept", "Example"],
+            "rows": [
+              ["Type inference", "var x = 1;"],
+              ["Explicit type", "int n = 42;"],
+              ["Immutable", "final name = 'Ada';"],
+              ["Compile-time const", "const pi = 3.14159;"],
+              ["Nullable type", "String? s;"],
+              ["Non-null assertion", "s!.length"],
+              ["Null-coalescing", "s ?? 'fallback'"],
+              ["Late init", "late final value = compute();" ]
+            ]
+          },
+          "example": "void main() {\n  var x = 1;\n  final name = 'Ada';\n  String? maybe;\n  print(maybe ?? 'fallback');\n  print('$name $x');\n}"
+        },
+        {
+          "title": "Strings",
+          "description": "Strings support interpolation with `$var` and `${expr}`.",
+          "table": {
+            "headers": ["Operation", "Example"],
+            "rows": [
+              ["Interpolation", "'Hello $name'"],
+              ["Expression", "'2+2=${2 + 2}'"],
+              ["Multiline", "'''line1\nline2'''"],
+              ["Concatenate", "'a' + 'b'"],
+              ["Length", "s.length"],
+              ["Substring", "s.substring(0, 3)"],
+              ["Replace", "s.replaceAll('a','b')"],
+              ["Split/join", "s.split(','), parts.join(',')" ]
+            ]
+          },
+          "example": "void main() {\n  final name = 'World';\n  print('Hello $name');\n  print('2+2=${2 + 2}');\n}"
+        },
+        {
+          "title": "Printing, stdin, and args",
+          "description": "Use `dart:io` for console input and args via `List<String> args`.",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Print", "print('hi');"],
+              ["Args", "void main(List<String> args) { ... }"],
+              ["Read line", "stdin.readLineSync()"],
+              ["Exit code", "exitCode = 2;" ]
+            ]
+          },
+          "example": "import 'dart:io';\n\nvoid main(List<String> args) {\n  stdout.write('Name: ');\n  final name = stdin.readLineSync() ?? '';\n  print('Hello $name');\n  print('Args: $args');\n}"
+        }
+      ]
+    },
+    {
+      "title": "Functions",
+      "description": "Parameters, returns, scope, anonymous functions, and common built-ins.",
+      "items": [
+        {
+          "title": "Parameters",
+          "description": "Dart supports positional, optional positional, named, and required named parameters.",
+          "table": {
+            "headers": ["Kind", "Example"],
+            "rows": [
+              ["Positional", "int add(int a, int b) => a + b;"],
+              ["Optional positional", "String f([String name = 'World']) => 'Hi $name';"],
+              ["Named", "void log({String level = 'INFO', required String msg}) { ... }"],
+              ["Nullable param", "void g(String? s) { ... }"],
+              ["Arrow syntax", "bool isEven(int n) => n % 2 == 0;" ]
+            ]
+          },
+          "example": "int add(int a, int b) => a + b;\n\nvoid logMsg({String level = 'INFO', required String msg}) {\n  print('[$level] $msg');\n}\n\nvoid main() {\n  print(add(2, 3));\n  logMsg(msg: 'started');\n}"
+        },
+        {
+          "title": "Returns",
+          "description": "Use explicit return types; functions returning nothing use `void`.",
+          "table": {
+            "headers": ["Return", "Example"],
+            "rows": [
+              ["Value", "String greet(String name) { return 'Hi $name'; }"],
+              ["Void", "void tick() { print('tick'); }"],
+              ["Nullable return", "int? parseInt(String s) { ... }"],
+              ["Future return", "Future<int> load() async { ... }" ]
+            ]
+          },
+          "example": "String greet(String name) => 'Hi $name';\n\nvoid main() {\n  print(greet('Ada'));\n}"
+        },
+        {
+          "title": "Scope",
+          "description": "Lexical scoping; closures capture variables.",
+          "table": {
+            "headers": ["Concept", "Example"],
+            "rows": [
+              ["Local variable", "var x = 1;"],
+              ["Block scope", "if (true) { var y = 2; }"],
+              ["Library-private", "class _Hidden {}"],
+              ["Capture", "int makeAdder(int a) => (int b) => a + b;" ]
+            ]
+          },
+          "example": "int Function(int) makeAdder(int a) {\n  return (int b) => a + b;\n}\n\nvoid main() {\n  final add10 = makeAdder(10);\n  print(add10(5));\n}"
+        },
+        {
+          "title": "Anonymous functions",
+          "description": "Use lambdas in collection ops and callbacks.",
+          "table": {
+            "headers": ["Use", "Example"],
+            "rows": [
+              ["Lambda", "(x) => x * 2"],
+              ["Block lambda", "(x) { return x * 2; }"],
+              ["as argument", "items.where((x) => x.isValid)"],
+              ["tear-off", "ints.forEach(print)" ]
+            ]
+          },
+          "example": "void main() {\n  final xs = [1, 2, 3];\n  final ys = xs.map((x) => x * 2).toList();\n  ys.forEach(print);\n}"
+        },
+        {
+          "title": "Built-in and predefined functions",
+          "description": "Core functions and common APIs on core types.",
+          "table": {
+            "headers": ["API", "Example", "Notes"],
+            "rows": [
+              ["print", "print('hi');", "Writes to stdout."],
+              ["List.map", "xs.map((x) => x + 1)", "Lazy iterable until collected."],
+              ["Iterable.where", "xs.where((x) => x > 0)", "Filters values."],
+              ["Iterable.any/all", "xs.any(p), xs.every(p)", "Predicates."],
+              ["String.parse", "int.parse('42')", "Throws on invalid."],
+              ["Try parse", "int.tryParse('x')", "Returns null on invalid."],
+              ["DateTime.now", "DateTime.now()", "Current time."],
+              ["Duration", "Duration(seconds: 5)", "Time span." ]
+            ]
+          },
+          "example": "void main() {\n  final xs = [1, -2, 3];\n  final pos = xs.where((x) => x > 0).toList();\n  print(pos.any((x) => x == 3));\n  print(int.tryParse('x'));\n}"
+        }
+      ]
+    },
+    {
+      "title": "Filters",
+      "description": "Filtering and transforming data using Iterable APIs.",
+      "items": [
+        {
+          "title": "where/map/reduce",
+          "description": "Most collection operators return Iterables; call toList/toSet when needed.",
+          "table": {
+            "headers": ["Operation", "Example"],
+            "rows": [
+              ["Filter", "xs.where((x) => x > 0)"],
+              ["Transform", "xs.map((x) => x * 2)"],
+              ["Fold", "xs.fold(0, (a, b) => a + b)"],
+              ["Reduce", "xs.reduce((a, b) => a + b)"],
+              ["Take/skip", "xs.take(5), xs.skip(2)"],
+              ["Distinct", "xs.toSet().toList()" ]
+            ]
+          },
+          "example": "void main() {\n  final xs = [1, -2, 3, 3];\n  final ys = xs.where((x) => x > 0).map((x) => x * 10).toSet().toList();\n  print(ys);\n}"
+        }
+      ]
+    },
+    {
+      "title": "Globals",
+      "description": "Environment variables, process information, and runtime basics.",
+      "items": [
+        {
+          "title": "dart:io Platform and Process",
+          "description": "Useful for scripts and administration tasks.",
+          "table": {
+            "headers": ["API", "Example"],
+            "rows": [
+              ["Args", "main(List<String> args)"],
+              ["Env vars", "Platform.environment['HOME']"],
+              ["OS", "Platform.operatingSystem"],
+              ["PID", "pid"],
+              ["Exit", "exit(code)"],
+              ["Exit code", "exitCode = 1" ]
+            ]
+          },
+          "example": "import 'dart:io';\n\nvoid main(List<String> args) {\n  print('os=${Platform.operatingSystem}');\n  print('home=${Platform.environment['HOME']}');\n  print('args=$args');\n}"
+        }
+      ]
+    },
+    {
+      "title": "Packages/Modules",
+      "description": "Imports, libraries, pub packages, and common structure.",
+      "items": [
+        {
+          "title": "Imports",
+          "description": "Use package imports for dependencies and relative imports inside your package.",
+          "table": {
+            "headers": ["Type", "Example"],
+            "rows": [
+              ["Dart SDK", "import 'dart:io';"],
+              ["Package", "import 'package:http/http.dart' as http;"],
+              ["Relative", "import '../lib/util.dart';"],
+              ["Show/Hide", "import 'dart:math' show max;"],
+              ["Prefix", "import 'dart:convert' as conv;" ]
+            ]
+          },
+          "example": "import 'dart:convert' as conv;\n\nvoid main() {\n  final s = conv.jsonEncode({'a': 1});\n  print(s);\n}"
+        },
+        {
+          "title": "pubspec structure",
+          "description": "Key sections you’ll commonly edit.",
+          "table": {
+            "headers": ["Key", "Meaning"],
+            "rows": [
+              ["name", "Package name"],
+              ["description", "Short description"],
+              ["environment", "SDK constraints"],
+              ["dependencies", "Runtime deps"],
+              ["dev_dependencies", "Dev-only deps"],
+              ["dependency_overrides", "Override versions (use sparingly)" ]
+            ]
+          },
+          "example": "name: my_app\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\ndependencies:\n  http: ^1.0.0"
+        }
+      ]
+    },
+    {
+      "title": "Operators",
+      "description": "Arithmetic, comparison, null-aware, type, and cascade operators.",
+      "items": [
+        {
+          "title": "Operator quick table",
+          "description": "Common operators used day-to-day.",
+          "table": {
+            "headers": ["Category", "Operators", "Notes"],
+            "rows": [
+              ["Arithmetic", "+ - * / ~/ %", "~/ is integer division."],
+              ["Comparison", "== != < <= > >=", "Use compareTo for ordering."],
+              ["Boolean", "&& || !", "Short-circuit."],
+              ["Null-aware", "?? ??= ?. !", "! is non-null assertion."],
+              ["Type test", "is is! as", "as casts (may throw)."],
+              ["Cascade", ".. ?..", "Call methods on same object." ],
+              ["Spread", "... ...?", "Spread collections; ...? skips null." ]
+            ]
+          },
+          "example": "class A {\n  int x = 0;\n  void inc() => x++;\n}\n\nvoid main() {\n  A? a;\n  final v = a?.x ?? 10;\n  final obj = A()..inc()..inc();\n  print([1, ...[2,3]]);\n  print(v);\n  print(obj.x);\n}"
+        }
+      ]
+    },
+    {
+      "title": "Arrays",
+      "description": "Lists, sets, and maps (Dart’s primary collection types).",
+      "items": [
+        {
+          "title": "List basics",
+          "description": "Lists are ordered collections (similar to arrays).",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Create", "final xs = <int>[1,2,3];"],
+              ["Index", "xs[0]"],
+              ["Add", "xs.add(4);"],
+              ["Insert", "xs.insert(0, 99);"],
+              ["Remove", "xs.remove(2); xs.removeAt(0);"],
+              ["Length", "xs.length"],
+              ["Copy", "final ys = List.of(xs);"],
+              ["Unmodifiable", "final zs = List.unmodifiable(xs);" ]
+            ]
+          },
+          "example": "void main() {\n  final xs = [1,2,3];\n  xs.add(4);\n  print(xs[0]);\n  print(xs.length);\n}"
+        },
+        {
+          "title": "Sets and Maps",
+          "description": "Sets hold unique values; Maps store key/value pairs.",
+          "table": {
+            "headers": ["Type", "Example"],
+            "rows": [
+              ["Set", "final s = <String>{'a','b'}; s.add('c');"],
+              ["Map", "final m = <String,int>{'a': 1, 'b': 2};"],
+              ["Read", "m['a']"],
+              ["Contains", "s.contains('a'), m.containsKey('a')"],
+              ["Iterate", "m.forEach((k, v) => print('$k=$v'));" ]
+            ]
+          },
+          "example": "void main() {\n  final m = {'a': 1, 'b': 2};\n  m.forEach((k, v) => print('$k=$v'));\n}"
+        },
+        {
+          "title": "Collection if/for and spreads",
+          "description": "Build collection literals conditionally or from loops; spread other collections.",
+          "table": {
+            "headers": ["Feature", "Example"],
+            "rows": [
+              ["Collection if", "[1, if (ok) 2]"],
+              ["Collection for", "[for (final x in xs) x * 2]"],
+              ["Spread", "[0, ...xs]"],
+              ["Null-aware spread", "[0, ...?maybeXs]" ]
+            ]
+          },
+          "example": "void main() {\n  final ok = true;\n  final xs = [1,2,3];\n  final ys = [0, if (ok) 99, ...xs, for (final x in xs) x * 10];\n  print(ys);\n}"
+        }
+      ]
+    },
+    {
+      "title": "Loops",
+      "description": "for/for-in/while/do-while and iteration patterns.",
+      "items": [
+        {
+          "title": "Loop constructs",
+          "description": "Prefer for-in for collections; use await for for streams.",
+          "table": {
+            "headers": ["Loop", "Example"],
+            "rows": [
+              ["for", "for (var i=0; i<n; i++) { ... }"],
+              ["for-in", "for (final x in xs) { ... }"],
+              ["while", "while (cond) { ... }"],
+              ["do-while", "do { ... } while (cond);"],
+              ["forEach", "xs.forEach((x) => print(x));"],
+              ["await for", "await for (final x in stream) { ... }" ]
+            ]
+          },
+          "example": "void main() {\n  final xs = [1,2,3];\n  for (final x in xs) {\n    if (x == 2) continue;\n    print(x);\n  }\n}"
+        },
+        {
+          "title": "break/continue and labels",
+          "description": "Use labeled break/continue for nested loops.",
+          "table": {
+            "headers": ["Feature", "Example"],
+            "rows": [
+              ["break", "break;"],
+              ["continue", "continue;"],
+              ["labeled break", "break outer;"],
+              ["labeled continue", "continue outer;" ]
+            ]
+          },
+          "example": "void main() {\n  outer: for (var i = 0; i < 3; i++) {\n    for (var j = 0; j < 3; j++) {\n      if (i == 1 && j == 1) break outer;\n    }\n  }\n  print('done');\n}"
+        }
+      ]
+    },
+    {
+      "title": "Conditions",
+      "description": "if/else, switch, ternary, and assertions.",
+      "items": [
+        {
+          "title": "if/else and ternary",
+          "description": "Use ?? and ?. with null safety for concise control flow.",
+          "table": {
+            "headers": ["Construct", "Example"],
+            "rows": [
+              ["if", "if (x > 10) { ... }"],
+              ["if/else", "if (ok) { ... } else { ... }"],
+              ["ternary", "final y = ok ? 'yes' : 'no';"],
+              ["null default", "final y = maybe ?? 'fallback';" ]
+            ]
+          },
+          "example": "void main() {\n  final x = 7;\n  final label = x > 10 ? 'big' : 'small';\n  print(label);\n}"
+        },
+        {
+          "title": "switch",
+          "description": "Switch is useful for simple branching; include default when appropriate.",
+          "example": "int toCode(String s) {\n  switch (s) {\n    case 'ok':\n      return 200;\n    case 'missing':\n      return 404;\n    default:\n      return 500;\n  }\n}"
+        },
+        {
+          "title": "assert",
+          "description": "Assertions help catch mistakes early (enabled in debug mode).",
+          "example": "void main() {\n  final x = 10;\n  assert(x > 0);\n  print(x);\n}"
+        }
+      ]
+    },
+    {
+      "title": "Regular Expressions",
+      "description": "Use RegExp for matching, capturing, and replacement.",
+      "items": [
+        {
+          "title": "Matching and captures",
+          "description": "Use hasMatch/firstMatch/allMatches; access capture groups with group(i).",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Create", "final re = RegExp(r'^(\\w+)-(\\d+)$');"],
+              ["Test", "re.hasMatch(s)"],
+              ["First match", "final m = re.firstMatch(s);"],
+              ["Groups", "m?.group(1), m?.group(2)"],
+              ["All matches", "for (final m in re.allMatches(s)) { ... }" ]
+            ]
+          },
+          "example": "void main() {\n  final re = RegExp(r'^(\\w+)-(\\d+)$');\n  final s = 'user-42';\n  final m = re.firstMatch(s);\n  print(m?.group(1));\n  print(m?.group(2));\n}"
+        },
+        {
+          "title": "Replace",
+          "description": "Use replaceAll / replaceFirst / replaceAllMapped.",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Replace all", "s.replaceAll(RegExp('foo'), 'bar')"],
+              ["Replace first", "s.replaceFirst(RegExp('foo'), 'bar')"],
+              ["Mapped replace", "s.replaceAllMapped(re, (m) => m[1]!.toUpperCase())" ]
+            ]
+          },
+          "example": "void main() {\n  final s = 'foo foo';\n  final out = s.replaceAll(RegExp('foo'), 'bar');\n  print(out);\n}"
+        },
+        {
+          "title": "RegExp flags",
+          "description": "Configure behavior with RegExp options.",
+          "table": {
+            "headers": ["Option", "Effect"],
+            "rows": [
+              ["caseSensitive: false", "Case-insensitive matching"],
+              ["multiLine: true", "^ and $ match line boundaries"],
+              ["dotAll: true", ". matches newlines"],
+              ["unicode: true", "Unicode-aware matching" ]
+            ]
+          },
+          "example": "final re = RegExp('^foo$', multiLine: true, caseSensitive: false);"
+        }
+      ]
+    },
+    {
+      "title": "Data and Time",
+      "description": "DateTime, Duration, parsing/formatting, and time zones.",
+      "items": [
+        {
+          "title": "DateTime and Duration",
+          "description": "DateTime is an instant in time (local/UTC). Duration is a time span.",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Now", "final now = DateTime.now();"],
+              ["UTC now", "final nowUtc = DateTime.now().toUtc();"],
+              ["Parse ISO-8601", "final dt = DateTime.parse('2025-12-20T10:00:00Z');"],
+              ["Add duration", "final later = now.add(Duration(minutes: 5));"],
+              ["Difference", "final d = later.difference(now);"],
+              ["Epoch ms", "now.millisecondsSinceEpoch" ]
+            ]
+          },
+          "example": "void main() {\n  final now = DateTime.now();\n  final later = now.add(const Duration(minutes: 5));\n  print(later.difference(now).inMinutes);\n}"
+        },
+        {
+          "title": "Formatting (intl)",
+          "description": "For locale-aware formatting, use the intl package.",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Add dep", "dart pub add intl"],
+              ["Format", "DateFormat('yyyy-MM-dd').format(dt)"],
+              ["Parse strict", "DateFormat('yyyy-MM-dd').parseStrict(s)" ]
+            ]
+          },
+          "example": "// Requires: package:intl\n// final s = DateFormat('yyyy-MM-dd').format(DateTime.now());"
+        }
+      ]
+    },
+    {
+      "title": "Database interactions",
+      "description": "Typical patterns using community database packages (parameterized queries, transactions).",
+      "items": [
+        {
+          "title": "General best practices",
+          "description": "Use placeholders/parameters, transactions, and close resources.",
+          "table": {
+            "headers": ["Practice", "Why"],
+            "rows": [
+              ["Parameterized queries", "Avoid SQL injection and quoting errors."],
+              ["Transactions", "Keep multi-step changes consistent."],
+              ["Connection pooling", "Reduce overhead of repeated connects."],
+              ["Timeouts", "Prevent hung queries from stalling the app." ]
+            ]
+          },
+          "example": "// Package APIs vary. Prefer parameterized queries and transactions."
+        }
+      ]
+    },
+    {
+      "title": "Async and Concurrency",
+      "description": "Futures, async/await, and Streams.",
+      "items": [
+        {
+          "title": "Future and async/await",
+          "description": "Use async/await for readable async code; handle errors with try/catch.",
+          "table": {
+            "headers": ["Pattern", "Example"],
+            "rows": [
+              ["Async function", "Future<int> f() async { return 1; }"],
+              ["Await", "final v = await f();"],
+              ["Parallel", "await Future.wait([a(), b()]);"],
+              ["Timeout", "await f().timeout(Duration(seconds: 2));"],
+              ["Error handling", "try { ... } catch (e, st) { ... }" ]
+            ]
+          },
+          "example": "Future<int> slow() async {\n  await Future.delayed(const Duration(milliseconds: 10));\n  return 1;\n}\n\nFuture<void> main() async {\n  final v = await slow();\n  print(v);\n}"
+        },
+        {
+          "title": "Streams",
+          "description": "Streams represent async sequences; use await for and listen.",
+          "example": "Stream<int> nums() async* {\n  for (var i = 0; i < 3; i++) {\n    yield i;\n  }\n}\n\nFuture<void> main() async {\n  await for (final x in nums()) {\n    print(x);\n  }\n}"
+        }
+      ]
+    },
+    {
+      "title": "Scripting and Administration",
+      "description": "Files, directories, processes, and common CLI patterns.",
+      "items": [
+        {
+          "title": "Files and directories",
+          "description": "Use dart:io File/Directory for filesystem operations.",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Read file", "final s = await File('a.txt').readAsString();"],
+              ["Write file", "await File('a.txt').writeAsString('hi');"],
+              ["List dir", "await for (final e in Directory('.').list()) { ... }"],
+              ["Exists", "final ok = await File('a.txt').exists();" ]
+            ]
+          },
+          "example": "import 'dart:io';\n\nFuture<void> main() async {\n  final f = File('hello.txt');\n  await f.writeAsString('hello');\n  print(await f.readAsString());\n}"
+        },
+        {
+          "title": "Running external commands",
+          "description": "Use Process.run for simple calls; Process.start for streaming I/O.",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Run and capture", "final r = await Process.run('echo', ['hello']);"],
+              ["Exit code", "r.exitCode"],
+              ["Stdout", "r.stdout"],
+              ["Stderr", "r.stderr" ]
+            ]
+          },
+          "example": "import 'dart:io';\n\nFuture<void> main() async {\n  final r = await Process.run('echo', ['hello']);\n  print(r.stdout);\n  exitCode = r.exitCode;\n}"
+        }
+      ]
+    },
+    {
+      "title": "HTTP and JSON",
+      "description": "Common networking and JSON patterns for scripts and services.",
+      "items": [
+        {
+          "title": "JSON encode/decode",
+          "description": "Use dart:convert for JSON (Map<String, dynamic> is typical).",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Encode", "jsonEncode({'a': 1})"],
+              ["Decode", "jsonDecode('{\\\"a\\\":1}')"],
+              ["Decode type", "final m = jsonDecode(s) as Map<String, dynamic>;" ]
+            ]
+          },
+          "example": "import 'dart:convert';\n\nvoid main() {\n  final s = jsonEncode({'a': 1});\n  final m = jsonDecode(s) as Map<String, dynamic>;\n  print(m['a']);\n}"
+        },
+        {
+          "title": "HTTP requests (http package)",
+          "description": "The http package is commonly used for simple REST calls.",
+          "table": {
+            "headers": ["Task", "Example"],
+            "rows": [
+              ["Add dependency", "dart pub add http"],
+              ["GET", "final r = await http.get(Uri.parse(url));"],
+              ["POST JSON", "await http.post(uri, headers: {'Content-Type':'application/json'}, body: jsonEncode(obj));"],
+              ["Status/body", "r.statusCode, r.body" ]
+            ]
+          },
+          "example": "// Requires: package:http\n// final r = await http.get(Uri.parse('https://example.com'));"
+        }
+      ]
+    },
+    {
+      "title": "Common Errors",
+      "description": "Frequent Dart errors/exceptions and typical fixes.",
+      "items": [
+        {
+          "title": "Null safety runtime errors",
+          "description": "Most common issue: using ! incorrectly or calling a method on null.",
+          "table": {
+            "headers": ["Error", "Typical cause", "Fix"],
+            "rows": [
+              ["Null check operator used on a null value", "Used ! on a nullable that was null", "Use ??, ?., or a guard if (x == null) return;"],
+              ["NoSuchMethodError", "Called a method on null or wrong type", "Check nullability; validate types and casts" ]
+            ]
+          },
+          "example": "void main() {\n  String? s;\n  // print(s!.length); // can throw\n  print(s?.length ?? 0);\n}"
+        },
+        {
+          "title": "Type and format errors",
+          "description": "Parsing and casting errors are common in I/O and JSON.",
+          "table": {
+            "headers": ["Error", "Typical cause", "Fix"],
+            "rows": [
+              ["FormatException", "int.parse on invalid string", "Use int.tryParse and handle null"],
+              ["type 'X' is not a subtype of type 'Y'", "Bad cast (often JSON)", "Cast carefully; validate structure; use typed parsing"],
+              ["LateInitializationError", "Accessed late var before init", "Initialize before use or make nullable" ]
+            ]
+          },
+          "example": "void main() {\n  final n = int.tryParse('x');\n  print(n ?? 0);\n}"
+        }
+      ]
+    }
+  ]
+}

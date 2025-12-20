@@ -1,0 +1,1034 @@
+{
+	"title": "Elixir",
+	"description": "A general-purpose Elixir quick reference covering core syntax, pattern matching, functions, modules, concurrency, Mix tooling, common pitfalls, and day-to-day scripting/operations patterns.",
+	"language": "elixir",
+	"categories": [
+		{
+			"title": "Installation and Initial Setup",
+			"description": "Installing Elixir/Erlang, verifying your environment, and creating projects.",
+			"items": [
+				{
+					"title": "Verify installation",
+					"description": "Elixir runs on the Erlang VM (BEAM). Ensure both Erlang and Elixir are installed.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["elixir -v", "Show Elixir + Erlang versions"],
+							["erl -version", "Show Erlang version"],
+							["iex --version", "Show IEx version"],
+							["mix --version", "Show Mix version" ]
+						]
+					},
+					"example": "elixir -v\niex --version\nmix --version"
+				},
+				{
+					"title": "Create and run a Mix project",
+					"description": "Mix is the standard build tool and dependency manager.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["mix new my_app", "Create a new project"],
+							["cd my_app", "Enter project directory"],
+							["mix test", "Run tests"],
+							["mix run", "Run your application"],
+							["iex -S mix", "Start IEx with your project loaded"],
+							["mix help", "List Mix tasks" ]
+						]
+					},
+					"example": "mix new my_app\ncd my_app\nmix test\niex -S mix"
+				},
+				{
+					"title": "Run scripts and one-liners",
+					"description": "Use elixir for scripts and -e for expressions.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["elixir script.exs", "Run a script"],
+							["elixir -e 'IO.puts(2+2)'", "Run a one-liner"],
+							["iex", "Interactive shell"],
+							["iex -S mix", "Interactive shell with a Mix project" ]
+						]
+					},
+					"example": "elixir -e 'IO.puts(Enum.sum([1,2,3]))'"
+				}
+			]
+		},
+		{
+			"title": "Basic Functionality",
+			"description": "Core language basics: values, bindings, immutability, pattern matching, strings, and pipelines.",
+			"items": [
+				{
+					"title": "Bindings and immutability",
+					"description": "Variables are bindings to values; values are immutable. Rebinding a name is allowed.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Bind", "x = 1"],
+							["Rebind", "x = x + 1"],
+							["Immutable update", "new_map = Map.put(map, :k, :v)"],
+							["Ignore value", "_ = expensive()"],
+							["Anonymous discard", "_unused = 123" ]
+						]
+					},
+					"example": "x = 1\nx = x + 1\nIO.inspect(x)"
+				},
+				{
+					"title": "Pattern matching",
+					"description": "= matches and binds; it is not assignment in the imperative sense.",
+					"table": {
+						"headers": ["Pattern", "Notes"],
+						"rows": [
+							["{a, b} = {1, 2}", "Tuple destructuring"],
+							["[h | t] = [1,2,3]", "Head/tail list match"],
+							["%{k: v} = %{k: 1, x: 2}", "Map match on keys"],
+							["^x", "Pin operator to match existing binding"],
+							["_", "Wildcard" ]
+						]
+					},
+					"example": "x = 1\n^x = 1\n# ^x = 2 would raise MatchError\n{a, b} = {\"hi\", 42}"
+				},
+				{
+					"title": "Basic types",
+					"description": "Common types: integers, floats, atoms, booleans, binaries, lists, tuples, maps.",
+					"table": {
+						"headers": ["Type", "Example"],
+						"rows": [
+							["Integer", "123"],
+							["Float", "3.14"],
+							["Atom", ":ok"],
+							["Boolean", "true / false"],
+							["Binary (UTF-8 string)", "\"hello\""],
+							["List", "[1, 2, 3]"],
+							["Tuple", "{:ok, 123}"],
+							["Map", "%{a: 1, \"b\" => 2}" ]
+						]
+					},
+					"example": "IO.inspect({:ok, %{a: 1}})"
+				},
+				{
+					"title": "Strings and binaries",
+					"description": "Elixir strings are UTF-8 binaries; charlists are lists of codepoints.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Concatenate", "\"a\" <> \"b\""],
+							["Interpolation", "\"Hello #{name}\""],
+							["Length (graphemes)", "String.length(s)"],
+							["Split", "String.split(s, \",\")"],
+							["Trim", "String.trim(s)"],
+							["Charlist", "'abc'"],
+							["Binary size", "byte_size(s)" ]
+						]
+					},
+					"example": "name = \"Ada\"\nIO.puts(\"Hello #{name}\")\nIO.inspect(String.split(\"a,b,c\", \",\"))"
+				},
+				{
+					"title": "The pipe operator (|>)",
+					"description": "Pipes pass the left value as the first argument to the next function.",
+					"table": {
+						"headers": ["Pattern", "Meaning"],
+						"rows": [
+							["x |> f()", "f(x)"],
+							["x |> f(a)", "f(x, a)"],
+							["x |> f() |> g()", "g(f(x))" ]
+						]
+					},
+					"example": "\"  hello  \"\n|> String.trim()\n|> String.upcase()\n|> IO.puts()"
+				},
+				{
+					"title": "I/O basics",
+					"description": "Use IO.* for printing/reading; Kernel.inspect/IO.inspect for debugging.",
+					"table": {
+						"headers": ["Function", "Use"],
+						"rows": [
+							["IO.puts/1", "Print line"],
+							["IO.write/1", "Print without newline"],
+							["IO.inspect/2", "Inspect and return value"],
+							["IO.gets/1", "Read a line from stdin"],
+							["inspect/2", "Convert term to string" ]
+						]
+					},
+					"example": "x = %{a: 1}\nIO.inspect(x, label: \"debug\")"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Common arithmetic, boolean, comparison, match, and bitstring operators.",
+			"items": [
+				{
+					"title": "Arithmetic and comparison",
+					"description": "Elixir distinguishes == and ===, and != and !==.",
+					"table": {
+						"headers": ["Operator", "Description"],
+						"rows": [
+							["+ - * /", "Arithmetic"],
+							["div(a, b)", "Integer division"],
+							["rem(a, b)", "Remainder"],
+							["== !=", "Value equality (allows type coercion in some cases)"],
+							["=== !==", "Strict equality"],
+							["< <= > >=", "Comparison" ]
+						]
+					},
+					"example": "IO.inspect(1 == 1.0)\nIO.inspect(1 === 1.0)\nIO.inspect(div(7, 3))"
+				},
+				{
+					"title": "Boolean operators",
+					"description": "and/or/not expect booleans; &&/||/! work with truthy/falsey.",
+					"table": {
+						"headers": ["Operator", "Notes"],
+						"rows": [
+							["and or not", "Strict boolean operators"],
+							["&& || !", "Truthy/falsey operators (only false and nil are falsey)" ]
+						]
+					},
+					"example": "IO.inspect(true and false)\nIO.inspect(\"x\" && 123)\nIO.inspect(nil || :default)"
+				},
+				{
+					"title": "Pattern match and pin",
+					"description": "Use = to match and bind; use ^ to match existing bindings.",
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["=", "Pattern match"],
+							["^", "Pin an existing binding"],
+							["in", "Membership (lists/ranges)" ]
+						]
+					},
+					"example": "x = 1\nIO.inspect(2 in [1,2,3])\n^x = 1"
+				},
+				{
+					"title": "Capture operator (&)",
+					"description": "Create anonymous functions by capturing arguments.",
+					"table": {
+						"headers": ["Example", "Meaning"],
+						"rows": [
+							["&(&1 + 1)", "fn x -> x + 1 end"],
+							["&String.upcase/1", "Capture a named function"],
+							["&Enum.map(&1, &String.trim/1)", "Nested capture" ]
+						]
+					},
+					"example": "inc = &(&1 + 1)\nIO.inspect(inc.(41))"
+				},
+				{
+					"title": "Bitstring/binary syntax",
+					"description": "Use <<>> for binaries and bitstring pattern matching.",
+					"table": {
+						"headers": ["Syntax", "Description"],
+						"rows": [
+							["<<1, 2, 3>>", "Binary of bytes"],
+							["<<x::unsigned-integer-size(16)>>", "Sized integer in binary"],
+							["<<head, rest::binary>> = bin", "Split first byte" ]
+						]
+					},
+					"example": "bin = <<1, 2, 3>>\n<<h, rest::binary>> = bin\nIO.inspect({h, rest})"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "Control flow with if/unless, case, cond, and with.",
+			"items": [
+				{
+					"title": "if / unless",
+					"description": "if/unless are expressions and return values.",
+					"table": {
+						"headers": ["Form", "Notes"],
+						"rows": [
+							["if expr do ... else ... end", "Returns a value"],
+							["unless expr do ... end", "Negated if" ]
+						]
+					},
+					"example": "x = 10\nlabel = if x > 0, do: :pos, else: :nonpos\nIO.inspect(label)"
+				},
+				{
+					"title": "case",
+					"description": "case uses pattern matching; supports guards.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Tuple match", "case result do {:ok, v} -> v; {:error, e} -> e end"],
+							["Guards", "when is_integer(x) and x > 0" ]
+						]
+					},
+					"example": "result = {:ok, 42}\ncase result do\n  {:ok, v} -> v\n  {:error, _} -> 0\nend"
+				},
+				{
+					"title": "cond",
+					"description": "cond selects the first truthy clause.",
+					"table": {
+						"headers": ["Tip", "Notes"],
+						"rows": [
+							["Use true as default", "Last clause often 'true -> ...'" ]
+						]
+					},
+					"example": "cond do\n  x < 0 -> :neg\n  x == 0 -> :zero\n  true -> :pos\nend"
+				},
+				{
+					"title": "with (happy-path pipelines)",
+					"description": "Chain pattern matches; handle errors cleanly.",
+					"table": {
+						"headers": ["Pattern", "Use"],
+						"rows": [
+							["with {:ok, a} <- f(), {:ok, b} <- g(a) do ... end", "Stop on first non-match"],
+							["else", "Handle error patterns" ]
+						]
+					},
+					"example": "with {:ok, a} <- parse(input),\n     {:ok, b} <- validate(a) do\n  {:ok, b}\nelse\n  {:error, reason} -> {:error, reason}\nend"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "Elixir favors recursion and Enum/Stream over traditional looping constructs; comprehensions are also common.",
+			"items": [
+				{
+					"title": "Enum iteration",
+					"description": "Use Enum for eager iteration over enumerables.",
+					"table": {
+						"headers": ["Function", "Description"],
+						"rows": [
+							["Enum.each/2", "Side-effect iteration"],
+							["Enum.map/2", "Transform values"],
+							["Enum.reduce/3", "Fold values"],
+							["Enum.any?/2", "Any match"],
+							["Enum.all?/2", "All match"],
+							["Enum.find/2", "Find first match" ]
+						]
+					},
+					"example": "[1,2,3] |> Enum.map(&(&1 * 2)) |> IO.inspect()"
+				},
+				{
+					"title": "Stream for lazy iteration",
+					"description": "Streams are lazy and composable; force evaluation with Enum.",
+					"table": {
+						"headers": ["Function", "Description"],
+						"rows": [
+							["Stream.map/2", "Lazy map"],
+							["Stream.filter/2", "Lazy filter"],
+							["Stream.take/2", "Take N items"],
+							["Enum.to_list/1", "Realize stream" ]
+						]
+					},
+					"example": "1..1_000_000\n|> Stream.map(&(&1 * 2))\n|> Stream.take(5)\n|> Enum.to_list()\n|> IO.inspect()"
+				},
+				{
+					"title": "for comprehensions",
+					"description": "Comprehensions generate lists (or binaries) from enumerables.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Generator", "for x <- list, do: x * 2"],
+							["Filter", "for x <- list, x > 0, do: x"],
+							["Multiple generators", "for x <- xs, y <- ys, do: {x, y}"],
+							[":into", "Collect into map/keyword list/etc." ]
+						]
+					},
+					"example": "for x <- [1,2,3], x > 1, do: x * 10"
+				},
+				{
+					"title": "Recursion (tail recursion)",
+					"description": "Use recursion for loops; prefer tail-recursive forms for performance.",
+					"table": {
+						"headers": ["Tip", "Notes"],
+						"rows": [
+							["Accumulators", "Carry state in parameters"],
+							["Pattern match", "Split [h|t]" ]
+						]
+					},
+					"example": "defmodule Sum do\n  def list(xs), do: do_sum(xs, 0)\n  defp do_sum([], acc), do: acc\n  defp do_sum([h | t], acc), do: do_sum(t, acc + h)\nend"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Elixir does not have mutable arrays; use lists, tuples, maps, and binaries. For indexed collections, use Erlang arrays or Elixir libraries when needed.",
+			"items": [
+				{
+					"title": "Lists",
+					"description": "Linked lists; fast prepend, linear index access.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Prepend", "[x | xs]"],
+							["Concat", "[1,2] ++ [3]"],
+							["Length", "length(xs)"],
+							["Membership", "x in xs"],
+							["Head/tail match", "[h | t] = xs" ]
+						]
+					},
+					"example": "xs = [2,3]\nys = [1 | xs]\n[h | t] = ys\nIO.inspect({h, t})"
+				},
+				{
+					"title": "Tuples",
+					"description": "Fixed-size; fast element access but expensive updates.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Create", "t = {:ok, 123}"],
+							["Access", "elem(t, 1)"],
+							["Update", "put_elem(t, 1, 999)"],
+							["Size", "tuple_size(t)" ]
+						]
+					},
+					"example": "t = {:ok, 123}\nIO.inspect(elem(t, 1))"
+				},
+				{
+					"title": "Maps and keyword lists",
+					"description": "Maps are key/value (any key). Keyword lists are lists of {atom, value} and preserve order.",
+					"table": {
+						"headers": ["Structure", "Example"],
+						"rows": [
+							["Map literal", "%{a: 1, \"b\" => 2}"],
+							["Get", "Map.get(m, :a)"],
+							["Put", "Map.put(m, :a, 2)"],
+							["Update!", "Map.update!(m, :a, &(&1 + 1))"],
+							["Keyword list", "[timeout: 1000, retries: 3]"],
+							["Keyword get", "Keyword.get(opts, :timeout)" ]
+						]
+					},
+					"example": "m = %{a: 1}\nm = Map.update!(m, :a, &(&1 + 41))\nIO.inspect(m)"
+				},
+				{
+					"title": "Binaries (byte arrays)",
+					"description": "Use binaries for byte-oriented data and performance-sensitive string work.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Size", "byte_size(bin)"],
+							["Concatenate", "bin1 <> bin2"],
+							["Pattern match", "<<h, rest::binary>> = bin"],
+							["Base encode/decode", "Base.encode64(bin) / Base.decode64(bin)" ]
+						]
+					},
+					"example": "bin = \"hi\"\nIO.inspect(byte_size(bin))\nIO.inspect(Base.encode64(bin))"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Parameters, returns, scope, anonymous functions, and common built-ins/predefined functions.",
+			"items": [
+				{
+					"title": "Function definitions and returns",
+					"description": "Functions return the last expression; use explicit return rarely (Kernel.return is not used).",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Named function", "def add(a, b), do: a + b"],
+							["Multi-line", "def f(x) do ... end"],
+							["Return value", "last expression"],
+							["Private", "defp helper(...)"]
+						]
+					},
+					"example": "defmodule Math do\n  def add(a, b), do: a + b\nend\nIO.inspect(Math.add(2, 3))"
+				},
+				{
+					"title": "Parameters and pattern matching",
+					"description": "Use patterns in parameters and multiple function heads.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Default args", "def f(x, y \\\\ 10)"],
+							["Guards", "def f(x) when is_integer(x) and x > 0"],
+							["Multiple heads", "def f(0), do: ...; def f(n), do: ..."],
+							["Match maps", "def f(%{id: id}) do ... end" ]
+						]
+					},
+					"example": "defmodule F do\n  def fact(0), do: 1\n  def fact(n) when n > 0, do: n * fact(n - 1)\nend"
+				},
+				{
+					"title": "Scope and imports",
+					"description": "Elixir has lexical scope; modules namespace functions. Use alias/import/require cautiously.",
+					"table": {
+						"headers": ["Construct", "Use"],
+						"rows": [
+							["alias", "Shorten module names"],
+							["import", "Bring functions/macros into scope"],
+							["require", "Load macros"],
+							["use", "Invoke module’s __using__/1 macro" ]
+						]
+					},
+					"example": "defmodule Example do\n  alias String, as: S\n  def up(s), do: S.upcase(s)\nend"
+				},
+				{
+					"title": "Anonymous functions",
+					"description": "Anonymous functions use fn -> end; invoke with dot-call f.(arg).",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Define", "f = fn x -> x * 2 end"],
+							["Call", "f.(21)"],
+							["Multi-arity", "fn\n  x -> ...\n  x, y -> ...\nend"],
+							["Capture", "&String.trim/1" ]
+						]
+					},
+					"example": "double = fn x -> x * 2 end\nIO.inspect(double.(21))"
+				},
+				{
+					"title": "Built-in functions (Kernel) and common helpers",
+					"description": "Kernel is imported by default; many core functions come from Kernel.",
+					"table": {
+						"headers": ["Function", "Purpose"],
+						"rows": [
+							["is_integer/1, is_map/1, is_list/1", "Type checks (guards)"],
+							["length/1", "List length"],
+							["map_size/1", "Map size"],
+							["elem/2, put_elem/3", "Tuple access/update"],
+							["hd/1, tl/1", "List head/tail (raises on empty list)"],
+							["get_in/2, put_in/3, update_in/3", "Nested data access/update"],
+							["apply/3", "Invoke by module/function/args"],
+							["throw/1, raise/1", "Control flow / errors" ]
+						]
+					},
+					"example": "m = %{user: %{name: \"Ada\"}}\nIO.inspect(get_in(m, [:user, :name]))"
+				},
+				{
+					"title": "Predefined modules (commonly used)",
+					"description": "Elixir standard library provides rich modules for collections, strings, processes, and more.",
+					"table": {
+						"headers": ["Module", "Common uses"],
+						"rows": [
+							["Enum", "Eager enumerable operations"],
+							["Stream", "Lazy enumerable operations"],
+							["String", "UTF-8 string operations"],
+							["Map", "Map manipulation"],
+							["List", "List utilities"],
+							["Keyword", "Keyword list utilities"],
+							["File", "File operations"],
+							["Path", "Path handling"],
+							["System", "OS integration"],
+							["Process", "Process/links/monitors"],
+							["Task", "Async tasks"],
+							["GenServer", "OTP server behavior"],
+							["Supervisor", "Supervision trees"],
+							["Logger", "Logging"],
+							["Regex", "Regular expressions" ]
+						]
+					},
+					"example": "Task.async(fn -> 1 + 1 end) |> Task.await() |> IO.inspect()"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filter/select patterns using Enum/Stream and pattern matching.",
+			"items": [
+				{
+					"title": "Enum.filter/2",
+					"description": "Select elements that satisfy a predicate.",
+					"table": {
+						"headers": ["Form", "Example"],
+						"rows": [
+							["Enum.filter(list, fun)", "Enum.filter([1,2,3], &(&1 > 1))"],
+							["With pipe", "[1,2,3] |> Enum.filter(&(&1 > 1))" ]
+						]
+					},
+					"example": "[1,2,3,4]\n|> Enum.filter(&(rem(&1, 2) == 0))\n|> IO.inspect()"
+				},
+				{
+					"title": "Enum.reject/2",
+					"description": "Reject elements that satisfy a predicate.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["Enum.reject/2", "Enum.reject([1,2,3], &(&1 == 2))" ]
+						]
+					},
+					"example": "[1,2,3] |> Enum.reject(&(&1 == 2)) |> IO.inspect()"
+				},
+				{
+					"title": "Stream.filter/2",
+					"description": "Lazy filtering for large/streaming data.",
+					"table": {
+						"headers": ["Pattern", "Notes"],
+						"rows": [
+							["Stream.filter", "Use Enum.to_list/1 or Enum.take/2 to realize" ]
+						]
+					},
+					"example": "1..1_000_000\n|> Stream.filter(&(rem(&1, 2) == 0))\n|> Enum.take(3)\n|> IO.inspect()"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Elixir avoids global mutable state. Common global-like mechanisms include module attributes, application environment, and ETS (Erlang Term Storage).",
+			"items": [
+				{
+					"title": "Module attributes",
+					"description": "Attributes like @moduledoc/@doc are metadata; custom attributes can be compile-time constants.",
+					"table": {
+						"headers": ["Attribute", "Purpose"],
+						"rows": [
+							["@moduledoc", "Module documentation"],
+							["@doc", "Function documentation"],
+							["@spec", "Typespec"],
+							["@behaviour", "Declare behavior"],
+							["@my_const", "Custom compile-time constant" ]
+						]
+					},
+					"example": "defmodule M do\n  @my_const 42\n  def v, do: @my_const\nend"
+				},
+				{
+					"title": "Application environment",
+					"description": "Use Application.get_env/3 for configuration (often set via config/*.exs).",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["Application.get_env/3", "Application.get_env(:my_app, :key, :default)"],
+							["Application.put_env/4", "Application.put_env(:my_app, :key, 123)" ]
+						]
+					},
+					"example": "Application.put_env(:my_app, :mode, :dev)\nIO.inspect(Application.get_env(:my_app, :mode))"
+				},
+				{
+					"title": "ETS (Erlang Term Storage)",
+					"description": "ETS tables provide in-memory storage shared across processes (use carefully).",
+					"table": {
+						"headers": ["Call", "Description"],
+						"rows": [
+							[":ets.new/2", "Create table"],
+							[":ets.insert/2", "Insert tuples"],
+							[":ets.lookup/2", "Lookup by key"],
+							[":ets.delete/2", "Delete by key" ]
+						]
+					},
+					"example": "tid = :ets.new(:cache, [:set, :public])\n:ets.insert(tid, {:k, 123})\nIO.inspect(:ets.lookup(tid, :k))"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "Modules, aliases/imports, and package management with Mix and Hex.",
+			"items": [
+				{
+					"title": "Module structure",
+					"description": "Modules define namespaces and functions; use defmodule, def, defp.",
+					"table": {
+						"headers": ["Construct", "Description"],
+						"rows": [
+							["defmodule", "Define a module"],
+							["def", "Public function"],
+							["defp", "Private function"],
+							["@moduledoc/@doc", "Docs"],
+							["@spec", "Typespecs" ]
+						]
+					},
+					"example": "defmodule Greeter do\n  @moduledoc \"\"\"Example module\"\"\"\n  def hello(name), do: \"Hello, #{name}\"\nend"
+				},
+				{
+					"title": "alias/import/require/use",
+					"description": "Manage namespace and macros.",
+					"table": {
+						"headers": ["Directive", "When to use"],
+						"rows": [
+							["alias", "Shorten module names"],
+							["import", "Bring functions/macros into scope"],
+							["require", "Use macros from a module"],
+							["use", "Invoke __using__/1 for behavior/injection" ]
+						]
+					},
+					"example": "defmodule X do\n  alias MyApp.Parser\n  require Logger\n  def run(s), do: Logger.info(Parser.parse(s) |> inspect())\nend"
+				},
+				{
+					"title": "Dependencies (Hex) and Mix",
+					"description": "Declare dependencies in mix.exs and fetch with mix deps.get.",
+					"table": {
+						"headers": ["Task", "Description"],
+						"rows": [
+							["mix deps.get", "Fetch dependencies"],
+							["mix deps.update --all", "Update dependencies"],
+							["mix deps.tree", "Show dependency tree"],
+							["mix hex.info pkg", "Inspect a Hex package" ]
+						]
+					},
+					"example": "mix deps.get\nmix deps.tree"
+				},
+				{
+					"title": "Documentation and types",
+					"description": "Generate docs and use typespecs for analysis and tooling.",
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["mix docs", "Generate HTML docs (requires ex_doc dependency)"],
+							["@spec", "Typespecs for Dialyzer and clarity"],
+							["dialyzer", "Static analysis (commonly via Dialyxir)" ]
+						]
+					},
+					"example": "@spec add(integer(), integer()) :: integer()\ndef add(a, b), do: a + b"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "Regex support via the Regex module (Erlang re).",
+			"items": [
+				{
+					"title": "Regex.match?/2",
+					"description": "Test whether a regex matches.",
+					"table": {
+						"headers": ["Call", "Example"],
+						"rows": [
+							["Regex.match?(~r/abc/, s)", "true/false"],
+							["Regex.match?(~r/^\"?\\w+\"?$/, s)", "Example with anchors" ]
+						]
+					},
+					"example": "IO.inspect(Regex.match?(~r/^a.+z$/, \"abcz\"))"
+				},
+				{
+					"title": "Regex.run/3 and captures",
+					"description": "Extract capture groups. Use named captures for clarity.",
+					"table": {
+						"headers": ["Call", "Notes"],
+						"rows": [
+							["Regex.run/2", "Returns list of captures or nil"],
+							["Regex.named_captures/2", "Returns map of capture names"],
+							["~r/.../", "Regex sigil" ]
+						]
+					},
+					"example": "re = ~r/(?<user>\\w+):(?<id>\\d+)/\nIO.inspect(Regex.named_captures(re, \"ada:42\"))"
+				},
+				{
+					"title": "Regex.replace/4",
+					"description": "Replace matches with a string or function.",
+					"table": {
+						"headers": ["Form", "Example"],
+						"rows": [
+							["Replace with string", "Regex.replace(~r/\\s+/, s, \" \")"],
+							["Replace with function", "Regex.replace(~r/\\d+/, s, fn m -> ... end)" ]
+						]
+					},
+					"example": "s = \"a   b\\n\"\nIO.inspect(Regex.replace(~r/\\s+/, s, \" \") |> String.trim())"
+				}
+			]
+		},
+		{
+			"title": "Date and Time",
+			"description": "Date, Time, NaiveDateTime, DateTime, time zones, and formatting/parsing.",
+			"items": [
+				{
+					"title": "Core types",
+					"description": "Elixir provides Date, Time, NaiveDateTime (no timezone), and DateTime (with timezone).",
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["Date", "Calendar date"],
+							["Time", "Time of day"],
+							["NaiveDateTime", "Date+time without timezone"],
+							["DateTime", "Date+time with timezone" ]
+						]
+					},
+					"example": "IO.inspect(Date.utc_today())\nIO.inspect(DateTime.utc_now())"
+				},
+				{
+					"title": "Parsing and formatting",
+					"description": "Use ISO8601 helpers or Calendar/DateTime functions.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["Date.from_iso8601/1", "Date.from_iso8601(\"2025-12-20\")"],
+							["Time.from_iso8601/1", "Time.from_iso8601(\"12:34:56\")"],
+							["NaiveDateTime.from_iso8601/1", "NaiveDateTime.from_iso8601(\"2025-12-20 12:34:56\")"],
+							["DateTime.from_iso8601/1", "DateTime.from_iso8601(\"2025-12-20T12:34:56Z\")"],
+							["Date.to_iso8601/1", "Date.to_iso8601(date)" ]
+						]
+					},
+					"example": "{:ok, d} = Date.from_iso8601(\"2025-12-20\")\nIO.puts(Date.to_iso8601(d))"
+				},
+				{
+					"title": "Durations and shifting",
+					"description": "For simple shifts, use Date.add/2 and NaiveDateTime.add/3. For advanced timezone/duration features, use a library (e.g., Timex) if allowed.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["Date.add/2", "Add days"],
+							["NaiveDateTime.add/3", "Add seconds (or other units)"],
+							["Date.diff/2", "Difference in days" ]
+						]
+					},
+					"example": "d = Date.utc_today()\nIO.inspect(Date.add(d, 7))"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "Database access typically uses Ecto (common in Elixir), or Erlang/Elixir drivers directly. Examples here show common Ecto patterns.",
+			"items": [
+				{
+					"title": "Ecto basics (Repo, schema, changeset)",
+					"description": "Define schemas, validate via changesets, and interact through a Repo.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Repo", "Database access module (e.g., MyApp.Repo)"],
+							["Schema", "Maps DB tables to structs"],
+							["Changeset", "Validations/casting"],
+							["Query", "Ecto.Query for composable SQL" ]
+						]
+					},
+					"example": "# Typical usage:\n# alias MyApp.Repo\n# alias MyApp.User\n# user = %User{name: \"Ada\"}\n# Repo.insert(user)"
+				},
+				{
+					"title": "Migrations (Ecto) commands",
+					"description": "Common Mix tasks for migrations.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["mix ecto.create", "Create the database"],
+							["mix ecto.migrate", "Run migrations"],
+							["mix ecto.rollback", "Rollback last migration"],
+							["mix ecto.gen.migration add_users", "Generate a migration"],
+							["mix ecto.reset", "Drop, create, migrate (dev/test)" ]
+						]
+					},
+					"example": "mix ecto.gen.migration add_users\nmix ecto.migrate"
+				},
+				{
+					"title": "Transactions and locks",
+					"description": "Use Repo.transaction/1 and Ecto.Multi for multi-step transactions.",
+					"table": {
+						"headers": ["Feature", "Use"],
+						"rows": [
+							["Repo.transaction(fn -> ... end)", "Run a transaction"],
+							["Ecto.Multi", "Compose multi-step transactional workflows" ]
+						]
+					},
+					"example": "# Repo.transaction(fn ->\n#   Repo.insert!(...)\n# end)"
+				},
+				{
+					"title": "Testing with DB (SQL sandbox)",
+					"description": "In Ecto-based apps, SQL sandbox helps isolate tests.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Ecto.Adapters.SQL.Sandbox", "Checkout/allow connections in tests"],
+							["mix test", "Run test suite" ]
+						]
+					},
+					"example": "# In test helper, configure sandbox mode for async tests appropriately"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequent compile/runtime errors and practical fixes.",
+			"items": [
+				{
+					"title": "MatchError",
+					"description": "Raised when a pattern match fails.",
+					"table": {
+						"headers": ["Cause", "Fix"],
+						"rows": [
+							["Assuming {:ok, v}", "Handle {:error, reason} branches"],
+							["Pin misuse", "Use ^ only when you mean to match existing binding" ]
+						]
+					},
+					"example": "{:ok, x} = {:error, :nope} # raises MatchError"
+				},
+				{
+					"title": "FunctionClauseError",
+					"description": "No function head matched the given arguments.",
+					"table": {
+						"headers": ["Cause", "Fix"],
+						"rows": [
+							["Missing clause", "Add a catch-all clause or validate inputs"],
+							["Unexpected type", "Use guards or pattern matching to constrain inputs" ]
+						]
+					},
+					"example": "def f(0), do: :zero\n# f(1) would raise FunctionClauseError without another clause"
+				},
+				{
+					"title": "UndefinedFunctionError",
+					"description": "Calling a function that is not defined or not available.",
+					"table": {
+						"headers": ["Cause", "Fix"],
+						"rows": [
+							["Wrong module/arity", "Check function name and arity"],
+							["Missing dependency", "Add dependency in mix.exs and run mix deps.get"],
+							["Not compiled", "mix compile" ]
+						]
+					},
+					"example": "Nonexistent.foo() # UndefinedFunctionError"
+				},
+				{
+					"title": "KeyError",
+					"description": "Accessing a missing key using map.key syntax or Map.fetch!/2.",
+					"table": {
+						"headers": ["Cause", "Fix"],
+						"rows": [
+							["m.key missing", "Use Map.get(m, :key, default)"],
+							["Map.fetch!/2", "Prefer Map.fetch/2 with error handling" ]
+						]
+					},
+					"example": "m = %{a: 1}\n# m.b raises KeyError\nIO.inspect(Map.get(m, :b, :default))"
+				},
+				{
+					"title": "Protocol.UndefinedError",
+					"description": "A protocol (e.g., String.Chars) isn’t implemented for a type.",
+					"table": {
+						"headers": ["Cause", "Fix"],
+						"rows": [
+							["IO.puts(term)", "Use inspect(term) or implement protocol"],
+							["String conversion", "Prefer IO.inspect/1 for debugging" ]
+						]
+					},
+					"example": "IO.puts(%{a: 1}) # Protocol.UndefinedError (String.Chars)"
+				}
+			]
+		},
+		{
+			"title": "Scripting and Administration",
+			"description": "Common operational tasks: running code, building releases, environment, logging, and observing runtime.",
+			"items": [
+				{
+					"title": "Mix tasks (everyday)",
+					"description": "Useful Mix tasks for development and operations.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["mix compile", "Compile the project"],
+							["mix test", "Run tests"],
+							["mix format", "Format code"],
+							["mix deps.get", "Fetch dependencies"],
+							["mix run -e '...'", "Run expression within project"],
+							["mix clean", "Remove build artifacts" ]
+						]
+					},
+					"example": "mix format\nmix test"
+				},
+				{
+					"title": "IEx productivity",
+					"description": "Common IEx helpers for exploration.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["h(Module.fun/arity)", "Help/docs"],
+							["i(term)", "Info about a term"],
+							["recompile()", "Recompile project in IEx"],
+							["v(n)", "Recall previous result"],
+							["flush()", "Flush process mailbox"],
+							["Runtime/runtime_info", "Inspect runtime details (varies)" ]
+						]
+					},
+					"example": "iex -S mix\nh(Enum.map/2)\ni(%{a: 1})"
+				},
+				{
+					"title": "Logging (Logger)",
+					"description": "Logger is the standard logging facility.",
+					"table": {
+						"headers": ["Call", "Notes"],
+						"rows": [
+							["require Logger", "Logger macros require require"],
+							["Logger.debug/info/warn/error", "Log at levels"],
+							["Logger.metadata/1", "Attach metadata" ]
+						]
+					},
+					"example": "require Logger\nLogger.info(\"starting\")"
+				},
+				{
+					"title": "Releases (Elixir releases)",
+					"description": "Build self-contained releases for deployment (Elixir 1.9+).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["MIX_ENV=prod mix release", "Build a release"],
+							["_build/prod/rel/app/bin/app start", "Start release"],
+							["... eval '...'", "Run an expression in running system"],
+							["... remote", "Remote IEx shell (if configured)" ]
+						]
+					},
+					"example": "MIX_ENV=prod mix release"
+				},
+				{
+					"title": "Observability and introspection",
+					"description": "Leverage Erlang VM tools for runtime introspection.",
+					"table": {
+						"headers": ["Tool", "Notes"],
+						"rows": [
+							[":observer.start()", "GUI observer (requires Erlang tools; runs in IEx)"],
+							[":sys.get_state(pid)", "Inspect GenServer state"],
+							[":erlang.process_info(pid)", "Inspect process info"],
+							[":timer.tc(fn -> ... end)", "Simple timing" ]
+						]
+					},
+					"example": ":observer.start()"
+				}
+			]
+		},
+		{
+			"title": "Concurrency and Processes",
+			"description": "Elixir runs on the BEAM: lightweight processes, message passing, OTP behaviors.",
+			"items": [
+				{
+					"title": "spawn/send/receive",
+					"description": "Start processes and communicate via message passing.",
+					"table": {
+						"headers": ["Primitive", "Description"],
+						"rows": [
+							["spawn(fn -> ... end)", "Start a process"],
+							["send(pid, msg)", "Send a message"],
+							["receive do ... end", "Receive messages"],
+							["self()", "Get current PID" ]
+						]
+					},
+					"example": "pid = spawn(fn ->\n  receive do\n    {:hello, from} -> send(from, :ok)\n  end\nend)\nsend(pid, {:hello, self()})\nreceive do\n  :ok -> IO.puts(\"got ok\")\nafter\n  1000 -> IO.puts(\"timeout\")\nend"
+				},
+				{
+					"title": "Links, monitors, and exits",
+					"description": "Supervision and fault tolerance rely on linking/monitoring.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Process.link/1", "Link processes; exit propagates"],
+							["Process.monitor/1", "Get :DOWN messages on exit"],
+							["Process.flag(:trap_exit, true)", "Handle exits as messages" ]
+						]
+					},
+					"example": "ref = Process.monitor(self())\nIO.inspect(ref)"
+				},
+				{
+					"title": "Task",
+					"description": "Simple async concurrency.",
+					"table": {
+						"headers": ["Call", "Description"],
+						"rows": [
+							["Task.async/1", "Start async task"],
+							["Task.await/2", "Wait for result with timeout"],
+							["Task.start_link/1", "Start a linked task" ]
+						]
+					},
+					"example": "t = Task.async(fn -> 40 + 2 end)\nIO.inspect(Task.await(t, 1000))"
+				},
+				{
+					"title": "GenServer (OTP behavior)",
+					"description": "Build server processes with standard callbacks.",
+					"table": {
+						"headers": ["Call", "Use"],
+						"rows": [
+							["GenServer.start_link/3", "Start server"],
+							["GenServer.call/3", "Synchronous request"],
+							["GenServer.cast/2", "Async request"],
+							["handle_call/3", "Handle calls"],
+							["handle_cast/2", "Handle casts"],
+							["handle_info/2", "Handle other messages" ]
+						]
+					},
+					"example": "# Define a GenServer module with init/1 and handle_call/3, then start it under a supervisor"
+				},
+				{
+					"title": "Supervision trees",
+					"description": "Supervisors restart child processes according to strategy.",
+					"table": {
+						"headers": ["Strategy", "Notes"],
+						"rows": [
+							[":one_for_one", "Restart only the failing child"],
+							[":one_for_all", "Restart all children when one fails"],
+							[":rest_for_one", "Restart the failing child and those started after it" ]
+						]
+					},
+					"example": "# children = [{MyWorker, arg}]\n# Supervisor.start_link(children, strategy: :one_for_one)"
+				}
+			]
+		}
+	]
+}

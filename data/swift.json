@@ -1,0 +1,585 @@
+{
+	"title": "Swift",
+	"description": "A general Swift language quick reference covering fundamentals, functions, closures, operators, collections, control flow, modules/packages (SwiftPM), common errors, regex, date/time, and practical command-line + database patterns.",
+	"language": "swift",
+	"categories": [
+		{
+			"title": "Installation and Tooling",
+			"description": "Swift toolchain basics and common command-line workflows.",
+			"items": [
+				{
+					"title": "swift / swiftc / xcrun",
+					"description": "On macOS, Swift is typically installed with Xcode or the Command Line Tools; on Linux, install the Swift toolchain from swift.org.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["swift --version", "Show Swift version"],
+							["swiftc --version", "Show Swift compiler version"],
+							["swift -e 'print(2+2)'", "Run a one-liner"],
+							["swift file.swift", "Run a Swift script"],
+							["swift repl", "Start interactive REPL (availability depends on platform/toolchain)"],
+							["swiftc file.swift -o app", "Compile a Swift file"],
+							["xcrun swiftc file.swift -o app", "Use Xcode toolchain explicitly (macOS)"],
+							["xcodebuild -list", "List Xcode project/scheme info" ]
+						]
+					},
+					"example": "swift --version\nswift -e 'print(\"Hello\")'\nswiftc main.swift -o main && ./main"
+				},
+				{
+					"title": "Swift Package Manager (SwiftPM)",
+					"description": "SwiftPM manages packages/modules and builds executables and libraries.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["swift package init --type executable", "Create an executable package"],
+							["swift package init --type library", "Create a library package"],
+							["swift build", "Build the package"],
+							["swift run", "Build and run an executable target"],
+							["swift test", "Run tests"],
+							["swift package resolve", "Resolve dependencies"],
+							["swift package update", "Update dependencies"],
+							["swift package describe", "Describe package structure" ]
+						]
+					},
+					"example": "swift package init --type executable\nswift build\nswift run"
+				}
+			]
+		},
+		{
+			"title": "Basic Functionality",
+			"description": "Core language basics: variables, types, strings, optionals, and common patterns.",
+			"items": [
+				{
+					"title": "Variables, constants, and types",
+					"description": "Swift is strongly typed. Use let for constants and var for variables.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Constant", "let n: Int = 42"],
+							["Variable", "var name = \"Ada\""],
+							["Type inference", "let pi = 3.14159"],
+							["Type annotation", "let ok: Bool = true"],
+							["Tuple", "let t: (Int, String) = (1, \"a\")"],
+							["Debug print", "print(x), dump(x)" ]
+						]
+					},
+					"example": "let n: Int = 42\nvar name = \"World\"\nprint(\"Hello, \\(name)! n=\\(n)\")"
+				},
+				{
+					"title": "Strings",
+					"description": "Swift strings are Unicode-correct; indexing by integer is not O(1) (use String.Index).",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Interpolation", "\"Hello, \\(name)\""],
+							["Concatenate", "s += \"!\""],
+							["Length", "s.count"],
+							["Prefix/suffix", "s.hasPrefix(\"Hi\"), s.hasSuffix(\"!\")"],
+							["Split", "s.split(separator: ',')"],
+							["Join", "parts.joined(separator: \"-\")" ]
+						]
+					},
+					"example": "let s = \"a,b,c\"\nlet parts = s.split(separator: ',')\nprint(parts.map(String.init).joined(separator: \"-\"))"
+				},
+				{
+					"title": "Optionals and nil handling",
+					"description": "Optionals represent absence. Prefer safe unwrapping (if let/guard let) over force unwrap (!).",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Optional", "let x: Int? = nil"],
+							["if let", "if let x { print(x) }"],
+							["guard let", "guard let x else { return }"],
+							["Nil-coalescing", "let y = x ?? 0"],
+							["Optional chaining", "user?.profile?.name"],
+							["Force unwrap (avoid)", "let z = x!" ]
+						]
+					},
+					"example": "func f(_ s: String?) {\n    let n = s?.count ?? 0\n    print(n)\n}\nf(nil)\nf(\"hi\")"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Parameters, returns, scope, anonymous functions, and common built-ins.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "Swift supports external parameter labels, default values, variadics, and returning tuples.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Basic function", "func add(_ a: Int, _ b: Int) -> Int { a + b }"],
+							["External label", "func greet(person name: String) { }"],
+							["Omit label", "func add(_ a: Int, _ b: Int)"],
+							["Default arg", "func log(_ s: String = \"hi\")"],
+							["Variadic", "func sum(_ xs: Int...) -> Int"],
+							["Tuple return", "func minMax(_ xs: [Int]) -> (min: Int, max: Int)"],
+							["Throwing", "func load() throws -> Data" ]
+						]
+					},
+					"example": "func add(_ a: Int, _ b: Int) -> Int { a + b }\nprint(add(2, 3))"
+				},
+				{
+					"title": "Scope and access control",
+					"description": "Scopes are lexical. Access control: open/public/internal/fileprivate/private.",
+					"table": {
+						"headers": ["Keyword", "Meaning"],
+						"rows": [
+							["open", "Public and subclassable/overridable outside module."],
+							["public", "Visible outside module but not necessarily overridable."],
+							["internal", "Default; visible inside module."],
+							["fileprivate", "Visible within the same file."],
+							["private", "Visible within the same type/extension scope." ]
+						]
+					},
+					"example": "public struct User {\n    public let id: Int\n    private var secret: String\n}"
+				},
+				{
+					"title": "Anonymous functions (closures)",
+					"description": "Closures are first-class. Common patterns: map/filter/reduce and completion handlers.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Closure literal", "let f = { (x: Int) -> Int in x * 2 }"],
+							["Shorthand args", "{ $0 * 2 }"],
+							["Capture list", "{ [weak self] in self?.doThing() }"],
+							["Escaping closure", "func f(_ cb: @escaping () -> Void)"],
+							["Trailing closure", "arr.map { $0 + 1 }" ]
+						]
+					},
+					"example": "let v = [1,2,3]\nprint(v.map { $0 * 2 })"
+				},
+				{
+					"title": "Built-in functions and common APIs",
+					"description": "Many utilities are in the Swift standard library and Foundation.",
+					"table": {
+						"headers": ["Name", "Purpose"],
+						"rows": [
+							["print", "Write to stdout."],
+							["debugPrint", "Debug-friendly printing."],
+							["assert", "Debug assertions."],
+							["fatalError", "Abort execution with message."],
+							["precondition", "Runtime assertion (may trap)."],
+							["type(of:)", "Get dynamic type."],
+							["String(describing:)", "Convert to String for display." ]
+						]
+					},
+					"example": "let x = 10\nprint(type(of: x))\nassert(x > 0)"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Transformations and filtering (Sequence/Collection higher-order functions).",
+			"items": [
+				{
+					"title": "map/filter/reduce and friends",
+					"description": "Swift collections provide many functional-style helpers.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["map", "xs.map { $0 * 2 }"],
+							["filter", "xs.filter { $0 % 2 == 0 }"],
+							["reduce", "xs.reduce(0, +)"],
+							["compactMap", "xs.compactMap(Int.init)"],
+							["flatMap", "xs.flatMap { $0 }"],
+							["sorted", "xs.sorted()"],
+							["sorted(by:)", "xs.sorted(by: >)"],
+							["contains(where:)", "xs.contains { $0 > 10 }" ]
+						]
+					},
+					"example": "let xs = [\"1\", \"x\", \"3\"]\nlet sum = xs.compactMap(Int.init).reduce(0, +)\nprint(sum)"
+				},
+				{
+					"title": "Dictionary helpers",
+					"description": "Grouping and mapping values are common for data processing.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["mapValues", "dict.mapValues { $0.count }"],
+							["grouping", "Dictionary(grouping: xs, by: { $0.kind })"],
+							["merge", "dict.merge(other) { a, b in b }"],
+							["default value", "dict[key, default: 0] += 1" ]
+						]
+					},
+					"example": "let xs = [\"a\", \"b\", \"a\"]\nvar c: [String:Int] = [:]\nxs.forEach { c[$0, default: 0] += 1 }\nprint(c)"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Global constants, variables, and environment configuration patterns.",
+			"items": [
+				{
+					"title": "Global constants and variables",
+					"description": "Top-level code is allowed in Swift scripts and in main.swift. Prefer constants and avoid mutable global state.",
+					"table": {
+						"headers": ["Item", "Example"],
+						"rows": [
+							["Global constant", "let API_BASE = URL(string: \"https://example.com\")!"],
+							["Global variable", "var debugEnabled = false"],
+							["Static property", "struct C { static let timeout: Double = 5 }"],
+							["Singleton", "final class S { static let shared = S() }" ]
+						]
+					},
+					"example": "let APP_NAME = \"svc\"\nvar debugEnabled = true\nprint(APP_NAME)"
+				},
+				{
+					"title": "Process arguments and environment (Foundation)",
+					"description": "Use CommandLine and ProcessInfo for CLI tools.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Read args", "CommandLine.arguments"],
+							["Read env", "ProcessInfo.processInfo.environment"],
+							["Get specific env", "ProcessInfo.processInfo.environment[\"KEY\"]" ]
+						]
+					},
+					"example": "import Foundation\nprint(CommandLine.arguments)\nprint(ProcessInfo.processInfo.environment[\"HOME\"] ?? \"\")"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "Modules, imports, and SwiftPM dependencies.",
+			"items": [
+				{
+					"title": "Imports and modules",
+					"description": "Swift code is organized into modules (targets). Common modules: Foundation, Dispatch.",
+					"table": {
+						"headers": ["Item", "Example"],
+						"rows": [
+							["Import", "import Foundation"],
+							["Type namespacing", "Foundation.Date"],
+							["Access control", "public/internal/fileprivate/private"],
+							["Conditional import", "#if canImport(Foundation)\nimport Foundation\n#endif" ]
+						]
+					},
+					"example": "import Foundation\nprint(Date())"
+				},
+				{
+					"title": "SwiftPM Package.swift (high level)",
+					"description": "Dependencies and targets are declared in Package.swift.",
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Package", "Top-level package definition."],
+							["Target", "Build unit that becomes a module."],
+							["Product", "Exposed library/executable produced by targets."],
+							["Dependency", "External package URL and version requirement."],
+							["Resources", "Bundle resources for targets (copy/process)." ]
+						]
+					},
+					"example": "// Package.swift (sketch)\n// dependencies: [.package(url: \"https://...\", from: \"1.0.0\")]"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Arithmetic, comparison, logical, ranges, and nil coalescing.",
+			"items": [
+				{
+					"title": "Common operators",
+					"description": null,
+					"table": {
+						"headers": ["Operator", "Meaning"],
+						"rows": [
+							["+ - * / %", "Arithmetic"],
+							["== != < <= > >=", "Comparison"],
+							["&& || !", "Boolean ops"],
+							["... ..<", "Closed/half-open ranges"],
+							["??", "Nil-coalescing"],
+							["? :", "Ternary conditional"],
+							["?.", "Optional chaining"],
+							["as? / as!", "Conditional/forced downcast"],
+							["is", "Type check" ]
+						]
+					},
+					"example": "let x: Int? = nil\nlet y = x ?? 10\nprint(y)"
+				},
+				{
+					"title": "Custom operators (advanced)",
+					"description": "Swift allows custom operators; use sparingly for clarity.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Declare operator", "infix operator <+>"],
+							["Implement", "func <+>(a: Int, b: Int) -> Int { a + b }"],
+							["Precedence group", "precedencegroup MyPrec { higherThan: AdditionPrecedence }" ]
+						]
+					},
+					"example": "infix operator <+>\nfunc <+>(a: Int, b: Int) -> Int { a + b }\nprint(1 <+> 2)"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Common Swift compiler and runtime pitfalls.",
+			"items": [
+				{
+					"title": "Optionals and casting pitfalls",
+					"description": null,
+					"table": {
+						"headers": ["Problem", "Typical fix"],
+						"rows": [
+							["Unexpectedly found nil while unwrapping an Optional", "Avoid !; use if let/guard let, provide defaults, validate inputs."],
+							["Value of optional type must be unwrapped", "Unwrap using if let/guard let or ?? before use."],
+							["Could not cast value", "Use as? and handle nil; avoid forced casts as!."],
+							["Index out of range", "Use bounds checks; prefer safe access patterns." ]
+						]
+					},
+					"example": "let xs = [1]\nprint(xs.first ?? 0)\n// Avoid xs[99]"
+				},
+				{
+					"title": "Concurrency and threading issues",
+					"description": "UI work must run on main thread (iOS/macOS apps). Data races are logic bugs.",
+					"table": {
+						"headers": ["Problem", "Typical fix"],
+						"rows": [
+							["Main thread checker violations", "Dispatch UI updates to main queue or use @MainActor."],
+							["Deadlocks", "Avoid synchronous dispatch to the same queue; keep critical sections small."],
+							["Data races", "Use actor/locks/queues; avoid shared mutable state." ]
+						]
+					},
+					"example": "import Foundation\nDispatchQueue.main.async {\n    // UI update\n}"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Arrays, dictionaries, sets, and safe access patterns.",
+			"items": [
+				{
+					"title": "Array basics",
+					"description": "Array is an ordered collection. Value semantics with copy-on-write.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Create", "let a = [1,2,3]"],
+							["Append", "var a=[Int](); a.append(1)"],
+							["Count", "a.count"],
+							["First/last", "a.first, a.last"],
+							["Contains", "a.contains(2)"],
+							["Slice", "a[1..<3]"],
+							["Safe first", "a.first ?? 0" ]
+						]
+					},
+					"example": "var a = [1,2,3]\na.append(4)\nprint(a.count)"
+				},
+				{
+					"title": "Dictionary and Set",
+					"description": "Dictionary is key/value; Set is unique unordered values.",
+					"table": {
+						"headers": ["Type", "Example"],
+						"rows": [
+							["Dictionary", "var d: [String:Int] = [\"a\": 1]"],
+							["Update", "d[\"b\"] = 2"],
+							["Default", "d[\"k\", default: 0] += 1"],
+							["Set", "var s: Set<String> = [\"a\", \"b\"]"],
+							["Membership", "s.contains(\"a\")" ]
+						]
+					},
+					"example": "var d: [String:Int] = [:]\nd[\"k\", default: 0] += 1\nprint(d)"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "for-in, while, repeat-while, and iteration patterns.",
+			"items": [
+				{
+					"title": "Loop constructs",
+					"description": null,
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["for-in", "for x in 0..<10 { }"],
+							["for-in array", "for x in xs { }"],
+							["enumerated", "for (i, x) in xs.enumerated() { }"],
+							["while", "while cond { }"],
+							["repeat-while", "repeat { } while cond" ]
+						]
+					},
+					"example": "let xs = [\"a\", \"b\"]\nfor (i, x) in xs.enumerated() {\n    print(i, x)\n}"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "if/else, switch, guard, and pattern matching.",
+			"items": [
+				{
+					"title": "if, guard, switch",
+					"description": "switch is powerful and must be exhaustive.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["if expression", "if ok { ... } else { ... }"],
+							["guard", "guard cond else { return }"],
+							["switch", "switch x { case 0: ... default: ... }"],
+							["where", "case let n where n > 10:" ]
+						]
+					},
+					"example": "func f(_ n: Int) {\n    switch n {\n    case 0: print(\"zero\")\n    case 1...3: print(\"small\")\n    default: print(\"other\")\n    }\n}\nf(2)"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "Swift supports modern Regex (Swift 5.7+) and also NSRegularExpression (Foundation).",
+			"items": [
+				{
+					"title": "Swift Regex (modern)",
+					"description": "Use Regex literals and firstMatch for ergonomic matching (toolchain dependent).",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Create regex", "let re = try! Regex(#\"^(\\w+)-(\\d+)$\"#)"],
+							["Check match", "s.firstMatch(of: re) != nil"],
+							["Capture", "if let m = s.firstMatch(of: re) { ... }"],
+							["Replace", "s.replacing(re, with: \"X\")" ]
+						]
+					},
+					"example": "import Foundation\n\nlet s = \"item-42\"\nlet re = try! Regex(#\"^(\\w+)-(\\d+)$\"#)\nprint(s.firstMatch(of: re) != nil)"
+				},
+				{
+					"title": "NSRegularExpression (Foundation)",
+					"description": "Portable across older Swift versions; more verbose.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Compile", "let re = try NSRegularExpression(pattern: \"\\\\d+\")"],
+							["Find matches", "re.matches(in: s, range: NSRange(s.startIndex..., in: s))"],
+							["Replace", "re.stringByReplacingMatches(in: s, range: ..., withTemplate: \"X\")" ]
+						]
+					},
+					"example": "import Foundation\n\nlet s = \"a1b2\"\nlet re = try! NSRegularExpression(pattern: \"\\\\d+\")\nlet r = NSRange(s.startIndex..., in: s)\nprint(re.stringByReplacingMatches(in: s, range: r, withTemplate: \"X\"))"
+				}
+			]
+		},
+		{
+			"title": "Data and Time",
+			"description": "Dates, time zones, formatting, parsing, and intervals.",
+			"items": [
+				{
+					"title": "Date, Calendar, and DateComponents",
+					"description": "Foundation provides Date (instant), Calendar (civil time), and components.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Now", "let now = Date()"],
+							["Add time", "let later = now.addingTimeInterval(60)"],
+							["Calendar add", "Calendar.current.date(byAdding: .day, value: 1, to: now)"],
+							["Components", "Calendar.current.dateComponents([.year,.month,.day], from: now)"],
+							["Time zone", "TimeZone.current" ]
+						]
+					},
+					"example": "import Foundation\nlet now = Date()\nlet comps = Calendar.current.dateComponents([.year,.month,.day], from: now)\nprint(comps.year ?? 0)"
+				},
+				{
+					"title": "DateFormatter and ISO8601DateFormatter",
+					"description": "DateFormatter is expensive; reuse instances if possible.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Format", "df.dateFormat = \"yyyy-MM-dd\"; df.string(from: now)"],
+							["Parse", "df.date(from: \"2025-12-20\")"],
+							["ISO 8601", "ISO8601DateFormatter().string(from: now)" ]
+						]
+					},
+					"example": "import Foundation\nlet df = DateFormatter()\ndf.locale = Locale(identifier: \"en_US_POSIX\")\ndf.dateFormat = \"yyyy-MM-dd\"\nprint(df.string(from: Date()))"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "Swift database access commonly uses SQLite, Core Data, or third-party libraries.",
+			"items": [
+				{
+					"title": "SQLite (C API) quick sketch",
+					"description": "For command-line tools, SQLite via C API works everywhere. Prefer a wrapper (GRDB, SQLite.swift) for larger projects.",
+					"table": {
+						"headers": ["Approach", "Notes"],
+						"rows": [
+							["sqlite3 (C API)", "Low-level; manual statements and bindings."],
+							["SQLite.swift", "Popular Swift wrapper."],
+							["GRDB", "Powerful SQLite toolkit with query interfaces."],
+							["Core Data", "Apple ORM/persistence for apps (not common for CLI)." ]
+						]
+					},
+					"example": "# Common local dev check\nsqlite3 --version"
+				},
+				{
+					"title": "PostgreSQL/MySQL libraries (ecosystem)",
+					"description": "Server DB access is typically via SwiftNIO-based libraries.",
+					"table": {
+						"headers": ["Library", "Notes"],
+						"rows": [
+							["PostgresNIO", "PostgreSQL client built on SwiftNIO."],
+							["MySQLNIO", "MySQL client built on SwiftNIO."],
+							["Vapor Fluent", "ORM layer commonly used with Vapor web framework." ]
+						]
+					},
+					"example": "# SwiftPM dependency examples vary by project; add via Package.swift"
+				}
+			]
+		},
+		{
+			"title": "Errors and Error Handling",
+			"description": "Swift uses Error/throws/try/catch and Result for explicit error handling.",
+			"items": [
+				{
+					"title": "throws / try / catch",
+					"description": "Use do/catch for handling and try? / try! for optional/forced error handling.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Throwing function", "func f() throws -> String"],
+							["Handle", "do { let x = try f() } catch { }"],
+							["try?", "let x = try? f()"],
+							["try! (avoid)", "let x = try! f()"],
+							["Custom error", "enum MyErr: Error { case bad }" ]
+						]
+					},
+					"example": "enum E: Error { case bad }\nfunc f(_ ok: Bool) throws -> Int { if !ok { throw E.bad }; return 1 }\ndo { print(try f(true)) } catch { print(error) }"
+				}
+			]
+		},
+		{
+			"title": "Concurrency (GCD and async/await)",
+			"description": "Modern Swift uses async/await and actors; older code uses GCD/OperationQueue.",
+			"items": [
+				{
+					"title": "Grand Central Dispatch (GCD)",
+					"description": "GCD is common for background work and scheduling.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Async work", "DispatchQueue.global().async { ... }"],
+							["Back to main", "DispatchQueue.main.async { ... }"],
+							["After delay", "DispatchQueue.main.asyncAfter(deadline: .now() + 1) { ... }"],
+							["Sync (careful)", "queue.sync { ... }" ]
+						]
+					},
+					"example": "import Foundation\nDispatchQueue.global().async {\n    print(\"bg\")\n    DispatchQueue.main.async { print(\"main\") }\n}"
+				},
+				{
+					"title": "async/await and Task",
+					"description": "Structured concurrency is the modern approach (Swift 5.5+ toolchains).",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Async function", "func f() async -> Int"],
+							["Await", "let x = await f()"],
+							["Spawn task", "Task { let x = await f() }"],
+							["Throwing async", "func f() async throws -> T"],
+							["Actor", "actor Store { var x = 0 }" ]
+						]
+					},
+					"example": "func f() async -> Int { 2 }\nTask {\n    let x = await f()\n    print(x)\n}"
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,684 @@
+{
+    "title": "Scala",
+    "description": "A robust Scala quick reference covering syntax, functions, collections, modules/packages, operators, control flow, regex, date/time, database access, build tooling, concurrency, and common pitfalls (Scala 2 and Scala 3).",
+    "language": "scala",
+    "categories": [
+        {
+            "title": "Installation and Initial Setup",
+            "description": "Install Scala tooling and learn common build/run commands.",
+            "items": [
+                {
+                    "title": "Tooling overview",
+                    "description": "Most Scala projects use sbt. For scripting/single-file apps, scala-cli or Ammonite are common.",
+                    "table": {
+                        "headers": ["Tool", "Purpose"],
+                        "rows": [
+                            ["sbt", "Build tool, dependency management, test/run/package"],
+                            ["scala / scalac", "Runner/REPL and compiler"],
+                            ["scala-cli", "Run single files, manage deps, package apps"],
+                            ["amm (Ammonite)", "Enhanced REPL and scripting"],
+                            ["coursier (cs)", "Installer/launcher; fetch artifacts" ]
+                        ]
+                    },
+                    "example": "scala -version\nscalac -version\nsbt --version"
+                },
+                {
+                    "title": "sbt commands",
+                    "description": "Most day-to-day sbt usage.",
+                    "table": {
+                        "headers": ["Command", "Description"],
+                        "rows": [
+                            ["sbt compile", "Compile"],
+                            ["sbt test", "Run tests"],
+                            ["sbt run", "Run a main"],
+                            ["sbt console", "Project REPL"],
+                            ["sbt clean", "Clean target/"],
+                            ["sbt package", "Build a JAR"],
+                            ["sbt reload", "Reload build definitions" ]
+                        ]
+                    },
+                    "example": "# Typical layout\n# src/main/scala\n# src/test/scala"
+                },
+                {
+                    "title": "scala-cli quickstart",
+                    "description": "Run a single file with dependencies (tool availability varies by environment).",
+                    "table": {
+                        "headers": ["Task", "Command"],
+                        "rows": [
+                            ["Run", "scala-cli run Main.scala"],
+                            ["REPL", "scala-cli repl"],
+                            ["Add dependency", "//> using dep \"org.typelevel::cats-core:2.10.0\""],
+                            ["Package", "scala-cli package Main.scala -o app" ]
+                        ]
+                    },
+                    "example": "//> using scala \"3.3.3\"\n//> using dep \"org.typelevel::cats-core:2.10.0\""
+                }
+            ]
+        },
+        {
+            "title": "Basic Functionality",
+            "description": "Core language basics: values, variables, types, strings, and null-safety patterns.",
+            "items": [
+                {
+                    "title": "val, var, lazy val",
+                    "description": "Prefer val (immutability). Use var only when needed.",
+                    "table": {
+                        "headers": ["Keyword", "Meaning"],
+                        "rows": [
+                            ["val", "Immutable binding"],
+                            ["var", "Mutable binding"],
+                            ["lazy val", "Initialized on first access" ]
+                        ]
+                    },
+                    "example": "val x = 1\nvar y = 2\ny += 1\nlazy val z = { println(\"init\"); 10 }"
+                },
+                {
+                    "title": "Types and inference",
+                    "description": "Scala infers types but you can annotate for clarity/public APIs.",
+                    "table": {
+                        "headers": ["Concept", "Example"],
+                        "rows": [
+                            ["Explicit", "val n: Int = 1"],
+                            ["Inferred", "val s = \"hi\""],
+                            ["Unit", "def f(): Unit = ()"],
+                            ["Top types", "Any, AnyRef, AnyVal"],
+                            ["Bottom type", "Nothing" ]
+                        ]
+                    },
+                    "example": "def add(a: Int, b: Int): Int = a + b"
+                },
+                {
+                    "title": "Strings and interpolation",
+                    "description": "Interpolate with s/f/raw.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["s\"...\"", "s\"Hello $name\""],
+                            ["f\"...\"", "f\"pi=${math.Pi}%.3f\""],
+                            ["raw\"...\"", "raw\"a\\\nb\""],
+                            ["Multiline", "\"\"\"line1\nline2\"\"\"" ]
+                        ]
+                    },
+                    "example": "val name = \"Ada\"\nprintln(s\"Hello $name\")"
+                },
+                {
+                    "title": "Null and Option",
+                    "description": "Prefer Option over null in Scala code.",
+                    "table": {
+                        "headers": ["Pattern", "Example"],
+                        "rows": [
+                            ["Create", "Option(x)"],
+                            ["Match", "opt match { case Some(v) => ...; case None => ... }"],
+                            ["Default", "opt.getOrElse(default)"],
+                            ["Map", "opt.map(f)"],
+                            ["FlatMap", "opt.flatMap(f)" ]
+                        ]
+                    },
+                    "example": "val maybeN: Option[Int] = Option(null).map(_ => 1)\nprintln(maybeN.getOrElse(0))"
+                }
+            ]
+        },
+        {
+            "title": "Operators",
+            "description": "Operators are methods; precedence and associativity rules matter.",
+            "items": [
+                {
+                    "title": "Operators are methods",
+                    "description": "a + b desugars to a.+(b).",
+                    "table": {
+                        "headers": ["Expression", "Desugars to"],
+                        "rows": [
+                            ["a + b", "a.+(b)"],
+                            ["a(i)", "a.apply(i)"],
+                            ["a(i) = v", "a.update(i, v)"],
+                            ["xs :+ x", "Append (Seq)"],
+                            ["x +: xs", "Prepend (Seq)" ]
+                        ]
+                    },
+                    "example": "val m = Map(\"a\" -> 1)\nprintln(m.apply(\"a\"))"
+                },
+                {
+                    "title": "Equality",
+                    "description": "== is null-safe value equality; eq is reference equality for AnyRef.",
+                    "table": {
+                        "headers": ["Operator", "Meaning"],
+                        "rows": [
+                            ["== / !=", "Value equality (uses equals), null-safe"],
+                            ["eq / ne", "Reference equality (AnyRef)" ]
+                        ]
+                    },
+                    "example": "val s: String = null\nprintln(s == null) // true"
+                },
+                {
+                    "title": "Boolean operators",
+                    "description": "Use && and || for short-circuiting.",
+                    "table": {
+                        "headers": ["Operator", "Notes"],
+                        "rows": [
+                            ["&& ||", "Short-circuit"],
+                            ["!", "Negation"],
+                            ["& |", "Non-short-circuit (also bitwise on Int/Long)" ]
+                        ]
+                    },
+                    "example": "val ok = (1 < 2) && (2 < 3)"
+                }
+            ]
+        },
+        {
+            "title": "Conditions",
+            "description": "if/match/try are expressions.",
+            "items": [
+                {
+                    "title": "if/else expression",
+                    "description": "Returns a value; keep branch types compatible.",
+                    "example": "val x = 10\nval sign = if (x < 0) -1 else 1",
+                    "table": null
+                },
+                {
+                    "title": "Pattern matching",
+                    "description": "Use match with guards and type patterns.",
+                    "example": "def describe(x: Any): String = x match {\n  case 0 => \"zero\"\n  case n: Int if n > 0 => \"pos int\"\n  case s: String => s\n  case _ => \"other\"\n}",
+                    "table": null
+                },
+                {
+                    "title": "Exceptions and Try",
+                    "description": "Use Try for exception-capturing computations.",
+                    "table": {
+                        "headers": ["Type", "Notes"],
+                        "rows": [
+                            ["try/catch", "Imperative exception handling"],
+                            ["scala.util.Try", "Success/Failure wrapper"],
+                            ["Either", "Often used for domain errors" ]
+                        ]
+                    },
+                    "example": "import scala.util.Try\nval n = Try(\"42\".toInt).getOrElse(0)"
+                }
+            ]
+        },
+        {
+            "title": "Loops",
+            "description": "Imperative loops exist, but Scala encourages combinators and recursion.",
+            "items": [
+                {
+                    "title": "for comprehensions",
+                    "description": "for/yield desugars to map/flatMap/withFilter.",
+                    "table": {
+                        "headers": ["Form", "Use"],
+                        "rows": [
+                            ["for (x <- xs) yield f(x)", "Build a new collection"],
+                            ["for { x <- xs; y <- ys } yield ...", "Nested iteration"],
+                            ["if guard", "Filtering (withFilter)" ]
+                        ]
+                    },
+                    "example": "val xs = List(1,2,3)\nval ys = for (x <- xs if x % 2 == 1) yield x * 10\nprintln(ys)"
+                },
+                {
+                    "title": "while / do-while",
+                    "description": "Use when you need tight loops and mutation.",
+                    "table": {
+                        "headers": ["Loop", "Example"],
+                        "rows": [
+                            ["while", "while (cond) { ... }"],
+                            ["do-while", "do { ... } while (cond)" ]
+                        ]
+                    },
+                    "example": "var i = 0\nwhile (i < 3) { i += 1 }"
+                },
+                {
+                    "title": "Recursion and @tailrec",
+                    "description": "For functional loops, use recursion and request tail-call optimization.",
+                    "table": {
+                        "headers": ["Tool", "Notes"],
+                        "rows": [
+                            ["@tailrec", "Compiler verifies tail recursion"],
+                            ["Tail recursion", "Uses constant stack when optimized" ]
+                        ]
+                    },
+                    "example": "import scala.annotation.tailrec\n@tailrec def loop(n: Int, acc: Int = 0): Int = if (n==0) acc else loop(n-1, acc+n)"
+                }
+            ]
+        },
+        {
+            "title": "Arrays",
+            "description": "Scala has Java arrays (mutable) and rich immutable collection types.",
+            "items": [
+                {
+                    "title": "Array basics",
+                    "description": "Array is mutable and indexed; backed by JVM arrays.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Create", "val a = Array(1,2,3)"],
+                            ["Index", "a(0)"],
+                            ["Update", "a(0) = 10"],
+                            ["Length", "a.length"],
+                            ["To Seq", "a.toSeq" ]
+                        ]
+                    },
+                    "example": "val a = Array(1,2,3)\na(0) = 9\nprintln(a.mkString(\",\"))"
+                },
+                {
+                    "title": "Common collections",
+                    "description": "Use immutable collections by default.",
+                    "table": {
+                        "headers": ["Type", "Notes"],
+                        "rows": [
+                            ["List", "Linked list; efficient head operations"],
+                            ["Vector", "General-purpose immutable indexed seq"],
+                            ["Seq", "Sequence abstraction"],
+                            ["Map/Set", "Key/value and unique elements"],
+                            ["mutable.*", "Mutable variants" ]
+                        ]
+                    },
+                    "example": "val xs = Vector(1,2,3)\nprintln(xs.map(_*2))"
+                },
+                {
+                    "title": "Collection conversions",
+                    "description": "Convert between collection types.",
+                    "table": {
+                        "headers": ["From", "To"],
+                        "rows": [
+                            ["List", "toVector, toSet"],
+                            ["Seq", "toList, toArray"],
+                            ["Map", "toList (pairs), keys, values" ]
+                        ]
+                    },
+                    "example": "val s = List(1,2,2).toSet\nprintln(s)"
+                }
+            ]
+        },
+        {
+            "title": "Functions",
+            "description": "Parameters, returns, scope, anonymous functions, and commonly used standard-library functions.",
+            "items": [
+                {
+                    "title": "Define functions and methods",
+                    "description": "Use def for methods; use val with lambdas for function values.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["Method", "def add(a: Int, b: Int): Int = a + b"],
+                            ["Lambda", "val f: Int => Int = x => x * 2"],
+                            ["Block body", "def f(x: Int) = { val y = x+1; y*y }" ]
+                        ]
+                    },
+                    "example": "def add(a: Int, b: Int): Int = a + b\nval inc: Int => Int = _ + 1"
+                },
+                {
+                    "title": "Parameters",
+                    "description": "Default arguments, named arguments, varargs, and multiple parameter lists.",
+                    "table": {
+                        "headers": ["Feature", "Example"],
+                        "rows": [
+                            ["Default", "def f(x: Int = 1) = x"],
+                            ["Named", "f(x = 10)"],
+                            ["Varargs", "def sum(xs: Int*) = xs.sum"],
+                            ["Multiple lists", "def fold[A](xs: List[A])(z: A)(f: (A,A)=>A) = ..."],
+                            ["By-name", "def retry(op: => Boolean) = ..." ]
+                        ]
+                    },
+                    "example": "def sum(xs: Int*): Int = xs.sum\nprintln(sum(1,2,3))"
+                },
+                {
+                    "title": "Returns",
+                    "description": "Return type can be inferred; explicit return is usually avoided except for early returns.",
+                    "table": {
+                        "headers": ["Pattern", "Notes"],
+                        "rows": [
+                            ["Inferred", "def f(x: Int) = x + 1"],
+                            ["Annotated", "def f(x: Int): Int = x + 1"],
+                            ["Unit", "def log(s: String): Unit = println(s)" ]
+                        ]
+                    },
+                    "example": "def f(x: Int): Int = x + 1"
+                },
+                {
+                    "title": "Scope",
+                    "description": "Nested defs and closures capture variables from outer scopes.",
+                    "example": "def makeCounter(): () => Int = {\n  var n = 0\n  () => { n += 1; n }\n}\nval c = makeCounter(); println(c()); println(c())",
+                    "table": null
+                },
+                {
+                    "title": "Anonymous functions",
+                    "description": "Use lambdas with placeholder syntax when it is clear.",
+                    "table": {
+                        "headers": ["Form", "Example"],
+                        "rows": [
+                            ["Explicit", "(x: Int) => x * 2"],
+                            ["Placeholder", "_ * 2"],
+                            ["Multiple args", "(a, b) => a + b" ]
+                        ]
+                    },
+                    "example": "val xs = List(1,2,3)\nprintln(xs.map(_ * 2))"
+                },
+                {
+                    "title": "Built-in/predefined functions (common)",
+                    "description": "Frequently used Scala/collection APIs.",
+                    "table": {
+                        "headers": ["Area", "Examples"],
+                        "rows": [
+                            ["Collections", "map, flatMap, filter, collect, foldLeft, reduce, groupBy"],
+                            ["Option", "map, flatMap, getOrElse, fold"],
+                            ["Either", "map, flatMap (right-biased), getOrElse"],
+                            ["String", "split, startsWith, trim, toIntOption (Scala 2.13+)" ]
+                        ]
+                    },
+                    "example": "val n = \"42\".toIntOption.getOrElse(0)"
+                }
+            ]
+        },
+        {
+            "title": "Filters",
+            "description": "Filtering and selection patterns over collections.",
+            "items": [
+                {
+                    "title": "filter / filterNot / withFilter",
+                    "description": "filter builds a new collection; withFilter is lazy and used by for-comprehensions.",
+                    "table": {
+                        "headers": ["Method", "Notes"],
+                        "rows": [
+                            ["filter", "Keep elements matching predicate"],
+                            ["filterNot", "Drop elements matching predicate"],
+                            ["withFilter", "Lazy filter (often used with for)" ]
+                        ]
+                    },
+                    "example": "val xs = List(1,2,3,4)\nprintln(xs.filter(_ % 2 == 0))"
+                },
+                {
+                    "title": "collect (filter + map)",
+                    "description": "Use partial functions to select and transform in one pass.",
+                    "example": "val xs: List[Any] = List(1, \"a\", 2)\nval ys = xs.collect { case i: Int => i * 10 }\nprintln(ys)",
+                    "table": null
+                },
+                {
+                    "title": "find / exists / forall",
+                    "description": "Quick boolean checks and optional results.",
+                    "table": {
+                        "headers": ["Method", "Return"],
+                        "rows": [
+                            ["find", "Option[A]"],
+                            ["exists", "Boolean"],
+                            ["forall", "Boolean" ]
+                        ]
+                    },
+                    "example": "val xs = List(1,2,3)\nprintln(xs.find(_>1))\nprintln(xs.exists(_==2))"
+                }
+            ]
+        },
+        {
+            "title": "Globals",
+            "description": "Scala avoids global variables; use objects/singletons and dependency injection patterns.",
+            "items": [
+                {
+                    "title": "Objects (singletons)",
+                    "description": "object defines a singleton; can hold constants and state (use sparingly).",
+                    "example": "object Config { val AppName = \"demo\"; var debug = false }",
+                    "table": null
+                },
+                {
+                    "title": "Environment and system properties",
+                    "description": "Read env vars and JVM system properties.",
+                    "table": {
+                        "headers": ["Source", "Example"],
+                        "rows": [
+                            ["Env vars", "sys.env.get(\"HOME\")"],
+                            ["System properties", "sys.props.get(\"user.home\")"],
+                            ["Set property", "System.setProperty(\"k\",\"v\")" ]
+                        ]
+                    },
+                    "example": "val home = sys.env.getOrElse(\"HOME\", \"/tmp\")"
+                },
+                {
+                    "title": "package object (Scala 2 pattern)",
+                    "description": "Scala 2 supports package objects for shared vals/defs within a package; Scala 3 uses package-level definitions.",
+                    "example": "// Scala 2: package object util { val Version = \"1.0\" }",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Packages/Modules",
+            "description": "Packages, imports, and dependency management.",
+            "items": [
+                {
+                    "title": "Packages and imports",
+                    "description": "Organize code with package declarations and imports.",
+                    "table": {
+                        "headers": ["Construct", "Example"],
+                        "rows": [
+                            ["package", "package com.example"],
+                            ["import", "import scala.util.Try"],
+                            ["Import rename", "import java.time.{Instant => JInstant}"],
+                            ["Exclude", "import scala.collection.mutable.{Map => _, _}" ]
+                        ]
+                    },
+                    "example": "package com.example\nimport scala.util.Try"
+                },
+                {
+                    "title": "sbt dependencies",
+                    "description": "Add libraries in build.sbt.",
+                    "table": {
+                        "headers": ["Setting", "Example"],
+                        "rows": [
+                            ["libraryDependencies", "libraryDependencies += \"org.typelevel\" %% \"cats-core\" % \"2.10.0\""],
+                            ["Scala version", "scalaVersion := \"3.3.3\""],
+                            ["Resolvers", "resolvers += \"...\" at \"...\"" ]
+                        ]
+                    },
+                    "example": "// build.sbt\nscalaVersion := \"3.3.3\"\nlibraryDependencies += \"org.xerial\" % \"sqlite-jdbc\" % \"3.45.3.0\""
+                }
+            ]
+        },
+        {
+            "title": "Regular Expressions",
+            "description": "Scala regex uses java.util.regex under the hood.",
+            "items": [
+                {
+                    "title": "Create and use Regex",
+                    "description": "Use raw strings to avoid double escaping.",
+                    "table": {
+                        "headers": ["Task", "Example"],
+                        "rows": [
+                            ["Compile", "val r = raw\"\\\\d+\".r"],
+                            ["Find first", "r.findFirstIn(s)"],
+                            ["Find all", "r.findAllIn(s).toList"],
+                            ["Replace", "r.replaceAllIn(s, \"<num>\")" ]
+                        ]
+                    },
+                    "example": "val s = \"id=42\"\nval r = raw\"\\\\d+\".r\nprintln(r.findFirstIn(s))"
+                },
+                {
+                    "title": "Capturing groups",
+                    "description": "Use unapplySeq in pattern matching.",
+                    "example": "val Pair = raw\"(\\\\w+)=(\\\\d+)\".r\n\"x=10\" match { case Pair(k,v) => println((k,v)) }",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Date and Time",
+            "description": "Use java.time (recommended over legacy java.util.Date).",
+            "items": [
+                {
+                    "title": "java.time basics",
+                    "description": "Common date/time operations.",
+                    "table": {
+                        "headers": ["Type", "Use"],
+                        "rows": [
+                            ["Instant", "Machine timestamp (UTC)"],
+                            ["LocalDate", "Date without time zone"],
+                            ["LocalDateTime", "Date/time without zone"],
+                            ["ZonedDateTime", "Date/time with zone"],
+                            ["Duration/Period", "Intervals" ]
+                        ]
+                    },
+                    "example": "import java.time.*\nval now = Instant.now()\nval tomorrow = LocalDate.now().plusDays(1)"
+                },
+                {
+                    "title": "Formatting",
+                    "description": "Use DateTimeFormatter.",
+                    "example": "import java.time.*\nimport java.time.format.DateTimeFormatter\nval fmt = DateTimeFormatter.ofPattern(\"yyyy-MM-dd\")\nprintln(LocalDate.now().format(fmt))",
+                    "table": null
+                }
+            ]
+        },
+        {
+            "title": "Database Interactions",
+            "description": "Most Scala DB access uses JDBC directly or libraries like Slick/Doobie. Database interactions depend on drivers and environment.",
+            "items": [
+                {
+                    "title": "JDBC basics",
+                    "description": "Use java.sql with a JDBC driver on the classpath.",
+                    "table": {
+                        "headers": ["Step", "Notes"],
+                        "rows": [
+                            ["Load driver", "Often automatic; sometimes Class.forName"],
+                            ["Connect", "DriverManager.getConnection(url,user,pw)"],
+                            ["Query", "prepareStatement + executeQuery"],
+                            ["Close", "Close ResultSet/Statement/Connection" ]
+                        ]
+                    },
+                    "example": "import java.sql.DriverManager\nval c = DriverManager.getConnection(\"jdbc:sqlite:test.db\")"
+                },
+                {
+                    "title": "Slick/Doobie (libraries)",
+                    "description": "Popular ecosystem libraries for safer DB access.",
+                    "table": {
+                        "headers": ["Library", "Notes"],
+                        "rows": [
+                            ["Slick", "FRM for Scala (type-safe queries)"],
+                            ["Doobie", "Functional JDBC layer (Typelevel ecosystem)" ]
+                        ]
+                    },
+                    "example": "// Add dependency in sbt, then follow library docs for setup."
+                }
+            ]
+        },
+        {
+            "title": "Common Errors",
+            "description": "Frequent compile/runtime issues and typical fixes.",
+            "items": [
+                {
+                    "title": "Type mismatch",
+                    "description": "Compiler expected one type but inferred another.",
+                    "table": {
+                        "headers": ["Cause", "Fix"],
+                        "rows": [
+                            ["Inferred Nothing/Any", "Add type annotations or refactor branches"],
+                            ["Wrong collection type", "Convert (toList/toVector) or adjust method"],
+                            ["Null in expression", "Use Option or handle null explicitly" ]
+                        ]
+                    },
+                    "example": "val x = if (true) 1 else \"a\" // becomes Any"
+                },
+                {
+                    "title": "MatchError",
+                    "description": "Pattern match was not exhaustive at runtime.",
+                    "table": {
+                        "headers": ["Fix", "Tip"],
+                        "rows": [
+                            ["Add default case", "case _ => ..."],
+                            ["Use sealed ADTs", "Exhaustiveness checking improves" ]
+                        ]
+                    },
+                    "example": "val x: Any = 1\nx match { case s: String => println(s) } // MatchError"
+                },
+                {
+                    "title": "NoSuchElementException",
+                    "description": "Commonly from .head/.get on empty collections/Options.",
+                    "table": {
+                        "headers": ["Avoid", "Prefer"],
+                        "rows": [
+                            ["opt.get", "opt.getOrElse / fold / pattern match"],
+                            ["xs.head", "xs.headOption" ]
+                        ]
+                    },
+                    "example": "val xs = List.empty[Int]\nprintln(xs.headOption.getOrElse(0))"
+                },
+                {
+                    "title": "NPE (NullPointerException)",
+                    "description": "Still possible due to Java interop or legacy code.",
+                    "table": {
+                        "headers": ["Cause", "Mitigation"],
+                        "rows": [
+                            ["Java APIs returning null", "Wrap with Option(x)"],
+                            ["Uninitialized fields", "Prefer constructor params/case classes" ]
+                        ]
+                    },
+                    "example": "def safeLen(s: String): Int = Option(s).map(_.length).getOrElse(0)"
+                }
+            ]
+        },
+        {
+            "title": "Concurrency and Futures",
+            "description": "Async patterns on the JVM; Scala Future is common, and libraries provide richer models.",
+            "items": [
+                {
+                    "title": "Future basics",
+                    "description": "scala.concurrent.Future runs on an ExecutionContext.",
+                    "table": {
+                        "headers": ["Method", "Notes"],
+                        "rows": [
+                            ["Future { ... }", "Start async computation"],
+                            ["map/flatMap", "Transform/chain"],
+                            ["recover", "Handle failures"],
+                            ["Await.result", "Blocking wait (avoid in app code)" ]
+                        ]
+                    },
+                    "example": "import scala.concurrent.*\nimport ExecutionContext.Implicits.global\nval f = Future(1+1).map(_*10)"
+                },
+                {
+                    "title": "Functional effect libraries",
+                    "description": "Many Scala services use effect systems for safer concurrency.",
+                    "table": {
+                        "headers": ["Library", "Notes"],
+                        "rows": [
+                            ["cats-effect", "IO, resource safety, fibers"],
+                            ["ZIO", "Typed effects, layers"],
+                            ["Akka/Pekko", "Actors/streams (ecosystem)" ]
+                        ]
+                    },
+                    "example": "// Choose based on project ecosystem; follow library docs."
+                }
+            ]
+        },
+        {
+            "title": "Scripting and Administration",
+            "description": "Command-line patterns, environment configuration, and operational considerations.",
+            "items": [
+                {
+                    "title": "Reading args",
+                    "description": "Access CLI args from main.",
+                    "example": "object Main { def main(args: Array[String]): Unit = println(args.toList) }",
+                    "table": null
+                },
+                {
+                    "title": "Logging (concept)",
+                    "description": "Use a logging facade (SLF4J) with an implementation (Logback/Log4j2).",
+                    "table": {
+                        "headers": ["Library", "Notes"],
+                        "rows": [
+                            ["slf4j-api", "Facade"],
+                            ["logback-classic", "Common backend"],
+                            ["log4j2", "Alternative backend" ]
+                        ]
+                    },
+                    "example": "// Configure via resources/logback.xml or log4j2.xml"
+                },
+                {
+                    "title": "JAR execution",
+                    "description": "Run with java -jar or via sbt-native-packager/docker (project-dependent).",
+                    "table": {
+                        "headers": ["Task", "Command"],
+                        "rows": [
+                            ["Run jar", "java -jar app.jar"],
+                            ["Set JVM opts", "java -Xmx512m -jar app.jar"],
+                            ["Set props", "java -Denv=prod -jar app.jar" ]
+                        ]
+                    },
+                    "example": "java -Dconfig.file=app.conf -jar app.jar"
+                }
+            ]
+        }
+    ]
+}

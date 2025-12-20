@@ -1,0 +1,514 @@
+{
+	"title": "Perl",
+	"description": "A general Perl (5) quick reference covering fundamentals, subs, scope and context, core operators, arrays/hashes, control flow, regex, date/time, DBI database access, modules/CPAN, common errors, and practical scripting patterns.",
+	"language": "perl",
+	"categories": [
+		{
+			"title": "Basic Functionality",
+			"description": "Core syntax, data types, strict/warnings, and context.",
+			"items": [
+				{
+					"title": "Boilerplate",
+					"description": "Use strict + warnings in almost all Perl code.",
+					"example": "#!/usr/bin/env perl\nuse strict;\nuse warnings;\nuse feature 'say';\n\nsay 'Hello, Perl';"
+				},
+				{
+					"title": "Scalars, arrays, hashes",
+					"description": "Sigils: $ scalar, @ array, % hash. Access elements with $a[0] and $h{key}.",
+					"table": {
+						"headers": ["Type", "Declaration", "Access"],
+						"rows": [
+							["Scalar", "my $x = 42;", "$x"],
+							["Array", "my @a = (1,2,3);", "$a[0]"],
+							["Hash", "my %h = (a => 1, b => 2);", "$h{a}"],
+							["Array ref", "my $ar = \\@a;", "$ar->[0]"],
+							["Hash ref", "my $hr = \\%h;", "$hr->{a}"],
+							["Anon ref", "my $ar = [1,2]; my $hr = {a=>1};", "$ar->[1], $hr->{a}" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy @a = (1,2,3);\nmy %h = (a => 1, b => 2);\nprint $a[0], \"\\n\";\nprint $h{a}, \"\\n\";"
+				},
+				{
+					"title": "Context (scalar vs list)",
+					"description": "Many operations behave differently depending on scalar vs list context.",
+					"table": {
+						"headers": ["Expression", "Scalar context", "List context"],
+						"rows": [
+							["@array", "Number of elements", "Elements"],
+							["reverse", "Reverse a string", "Reverse a list"],
+							["localtime", "Human-readable string", "List of time parts"],
+							["caller", "Package name", "List of call-frame info" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy @a = (1,2,3);\nprint scalar(@a), \"\\n\";\nmy @r = reverse @a;\nprint join(',', @r), \"\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Functions",
+			"description": "Subroutines, arguments, returns, and scope.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "Arguments arrive in @_ (list). Return the last expression or use return.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Positional args", "my ($a, $b) = @_;"],
+							["Shift arg", "my $x = shift;"],
+							["Default", "my $x = shift // 10;"],
+							["Return scalar", "return $a + $b;"],
+							["Return list", "return ($min, $max);"],
+							["Named args (hash)", "my (%opts) = @_;" ]
+						]
+					},
+					"example": "use strict; use warnings;\nsub add {\n  my ($a, $b) = @_;\n  return $a + $b;\n}\nprint add(2,3), \"\\n\";"
+				},
+				{
+					"title": "Scope: my, our, local",
+					"description": "my is lexical; our declares a package var; local temporarily changes a global/special var.",
+					"table": {
+						"headers": ["Keyword", "Meaning"],
+						"rows": [
+							["my", "Lexical variable scoped to a block/file."],
+							["our", "Package variable with a lexical alias."],
+							["local", "Dynamic scoping for package vars/special vars."],
+							["state", "Persistent lexical across calls (feature)." ]
+						]
+					},
+					"example": "use strict; use warnings;\nuse feature 'state';\nsub counter { state $n = 0; return $n++; }\nprint counter(), \"\\n\";\nprint counter(), \"\\n\";"
+				},
+				{
+					"title": "Anonymous subs (code refs)",
+					"description": "Create and call coderefs; closures capture lexicals.",
+					"table": {
+						"headers": ["Use", "Example"],
+						"rows": [
+							["Create", "my $f = sub { $_[0] * 2 };"],
+							["Call", "$f->(10)"],
+							["Closure", "my $base=10; my $f=sub { $_[0]+$base };"],
+							["Callback", "map { $f->($_) } @xs" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy $base = 10;\nmy $f = sub { my ($x) = @_; return $x + $base; };\nprint $f->(5), \"\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering and transforming lists with grep/map and simple patterns.",
+			"items": [
+				{
+					"title": "grep and map",
+					"description": "grep filters; map transforms.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Filter", "my @pos = grep { $_ > 0 } @xs;"],
+							["Transform", "my @sq = map { $_ * $_ } @xs;"],
+							["Regex filter", "my @m = grep { /foo/ } @lines;"],
+							["Uppercase", "my @u = map { uc($_) } @s;" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy @xs = (1, -2, 3);\nmy @pos = grep { $_ > 0 } @xs;\nmy @sq = map { $_ * $_ } @pos;\nprint join(',', @sq), \"\\n\";"
+				},
+				{
+					"title": "Sort and unique",
+					"description": "Use sort for ordering; use a hash to track uniqueness.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Numeric sort", "my @s = sort { $a <=> $b } @xs;"],
+							["String sort", "my @s = sort { $a cmp $b } @xs;"],
+							["Unique", "my %seen; my @u = grep { !$seen{$_}++ } @xs;" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy @xs = (3,1,2,2,1);\nmy %seen;\nmy @u = grep { !$seen{$_}++ } @xs;\nprint join(',', sort { $a <=> $b } @u), \"\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Special variables and common process/system globals.",
+			"items": [
+				{
+					"title": "Common special variables",
+					"description": "Perl has many special variables; use them judiciously.",
+					"table": {
+						"headers": ["Variable", "Meaning"],
+						"rows": [
+							["$_", "Default scalar for many operations."],
+							["@_", "Subroutine arguments."],
+							["@ARGV", "Command-line args."],
+							["%ENV", "Environment variables."],
+							["$0", "Program name."],
+							["$!", "Last system error (errno string)."],
+							["$?", "Status of last child process."],
+							["$.", "Current line number for last read filehandle."],
+							["$/", "Input record separator (newline default)."],
+							["$|", "Autoflush for currently selected filehandle." ]
+						]
+					},
+					"example": "use strict; use warnings;\nprint \"prog=$0\\n\";\nprint \"args=\", join(',', @ARGV), \"\\n\";\nprint \"HOME=$ENV{HOME}\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "Using modules, creating packages, and CPAN basics.",
+			"items": [
+				{
+					"title": "Using modules",
+					"description": "use imports at compile time; require is runtime loading.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Import module", "use JSON::PP;"],
+							["Import with args", "use feature 'say';"],
+							["Runtime load", "require Some::Module; Some::Module->import();"],
+							["Show include paths", "print join(\"\\n\", @INC), \"\\n\";" ]
+						]
+					},
+					"example": "use strict; use warnings;\nuse JSON::PP 'encode_json';\nprint encode_json({a=>1}), \"\\n\";"
+				},
+				{
+					"title": "Defining a package",
+					"description": "A module is usually a package in a .pm file and returns a true value.",
+					"example": "package My::Util;\nuse strict;\nuse warnings;\n\nsub hello { return 'hi'; }\n\n1;"
+				},
+				{
+					"title": "CPAN tooling quick hits",
+					"description": "cpanm is a common installer; local::lib supports user-local installs.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Install cpanminus", "cpan App::cpanminus"],
+							["Install a module", "cpanm Some::Module"],
+							["Install to local lib", "cpanm --local-lib=~/perl5 Some::Module"],
+							["Search docs", "perldoc Some::Module" ]
+						]
+					},
+					"example": "cpanm --local-lib=~/perl5 Try::Tiny"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Common Perl operators and their typical usage.",
+			"items": [
+				{
+					"title": "Comparison and logic",
+					"description": "Use numeric operators for numbers and string operators for strings.",
+					"table": {
+						"headers": ["Category", "Operators", "Notes"],
+						"rows": [
+							["Numeric compare", "== != < <= > >= <=>", "<=> is the numeric spaceship."],
+							["String compare", "eq ne lt le gt ge cmp", "cmp is the string spaceship."],
+							["Boolean", "&& || !", "Short-circuit."],
+							["Defined-or", "// //=", "Fallback when undef."],
+							["Regex", "=~ !~", "Apply regex to a string." ]
+						]
+					},
+					"example": "my $a = 10; my $b = '10';\nprint ($a == $b ? \"num yes\\n\" : \"num no\\n\");\nprint ($a eq $b ? \"str yes\\n\" : \"str no\\n\");"
+				},
+				{
+					"title": "String ops",
+					"description": "Concatenate, repeat, and other common string operations.",
+					"table": {
+						"headers": ["Operator", "Meaning", "Example"],
+						"rows": [
+							[".", "Concatenate", "$s = 'a' . 'b';"],
+							[".=", "Append", "$s .= 'x';"],
+							["x", "Repeat", "'ab' x 3  # abab ab"],
+							["=~", "Match/substitute", "$s =~ s/foo/bar/;" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy $s = 'ab' x 3;\n$s =~ s/b/X/g;\nprint $s, \"\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Array operations, slices, and common patterns.",
+			"items": [
+				{
+					"title": "Common array operations",
+					"description": "Use push/pop for stack, shift/unshift for queue.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Append", "push @a, $x;"],
+							["Remove last", "my $x = pop @a;"],
+							["Remove first", "my $x = shift @a;"],
+							["Prepend", "unshift @a, $x;"],
+							["Length", "my $n = scalar(@a);"],
+							["Slice", "my @s = @a[0,2,3];" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy @a = (1,2,3);\npush @a, 4;\nmy $first = shift @a;\nprint \"first=$first rest=\", join(',', @a), \"\\n\";"
+				},
+				{
+					"title": "Hashes (associative arrays)",
+					"description": "Iterate with keys/values/each; delete keys; check existence.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Check key", "if (exists $h{$k}) { ... }"],
+							["Default", "my $v = $h{$k} // 'default';"],
+							["Delete", "delete $h{$k};"],
+							["Iterate", "for my $k (keys %h) { ... }"],
+							["Sorted keys", "for my $k (sort keys %h) { ... }" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy %h = (a=>1, b=>2);\nfor my $k (sort keys %h) {\n  print \"$k=$h{$k}\\n\";\n}"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "Looping constructs and iteration patterns.",
+			"items": [
+				{
+					"title": "for/foreach, while, until",
+					"description": "foreach is an alias for for; while reads line-by-line well.",
+					"table": {
+						"headers": ["Loop", "Example"],
+						"rows": [
+							["foreach over list", "for my $x (@xs) { ... }"],
+							["C-style for", "for (my $i=0; $i<$n; $i++) { ... }"],
+							["while", "while ($cond) { ... }"],
+							["until", "until ($cond) { ... }"],
+							["Read lines", "while (my $line = <STDIN>) { chomp $line; ... }" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy @xs = (1,2,3);\nfor my $x (@xs) {\n  print $x, \"\\n\";\n}"
+				},
+				{
+					"title": "Loop control",
+					"description": "next/last/redo control loop flow.",
+					"table": {
+						"headers": ["Keyword", "Meaning"],
+						"rows": [
+							["next", "Continue to next iteration."],
+							["last", "Break out of loop."],
+							["redo", "Repeat iteration without re-checking condition." ]
+						]
+					},
+					"example": "use strict; use warnings;\nfor my $x (1..5) {\n  next if $x == 3;\n  last if $x == 5;\n  print $x, \"\\n\";\n}"
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "Conditional logic and common truthiness rules.",
+			"items": [
+				{
+					"title": "if/elsif/else and ternary",
+					"description": "Only undef, 0, '0', and '' are false.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["if", "if ($x > 10) { ... }"],
+							["elsif", "elsif ($x > 5) { ... }"],
+							["else", "else { ... }"],
+							["ternary", "my $y = $ok ? 'yes' : 'no';"],
+							["postfix if", "print 'hi' if $debug;" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy $x = 7;\nmy $label = ($x > 10) ? 'big' : 'small';\nprint $label, \"\\n\";"
+				},
+				{
+					"title": "unless and defined",
+					"description": "unless is the opposite of if; defined checks for undef.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["unless", "unless ($ok) { die 'not ok'; }"],
+							["defined", "if (defined $x) { ... }"],
+							["defined-or", "my $x = $maybe // 'fallback';" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy $maybe;\nmy $x = $maybe // 'fallback';\nprint $x, \"\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "Matching, capturing, substitution, and common regex modifiers.",
+			"items": [
+				{
+					"title": "Matching and captures",
+					"description": "Use =~ to apply patterns; captures are in $1, $2, ...",
+					"table": {
+						"headers": ["Operation", "Example", "Notes"],
+						"rows": [
+							["Match", "if ($s =~ /foo/) { ... }", "Returns true if matches."],
+							["Capture", "if ($s =~ /(foo)(bar)/) { print $1; }", "$1..$9 are capture vars."],
+							["Named capture", "if ($s =~ /(?<name>foo)/) { print $+{name}; }", "Access with %+ or $+{...}."],
+							["Anchors", "/^start/ and /end$/", "Start/end of string (or line with /m)."],
+							["Character classes", "/[A-Za-z0-9_]+/", "Use \\d, \\w, \\s too." ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy $s = 'user=alice id=42';\nif ($s =~ /user=(\\w+)\\s+id=(\\d+)/) {\n  print \"u=$1 id=$2\\n\";\n}"
+				},
+				{
+					"title": "Substitution and modifiers",
+					"description": "s/// replaces; common modifiers include g, i, m, s, x.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Replace first", "$s =~ s/foo/bar/;"],
+							["Replace all", "$s =~ s/foo/bar/g;"],
+							["Case-insensitive", "$s =~ s/foo/bar/ig;"],
+							["Multiline", "$s =~ /^x/m;"],
+							["Dot matches newline", "$s =~ /a.*b/s;"],
+							["Whitespace/comment mode", "$s =~ /a \\s+ b/x;" ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy $s = 'Foo foo';\n$s =~ s/foo/bar/ig;\nprint $s, \"\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Date and Time",
+			"description": "Working with time using core functions and common modules.",
+			"items": [
+				{
+					"title": "Core time functions",
+					"description": "time gives epoch seconds; localtime can return list or string.",
+					"table": {
+						"headers": ["Function", "Description"],
+						"rows": [
+							["time", "Epoch seconds."],
+							["localtime", "String or list of components."],
+							["gmtime", "UTC version of localtime."],
+							["sleep", "Sleep seconds." ]
+						]
+					},
+					"example": "use strict; use warnings;\nmy $t = time();\nprint \"epoch=$t\\n\";\nmy @lt = localtime($t);\nprint \"year=\", $lt[5] + 1900, \"\\n\";"
+				},
+				{
+					"title": "Time::Piece and DateTime",
+					"description": "Time::Piece is lightweight; DateTime is feature-rich.",
+					"table": {
+						"headers": ["Module", "Example"],
+						"rows": [
+							["Time::Piece", "use Time::Piece; my $tp = localtime; print $tp->datetime;"],
+							["Parse", "my $tp = Time::Piece->strptime($s, '%Y-%m-%d');"],
+							["DateTime", "use DateTime; my $dt = DateTime->now(time_zone=>'UTC');" ]
+						]
+					},
+					"example": "use strict; use warnings;\nuse Time::Piece;\nmy $tp = localtime;\nprint $tp->datetime, \"\\n\";"
+				}
+			]
+		},
+		{
+			"title": "Database interactions",
+			"description": "DBI patterns for connecting, querying, and handling errors.",
+			"items": [
+				{
+					"title": "DBI quickstart",
+					"description": "DBI is the standard Perl database interface (drivers via DBD::*).",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							[
+								"Connect",
+								"my $dbh = DBI->connect($dsn, $user, $pass, { RaiseError=>1, PrintError=>0, AutoCommit=>1 });"
+							],
+							[
+								"Prepare/execute",
+								"my $sth = $dbh->prepare('SELECT id,name FROM users WHERE id=?'); $sth->execute($id);"
+							],
+							[
+								"Fetch one row",
+								"my $row = $sth->fetchrow_hashref;"
+							],
+							[
+								"Iterate rows",
+								"while (my $r = $sth->fetchrow_hashref) { ... }"
+							],
+							[
+								"Do (no results)",
+								"$dbh->do('DELETE FROM t WHERE id=?', undef, $id);"
+							],
+							[
+								"Transactions",
+								"$dbh->{AutoCommit}=0; eval { ...; $dbh->commit; 1 } or do { $dbh->rollback; die $@ };"
+							]
+						]
+					},
+					"example": "use strict; use warnings;\nuse DBI;\n\nmy $dbh = DBI->connect('dbi:SQLite:dbname=test.db', '', '', { RaiseError=>1, PrintError=>0, AutoCommit=>1 });\nmy $sth = $dbh->prepare('SELECT 1 AS ok');\n$sth->execute();\nmy $row = $sth->fetchrow_hashref;\nprint $row->{ok}, \"\\n\";"
+				},
+				{
+					"title": "Placeholders and quoting",
+					"description": "Use placeholders (?) to avoid SQL injection and quoting issues.",
+					"table": {
+						"headers": ["Approach", "Notes"],
+						"rows": [
+							["Placeholders", "Preferred: $sth = $dbh->prepare('... WHERE x=?'); $sth->execute($x);"],
+							["quote", "$dbh->quote($value) can help, but placeholders are better."],
+							["RaiseError", "Set RaiseError=>1 and PrintError=>0 for sane error handling." ]
+						]
+					},
+					"example": "my $sth = $dbh->prepare('SELECT * FROM users WHERE email=?');\n$sth->execute($email);"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequent Perl errors/warnings and what they usually mean.",
+			"items": [
+				{
+					"title": "Can't locate ... in @INC",
+					"description": "A module isn't installed or isn't on Perl's include path.",
+					"table": {
+						"headers": ["Fix", "Example"],
+						"rows": [
+							["Install module", "cpanm Some::Module"],
+							["Use local::lib", "cpanm --local-lib=~/perl5 Some::Module"],
+							["Add include path", "perl -Ilib script.pl"],
+							["Inspect @INC", "perl -E 'say for @INC'" ]
+						]
+					},
+					"example": "perl -E 'say for @INC'"
+				},
+				{
+					"title": "Global symbol requires explicit package name",
+					"description": "Usually means you forgot to declare a variable with my/our under strict.",
+					"example": "use strict; use warnings;\nmy $x = 1;\nprint $x, \"\\n\";"
+				},
+				{
+					"title": "Use of uninitialized value",
+					"description": "You used undef as a string/number. Use defined(), //, or initialize variables.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Defined check", "if (defined $x) { ... }"],
+							["Default", "my $v = $x // 'fallback';"],
+							["Initialize", "my $x = '';" ]
+						]
+					},
+					"example": "my $x;\nprint($x // 'fallback'), \"\\n\";"
+				},
+				{
+					"title": "Wide character in print",
+					"description": "You printed Unicode to a handle without proper encoding.",
+					"table": {
+						"headers": ["Fix", "Example"],
+						"rows": [
+							["Set binmode", "binmode(STDOUT, ':encoding(UTF-8)');"],
+							["Use open pragma", "use open ':std', ':encoding(UTF-8)';" ]
+						]
+					},
+					"example": "use strict; use warnings;\nuse open ':std', ':encoding(UTF-8)';\nprint \"café\\n\";"
+				},
+				{
+					"title": "Permission denied / No such file or directory",
+					"description": "System-level errors during open/stat/system. Check paths, permissions, and $!.",
+					"example": "open my $fh, '<', '/path/file' or die \"open failed: $!\";"
+				}
+			]
+		}
+	]
+}
