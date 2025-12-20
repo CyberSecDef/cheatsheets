@@ -1,5 +1,5 @@
 {
-	"title": "GitLab CI / Runner CLI Cheatsheet",
+	"title": "GitLab CI / Runner CLI",
 	"description": "A comprehensive guide to GitLab CI-related command line tools and workflows: glab (GitLab CLI), gitlab-runner, config linting, and day-to-day troubleshooting.",
 	"language": "shell",
 	"categories": [

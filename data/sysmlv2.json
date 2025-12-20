@@ -1,5 +1,5 @@
 {
-	"title": "SysML v2 Cheatsheet",
+	"title": "SysML v2",
 	"description": "A practical SysML v2 quick reference: core concepts, structure, behavior, requirements, constraints/parametrics, allocations/traceability, views/viewpoints, and common modeling patterns. Examples use a simplified textual style; exact syntax varies by tool and the evolving spec.",
 	"language": "text",
 	"categories": [

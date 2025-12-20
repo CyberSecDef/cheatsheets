@@ -1,5 +1,5 @@
 {
-    "title": "Sample Cheatsheet",
+    "title": "Sample",
     "description": "A comprehensive guide to .",
     "language": "shell",
     "categories": [

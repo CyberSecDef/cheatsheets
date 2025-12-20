@@ -17,9 +17,11 @@
             transition: background-color 0.3s ease;
         }
 
-        .navbar {
-            position: sticky;
+        .cheatsheet-navbar {
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 1050;
             backdrop-filter: blur(10px);
             background-color: rgba(var(--bs-tertiary-bg-rgb), 0.8) !important;
@@ -32,16 +34,62 @@
         pre[class*="language-"] {
             border: 1px solid var(--bs-border-color);
         }
+
+        .category-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .category-toggle:focus-visible {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
+        }
+
+        .category-body {
+            overflow: hidden;
+            transition: max-height 0.25s ease, opacity 0.25s ease;
+            opacity: 1;
+        }
+
+        .category-body.is-collapsed {
+            opacity: 0;
+        }
+
+        .toc-target {
+            scroll-margin-top: var(--cheatsheet-navbar-height, 80px);
+        }
     </style>
 </head>
 
 <body>
 
     <!-- Sticky Header -->
-    <nav class="navbar navbar-expand-lg border-bottom">
+    <nav class="navbar navbar-expand-lg border-bottom cheatsheet-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand" id="sticky-title" href="#"></a>
+            
             <div class="ms-auto d-flex align-items-center">
+                <div class="dropdown me-2">
+                    <button
+                        id="toc-toggle"
+                        class="btn btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        data-bs-auto-close="true"
+                        aria-expanded="false"
+                        aria-label="Table of contents"
+                        title="Table of contents"
+                    >
+                        ☰
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-start" id="toc-menu" aria-labelledby="toc-toggle">
+                        <li><h6 class="dropdown-header">Contents</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><span class="dropdown-item-text text-muted">Loading...</span></li>
+                    </ul>
+                </div>
+
+                <a class="navbar-brand" id="sticky-title" href="#">Cheat Sheets</a>
+
                 <div class="me-3">
                     <select
                         id="sheet-select"
@@ -91,7 +139,7 @@
         <div class="container py-0">
             <div class="row">
                 <div class="p-4 p-md-5 mb-4 rounded-5 text-body-emphasis bg-body-secondary">
-                    <div class="col-8 px-0">
+                    <div class="col px-0">
                         <h1 class="display-4 fst-italic" id="page-title"></h1>
                         <p class="lead my-3" id="page-description"></p>
                     </div>
@@ -113,11 +161,20 @@
     <script>
         const grid = document.getElementById('masonry-grid');
 
+        const updateNavbarOffset = () => {
+            const nav = document.querySelector('.cheatsheet-navbar');
+            if (!nav) return;
+            document.body.style.paddingTop = nav.offsetHeight + 'px';
+            document.documentElement.style.setProperty('--cheatsheet-navbar-height', nav.offsetHeight + 'px');
+        };
+
+        window.addEventListener('load', updateNavbarOffset);
+        window.addEventListener('resize', updateNavbarOffset);
+
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
         const sheet = urlParams.get('sheet');
-        const defaultSheet = 'go_file.json';
-
+        
         const selectElement = document.getElementById('sheet-select');
         const optionExists = (select, value) => {
             if (!select || !value) return false;
@@ -138,12 +195,15 @@
             return select.options[0].value;
         };
 
+        const defaultSheet = getFirstOptionValue(selectElement);
         const activeSheet = optionExists(selectElement, sheet)
             ? sheet
             : (optionExists(selectElement, defaultSheet) ? defaultSheet : getFirstOptionValue(selectElement));
 
         if (selectElement && activeSheet) {
             selectElement.value = activeSheet;
+        }else{
+            selectElement.options[0].selected = true;
         }
 
         if (!activeSheet) {
@@ -154,12 +214,40 @@
             .then(d => {
                 const data = d;
                 document.getElementById('page-title').textContent = data.title;
-                document.getElementById('sticky-title').textContent = data.title;
                 document.getElementById('page-description').textContent = data.description;
 
-                data.categories.forEach(category => {
+                const tocMenu = document.getElementById('toc-menu');
+                const tocToggle = document.getElementById('toc-toggle');
+
+                if (tocMenu) {
+                    tocMenu.innerHTML = '';
+
+                    const headerLi = document.createElement('li');
+                    const headerEl = document.createElement('h6');
+                    headerEl.className = 'dropdown-header';
+                    headerEl.textContent = 'Contents';
+                    headerLi.appendChild(headerEl);
+                    tocMenu.appendChild(headerLi);
+
+                    const dividerLi = document.createElement('li');
+                    dividerLi.innerHTML = '<hr class="dropdown-divider">';
+                    tocMenu.appendChild(dividerLi);
+                }
+
+                const layoutMasonry = () => {
+                    try {
+                        if (window.Masonry && typeof Masonry.data === 'function') {
+                            const msnry = Masonry.data(grid);
+                            if (msnry) msnry.layout();
+                        }
+                    } catch {
+                        // no-op
+                    }
+                };
+
+                data.categories.forEach((category, categoryIndex) => {
                     const col = document.createElement('div');
-                    col.className = 'col-4 mb-4';
+                    col.className = 'col-sm-12 col-md-6 col-lg-4 mb-4';
 
                     let itemsHtml = '';
                     category.items.forEach(item => {
@@ -181,7 +269,7 @@
                         let exampleHtml = '';
                         if (item.example) {
                             exampleHtml = `
-                            <pre class="mt-2"><code class="language-${data.language}">${item.example.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+                            <pre class="my-2 py-2"><code style="overflow:scroll;" class="language-${data.language}">${item.example.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
                         `;
                         }
 
@@ -198,17 +286,101 @@
 
                     const categoryDescription = category.description ? `<div class="card-body"><p class="card-text">${category.description}</p></div>` : '';
 
+                    const headerId = `category-title-${categoryIndex}`;
+                    const bodyId = `category-body-${categoryIndex}`;
+
                     col.innerHTML = `
-                    <div class="card ">
-                        <h5 class="card-header text-bg-secondary">${category.title}</h5>
-                        <p class="bg-transparent">
-                        ${categoryDescription}
-                        ${itemsHtml}
-                        </p>
+                    <div class="card">
+                        <h5
+                            id="${headerId}"
+                            class="card-header text-bg-secondary category-toggle toc-target"
+                            role="button"
+                            tabindex="0"
+                            aria-expanded="true"
+                            aria-controls="${bodyId}"
+                        >${category.title}</h5>
+                        <div class="category-body my-4 py-2" id="${bodyId}">
+                            ${categoryDescription}
+                            ${itemsHtml}
+                        </div>
                     </div>`;
 
                     grid.appendChild(col);
+
+                    const headerEl = col.querySelector('.category-toggle');
+                    const bodyEl = col.querySelector('.category-body');
+
+                    if (tocMenu) {
+                        const li = document.createElement('li');
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'dropdown-item';
+                        btn.textContent = category.title || `Category ${categoryIndex + 1}`;
+                        btn.addEventListener('click', () => {
+                            const target = document.getElementById(headerId);
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                            if (window.bootstrap && tocToggle) {
+                                try {
+                                    window.bootstrap.Dropdown.getOrCreateInstance(tocToggle).hide();
+                                } catch {
+                                    // no-op
+                                }
+                            }
+                        });
+                        li.appendChild(btn);
+                        tocMenu.appendChild(li);
+                    }
+
+                    if (headerEl && bodyEl) {
+                        // Initialize to expanded with a concrete max-height so collapse animates.
+                        bodyEl.classList.remove('is-collapsed');
+                        bodyEl.style.maxHeight = bodyEl.scrollHeight + 'px';
+
+                        const setExpanded = (expanded) => {
+                            headerEl.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
+                            if (!expanded) {
+                                bodyEl.classList.add('is-collapsed');
+                                bodyEl.style.maxHeight = '0px';
+                                return;
+                            }
+
+                            bodyEl.classList.remove('is-collapsed');
+                            // Ensure we recalc in case content height changed.
+                            bodyEl.style.maxHeight = bodyEl.scrollHeight + 'px';
+                        };
+
+                        const toggleExpanded = () => {
+                            const isExpanded = headerEl.getAttribute('aria-expanded') === 'true';
+                            setExpanded(!isExpanded);
+                        };
+
+                        headerEl.addEventListener('click', toggleExpanded);
+                        headerEl.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                toggleExpanded();
+                            }
+                        });
+
+                        bodyEl.addEventListener('transitionend', (e) => {
+                            if (e.propertyName === 'max-height') {
+                                layoutMasonry();
+                            }
+                        });
+                    }
                 });
+
+                if (tocMenu && (!data.categories || data.categories.length === 0)) {
+                    const li = document.createElement('li');
+                    const span = document.createElement('span');
+                    span.className = 'dropdown-item-text text-muted';
+                    span.textContent = 'No categories available';
+                    li.appendChild(span);
+                    tocMenu.appendChild(li);
+                }
 
                 Prism.highlightAll();
                 

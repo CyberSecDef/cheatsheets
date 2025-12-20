@@ -1,5 +1,5 @@
 {
-	"title": "kubectl Command Cheatsheet",
+	"title": "kubectl",
 	"description": "A comprehensive guide to kubectl (Kubernetes CLI) for viewing, deploying, debugging, and managing Kubernetes resources.",
 	"language": "shell",
 	"categories": [

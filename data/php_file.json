@@ -1,5 +1,5 @@
 {
-    "title": "PHP File I/O Cheatsheet",
+    "title": "PHP File I/O",
     "description": "A comprehensive quick reference for File I/O operations in PHP, from basic reads/writes to locking and structured formats.",
     "language": "php",
     "categories": [

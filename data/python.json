@@ -1,5 +1,5 @@
 {
-	"title": "Python Cheatsheet",
+	"title": "Python",
 	"description": "A general-purpose Python quick reference covering syntax, functions, modules, common pitfalls, and day-to-day patterns.",
 	"language": "python",
 	"categories": [
@@ -325,7 +325,7 @@
 						"headers": ["Gotcha", "Fix"],
 						"rows": [
 							["Mutable default args", "Use None and create inside function"],
-							["Shadowing built-ins", "Avoid naming variables list, dict, str, etc."],
+							["Shadowing built-ins", "Avoid naming variables list, dict, str, etc. Avoid naming files after modules like os or json."],
 							["Chained comparison confusion", "Remember: 1 < x < 10 is valid" ]
 						]
 					},

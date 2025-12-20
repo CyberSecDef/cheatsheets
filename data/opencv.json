@@ -1,5 +1,5 @@
 {
-	"title": "OpenCV (cv2) Cheatsheet",
+	"title": "OpenCV (cv2)",
 	"description": "A practical OpenCV quick reference for Python (cv2): image/video I/O, colorspaces, drawing, geometric transforms, filtering, morphology, feature detection, calibration, tracking, DNN, and performance tips.",
 	"language": "python",
 	"categories": [

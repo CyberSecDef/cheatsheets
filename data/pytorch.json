@@ -1,5 +1,5 @@
 {
-	"title": "PyTorch Cheatsheet",
+	"title": "PyTorch",
 	"description": "A practical PyTorch quick reference covering tensors, autograd, nn modules, optimization, data loading, CUDA, distributed training, export/compile, and profiling.",
 	"language": "python",
 	"categories": [

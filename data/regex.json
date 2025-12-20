@@ -1,5 +1,5 @@
 {
-	"title": "Regular Expressions Cheatsheet",
+	"title": "Regular Expressions",
 	"description": "A practical reference for regular expression syntax and features across common flavors (PCRE, JavaScript, Python, .NET, POSIX).",
 	"language": "regex",
 	"categories": [
