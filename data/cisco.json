@@ -1,0 +1,877 @@
+{
+	"title": "Cisco Networking + APIC/ACI Cheatsheet",
+	"description": "General-to-advanced Cisco networking (IOS/IOS-XE/NX-OS) plus Cisco ACI and APIC operations: configuration patterns, verification commands, troubleshooting, and APIC APIs.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "CLI Fundamentals (IOS / IOS-XE / NX-OS)",
+			"description": "Modes, navigation, output filtering, and configuration management.",
+			"items": [
+				{
+					"title": "Modes and navigation",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Privileged exec", "enable"],
+							["Global config", "configure terminal"],
+							["Interface config", "interface [name]"],
+							["Exit one level", "exit"],
+							["Exit to exec", "end"],
+							["Disable paging", "terminal length 0"],
+							["Help", "?" ]
+						]
+					},
+					"example": "terminal length 0\nshow version\nshow running-config | include ^hostname"
+				},
+				{
+					"title": "Filtering output",
+					"description": "Pipe/filter support varies by platform/release.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Include", "show running-config | include ^interface|^router"],
+							["Exclude", "show running-config | exclude secret"],
+							["Section", "show running-config | section interface GigabitEthernet1/0/1"],
+							["Begin", "show running-config | begin line vty"],
+							["NX-OS grep", "show interface brief | grep up" ]
+						]
+					},
+					"example": "show ip interface brief\nshow run | section interface"
+				},
+				{
+					"title": "Save, checkpoints, rollback",
+					"description": "Availability varies; verify what your platform supports.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Save running to startup", "copy running-config startup-config"],
+							["Show startup", "show startup-config"],
+							["NX-OS checkpoint", "checkpoint [name]"],
+							["NX-OS rollback", "rollback running-config checkpoint [name]"],
+							["IOS config replace (if supported)", "configure replace flash:[file] force" ]
+						]
+					},
+					"example": "copy running-config startup-config"
+				}
+			]
+		},
+		{
+			"title": "Baseline Health and Inventory",
+			"description": "Quick checks for platform state, resources, time, and logs.",
+			"items": [
+				{
+					"title": "Identity and inventory",
+					"description": null,
+					"table": {
+						"headers": ["Command", "What it shows"],
+						"rows": [
+							["show version", "Software, uptime, model"],
+							["show inventory", "Serials/modules"],
+							["show license all (platform-dependent)", "Licensing"],
+							["show environment (platform-dependent)", "Fans/PSU/temps" ]
+						]
+					},
+					"example": "terminal length 0\nshow version\nshow inventory"
+				},
+				{
+					"title": "CPU/memory",
+					"description": "Useful for control-plane drops and intermittent outages.",
+					"table": {
+						"headers": ["Platform", "Command"],
+						"rows": [
+							["IOS/IOS-XE", "show processes cpu sorted / show processes memory"],
+							["NX-OS", "show system resources" ]
+						]
+					},
+					"example": "show processes cpu sorted\nshow processes memory"
+				},
+				{
+					"title": "Time and logging",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show clock", "Time"],
+							["show ntp status", "NTP state"],
+							["show logging", "Buffered logs + syslog config"],
+							["terminal monitor", "Stream syslog to your session" ]
+						]
+					},
+					"example": "show clock\nshow ntp status\nshow logging | include NTP|SYS"
+				}
+			]
+		},
+		{
+			"title": "Interfaces (L1/L2/L3)",
+			"description": "Bring up interfaces, configure access/trunk, set IPs, and verify.",
+			"items": [
+				{
+					"title": "Verify interfaces",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["show ip interface brief", "L3 interface status"],
+							["show interfaces status", "Switchport status (platform-dependent)"],
+							["show interfaces [if]", "Counters/errors"],
+							["show interfaces [if] switchport", "Access/trunk details"],
+							["show cdp neighbors detail", "Neighbor discovery"],
+							["show lldp neighbors detail", "LLDP neighbors" ]
+						]
+					},
+					"example": "show ip interface brief\nshow interfaces GigabitEthernet1/0/1\nshow interfaces GigabitEthernet1/0/1 switchport"
+				},
+				{
+					"title": "Common interface config",
+					"description": "Minimal pattern: description, admin up, optional MTU.",
+					"table": {
+						"headers": ["Task", "Commands"],
+						"rows": [
+							["Enter interface", "interface GigabitEthernet1/0/1"],
+							["Description", "description Uplink to Core"],
+							["Enable", "no shutdown"],
+							["Set MTU (if needed)", "mtu [bytes]"],
+							["Reset to defaults", "default interface GigabitEthernet1/0/1" ]
+						]
+					},
+					"example": "configure terminal\ninterface GigabitEthernet1/0/1\ndescription Uplink to Core\nno shutdown\nend"
+				}
+			]
+		},
+		{
+			"title": "Switching: VLANs and Trunks",
+			"description": "Access ports, trunk ports, native VLAN, allowed VLANs.",
+			"items": [
+				{
+					"title": "Access port",
+					"description": "Assign a port to a single VLAN.",
+					"table": {
+						"headers": ["Commands", "Notes"],
+						"rows": [
+							["switchport mode access", "Force access"],
+							["switchport access vlan [vlan]", "Assign VLAN"],
+							["spanning-tree portfast", "Edge port (end hosts)"],
+							["spanning-tree bpduguard enable", "Protect against loops" ]
+						]
+					},
+					"example": "configure terminal\ninterface GigabitEthernet1/0/10\nswitchport mode access\nswitchport access vlan 10\nspanning-tree portfast\nspanning-tree bpduguard enable\nend"
+				},
+				{
+					"title": "Trunk port",
+					"description": "Carry multiple VLANs. Ensure native VLAN and allowed VLAN list are correct.",
+					"table": {
+						"headers": ["Commands", "Notes"],
+						"rows": [
+							["switchport mode trunk", "Force trunk"],
+							["switchport trunk native vlan [vlan]", "Untagged VLAN"],
+							["switchport trunk allowed vlan [list]", "Allowed VLAN list"],
+							["show interfaces trunk", "Verify trunking" ]
+						]
+					},
+					"example": "configure terminal\ninterface GigabitEthernet1/0/1\nswitchport mode trunk\nswitchport trunk native vlan 999\nswitchport trunk allowed vlan 10,20,30,999\nend\nshow interfaces trunk"
+				},
+				{
+					"title": "VLAN and MAC verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show vlan brief", "VLAN list and membership"],
+							["show mac address-table", "MAC learning"],
+							["show mac address-table interface [if]", "MACs learned on a port" ]
+						]
+					},
+					"example": "show vlan brief\nshow mac address-table | include Gi1/0/10"
+				}
+			]
+		},
+		{
+			"title": "Spanning Tree",
+			"description": "STP/RSTP/MST verification and common protections.",
+			"items": [
+				{
+					"title": "STP verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["show spanning-tree summary", "Mode and root overview"],
+							["show spanning-tree vlan [vlan]", "Per-VLAN STP detail"],
+							["show spanning-tree interface [if] detail", "Port role/state" ]
+						]
+					},
+					"example": "show spanning-tree summary\nshow spanning-tree vlan 10"
+				},
+				{
+					"title": "Edge-port protections",
+					"description": "Use on host-facing ports only.",
+					"table": {
+						"headers": ["Feature", "Commands"],
+						"rows": [
+							["PortFast", "spanning-tree portfast"],
+							["BPDU Guard", "spanning-tree bpduguard enable"],
+							["Root Guard", "spanning-tree guard root" ]
+						]
+					},
+					"example": "configure terminal\ninterface GigabitEthernet1/0/10\nspanning-tree portfast\nspanning-tree bpduguard enable\nend"
+				}
+			]
+		},
+		{
+			"title": "EtherChannel / Port-Channel",
+			"description": "Bundle links with LACP (preferred) and validate.",
+			"items": [
+				{
+					"title": "LACP configuration (conceptual)",
+					"description": "Exact syntax varies (IOS vs NX-OS). Ensure both sides match: trunk/access, VLANs, speed/duplex.",
+					"table": {
+						"headers": ["Goal", "Commands (typical IOS-style)"],
+						"rows": [
+							["Create channel group", "interface range Gi1/0/1-2\nchannel-group 1 mode active"],
+							["Configure Port-Channel", "interface Port-channel1\nswitchport mode trunk"],
+							["Verify", "show etherchannel summary" ]
+						]
+					},
+					"example": "show etherchannel summary\nshow interfaces port-channel 1"
+				},
+				{
+					"title": "Verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "What to look for"],
+						"rows": [
+							["show etherchannel summary", "Members in P (bundled) state"],
+							["show lacp neighbor", "LACP partner info"],
+							["show interfaces port-channel [n]", "Port-channel line protocol up" ]
+						]
+					},
+					"example": "show etherchannel summary\nshow lacp neighbor"
+				}
+			]
+		},
+		{
+			"title": "Routing Essentials",
+			"description": "Static routes, route lookup, and VRF basics.",
+			"items": [
+				{
+					"title": "Static routes",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Default route", "ip route 0.0.0.0 0.0.0.0 [next-hop]"],
+							["Route to prefix", "ip route [prefix] [mask] [next-hop]"],
+							["Verify", "show ip route | include 0.0.0.0|[prefix]"],
+							["Route lookup", "show ip route [destination]" ]
+						]
+					},
+					"example": "configure terminal\nip route 0.0.0.0 0.0.0.0 192.0.2.1\nend\nshow ip route | include 0.0.0.0"
+				},
+				{
+					"title": "VRF quick concepts",
+					"description": "VRF creates separate routing tables. Commands vary by platform (IOS-XE vs NX-OS).",
+					"table": {
+						"headers": ["Goal", "Command examples"],
+						"rows": [
+							["Show VRFs", "show vrf (platform-dependent)"],
+							["Show routes in VRF", "show ip route vrf [vrf]"],
+							["Ping in VRF", "ping vrf [vrf] [ip]" ]
+						]
+					},
+					"example": "show ip route vrf Mgmt-vrf"
+				}
+			]
+		},
+		{
+			"title": "OSPF (Common)",
+			"description": "Basic OSPF configuration patterns and verification.",
+			"items": [
+				{
+					"title": "OSPF verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show ip ospf neighbor", "Adjacencies"],
+							["show ip ospf interface", "Interface OSPF state"],
+							["show ip route ospf", "OSPF-learned routes"],
+							["show ip ospf database", "LSDB (advanced)" ]
+						]
+					},
+					"example": "show ip ospf neighbor\nshow ip route ospf"
+				},
+				{
+					"title": "Common knobs",
+					"description": "Use with care; mismatches can break adjacency.",
+					"table": {
+						"headers": ["Knob", "Command"],
+						"rows": [
+							["Passive interface", "passive-interface [if]"],
+							["Network type", "ip ospf network point-to-point"],
+							["Hello/dead timers", "ip ospf hello-interval [s] / ip ospf dead-interval [s]"],
+							["Cost", "ip ospf cost [n]" ]
+						]
+					},
+					"example": "show ip ospf interface GigabitEthernet1/0/1 | include Hello|Dead|Cost"
+				}
+			]
+		},
+		{
+			"title": "BGP (Common)",
+			"description": "Session verification, advertised/received routes, and common operational checks.",
+			"items": [
+				{
+					"title": "BGP session checks",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show ip bgp summary", "Peer state, prefixes"],
+							["show ip bgp neighbors [peer]", "Neighbor detail"],
+							["show ip bgp", "BGP table"],
+							["show ip route bgp", "Installed routes" ]
+						]
+					},
+					"example": "show ip bgp summary\nshow ip bgp neighbors 192.0.2.2 | include BGP state|Last reset"
+				},
+				{
+					"title": "Route-policy primitives (concepts)",
+					"description": "Implementation differs: route-maps, prefix-lists, AS-path filters, communities.",
+					"table": {
+						"headers": ["Filter type", "Typical usage"],
+						"rows": [
+							["prefix-list", "Match prefixes"],
+							["route-map", "Policy: match + set attributes"],
+							["community-list", "Filter/act on communities"],
+							["as-path access-list", "Filter AS paths" ]
+						]
+					},
+					"example": "show ip prefix-list\nshow route-map"
+				}
+			]
+		},
+		{
+			"title": "First Hop Redundancy (HSRP/VRRP)",
+			"description": "Gateway redundancy for VLANs/SVIs.",
+			"items": [
+				{
+					"title": "HSRP verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show standby brief", "State, active/standby"],
+							["show standby", "Detailed timers, preempt, tracking" ]
+						]
+					},
+					"example": "show standby brief"
+				},
+				{
+					"title": "VRRP verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show vrrp brief (platform-dependent)", "State overview"],
+							["show vrrp (platform-dependent)", "Detailed state" ]
+						]
+					},
+					"example": "show vrrp brief"
+				}
+			]
+		},
+		{
+			"title": "ACLs and Packet Filtering",
+			"description": "Standard/extended ACL concepts and operational checks.",
+			"items": [
+				{
+					"title": "ACL basics",
+					"description": "Remember: ACLs are order-dependent; use explicit permits/denies and log carefully.",
+					"table": {
+						"headers": ["ACL type", "Common use"],
+						"rows": [
+							["Standard", "Filter by source IP"],
+							["Extended", "Filter by src/dst/protocol/ports"],
+							["Named ACL", "More readable management" ]
+						]
+					},
+					"example": "show access-lists"
+				},
+				{
+					"title": "Verify ACL application",
+					"description": null,
+					"table": {
+						"headers": ["Command", "What it tells you"],
+						"rows": [
+							["show ip interface [if]", "Inbound/outbound ACL applied"],
+							["show access-lists [name]", "Match counters"],
+							["show running-config interface [if]", "Applied ACLs in config" ]
+						]
+					},
+					"example": "show ip interface GigabitEthernet1/0/1 | include access list\nshow access-lists"
+				}
+			]
+		},
+		{
+			"title": "NAT and PBR (Concepts)",
+			"description": "NAT is common at edges; PBR overrides routing decisions. Syntax varies by platform.",
+			"items": [
+				{
+					"title": "NAT verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show ip nat translations", "Active translations"],
+							["show ip nat statistics", "Counters"],
+							["show running-config | include ip nat", "NAT config lines" ]
+						]
+					},
+					"example": "show ip nat translations\nshow ip nat statistics"
+				},
+				{
+					"title": "PBR verification (route-map)",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show route-map", "Policy definition"],
+							["show ip policy", "Where policy is applied"],
+							["show ip interface [if]", "Policy routing on interface" ]
+						]
+					},
+					"example": "show ip policy\nshow route-map"
+				}
+			]
+		},
+		{
+			"title": "QoS (High-level)",
+			"description": "QoS syntax differs widely (MQC, policy-maps). Use show commands to validate.",
+			"items": [
+				{
+					"title": "MQC building blocks",
+					"description": null,
+					"table": {
+						"headers": ["Object", "Purpose"],
+						"rows": [
+							["class-map", "Match traffic"],
+							["policy-map", "Actions (priority, bandwidth, police, shape)"],
+							["service-policy", "Apply policy to interface" ]
+						]
+					},
+					"example": "show class-map\nshow policy-map"
+				},
+				{
+					"title": "QoS verification",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show policy-map interface [if]", "Counters and drops"],
+							["show mls qos (platform-dependent)", "Switch QoS state" ]
+						]
+					},
+					"example": "show policy-map interface GigabitEthernet1/0/1"
+				}
+			]
+		},
+		{
+			"title": "Management and Security",
+			"description": "SSH, AAA, SNMP, syslog, and operational hygiene.",
+			"items": [
+				{
+					"title": "SSH access (typical IOS-style)",
+					"description": "Exact steps vary. Ensure domain name + crypto keys + vty transport.",
+					"table": {
+						"headers": ["Task", "Commands"],
+						"rows": [
+							["Set domain", "ip domain-name example.local"],
+							["Generate keys", "crypto key generate rsa modulus 2048"],
+							["VTY restrict", "line vty 0 4\ntransport input ssh"],
+							["Disable telnet", "transport input ssh" ]
+						]
+					},
+					"example": "show ip ssh\nshow run | section line vty"
+				},
+				{
+					"title": "AAA quick checks",
+					"description": "AAA implementation depends on TACACS+/RADIUS design.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show aaa servers (platform-dependent)", "AAA server status"],
+							["show running-config | include aaa|tacacs|radius", "AAA config"],
+							["test aaa group [group] [user] [pass] legacy", "Connectivity test (platform-dependent)" ]
+						]
+					},
+					"example": "show run | include aaa|tacacs|radius"
+				},
+				{
+					"title": "SNMP/syslog basics",
+					"description": "Prefer SNMPv3 over v2c. Verify reachability to collectors.",
+					"table": {
+						"headers": ["Item", "Verification"],
+						"rows": [
+							["Syslog", "show logging"],
+							["SNMP", "show snmp (platform-dependent)"],
+							["NTP", "show ntp status" ]
+						]
+					},
+					"example": "show logging\nshow ntp status"
+				}
+			]
+		},
+		{
+			"title": "Monitoring and Packet Capture",
+			"description": "NetFlow/IPFIX, SPAN, and on-box captures (platform-dependent).",
+			"items": [
+				{
+					"title": "NetFlow/IPFIX verification (common)",
+					"description": "Exact commands differ by platform and configuration style (Flexible NetFlow, etc.).",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show flow exporter", "Exporter status (IOS-XE; if configured)"],
+							["show flow monitor", "Monitor status/counters (IOS-XE; if configured)"],
+							["show flow record", "Record definition (IOS-XE; if configured)"],
+							["show running-config | include flow", "Locate flow config quickly" ]
+						]
+					},
+					"example": "show flow exporter\nshow flow monitor\nshow run | include flow"
+				},
+				{
+					"title": "SPAN / ERSPAN (common syntax)",
+					"description": "Switch SPAN configuration is platform-specific; always validate session state and destination.",
+					"table": {
+						"headers": ["Task", "Command (typical)"],
+						"rows": [
+							["Show sessions", "show monitor session all"],
+							["Define session", "monitor session 1 source interface [if] both"],
+							["Set destination", "monitor session 1 destination interface [if]"],
+							["Remove session", "no monitor session 1" ]
+						]
+					},
+					"example": "show monitor session all"
+				},
+				{
+					"title": "Embedded Packet Capture (EPC) (IOS-XE; if supported)",
+					"description": "On-box capture workflow. Command names vary by release.",
+					"table": {
+						"headers": ["Phase", "Command (typical)"],
+						"rows": [
+							["Define capture", "monitor capture buffer [name] size [bytes]"],
+							["Attach point", "monitor capture point ip cef [name] [if] both"],
+							["Start/stop", "monitor capture point start|stop [name]"],
+							["Export", "monitor capture buffer [name] export tftp://[server]/file.pcap"],
+							["Show", "show monitor capture" ]
+						]
+					},
+					"example": "show monitor capture"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting Playbook (IOS / NX-OS)",
+			"description": "High-signal show commands and quick isolations: L1/L2/L3, routing, ARP, and path.",
+			"items": [
+				{
+					"title": "Layered triage",
+					"description": "Start from link up -> L2 -> L3 -> policy -> app.",
+					"table": {
+						"headers": ["Layer", "Commands"],
+						"rows": [
+							["L1", "show interfaces [if] | include line protocol|error|CRC"],
+							["L2", "show vlan brief; show mac address-table; show spanning-tree interface [if] detail"],
+							["L3", "show ip interface brief; show arp; show ip route [dst]; ping; traceroute"],
+							["Policy", "show access-lists; show ip interface [if]"],
+							["Control plane", "show processes cpu sorted / show system resources" ]
+						]
+					},
+					"example": "show interfaces GigabitEthernet1/0/1\nshow spanning-tree interface GigabitEthernet1/0/1 detail\nshow ip route 8.8.8.8\nping 8.8.8.8\ntraceroute 8.8.8.8"
+				},
+				{
+					"title": "CEF / forwarding checks (platform-dependent)",
+					"description": "When routing looks correct but traffic still fails.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show ip cef [dst]", "Forwarding path decision"],
+							["show adjacency (platform-dependent)", "Adjacency/ARP linkage"],
+							["show platform hardware qfp active statistics drop (IOS-XE; platform-dependent)", "Hardware drops" ]
+						]
+					},
+					"example": "show ip cef 8.8.8.8"
+				}
+			]
+		},
+		{
+			"title": "NX-OS Notes (incl. vPC)",
+			"description": "Common NX-OS operational commands and vPC checks.",
+			"items": [
+				{
+					"title": "Feature model",
+					"description": "NX-OS uses features that must be enabled.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List features", "show feature"],
+							["Enable feature", "feature [name]"],
+							["Show interfaces brief", "show interface brief"],
+							["Show port-channels", "show port-channel summary" ]
+						]
+					},
+					"example": "show feature\nshow interface brief\nshow port-channel summary"
+				},
+				{
+					"title": "vPC verification",
+					"description": "Always check vPC peer-link, peer-keepalive, and consistency.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["show vpc brief", "vPC role and peer status"],
+							["show vpc consistency-parameters global", "Global consistency"],
+							["show vpc consistency-parameters interface port-channel [n]", "Per-vPC consistency"],
+							["show lacp neighbor", "LACP partners" ]
+						]
+					},
+					"example": "show vpc brief\nshow vpc consistency-parameters global"
+				}
+			]
+		},
+		{
+			"title": "ACI Concepts (Mental Model)",
+			"description": "How ACI objects map to connectivity: Tenant -> VRF -> BD -> EPG, plus Contracts and Policies.",
+			"items": [
+				{
+					"title": "Core objects",
+					"description": null,
+					"table": {
+						"headers": ["Object", "Meaning"],
+						"rows": [
+							["Tenant", "Administrative domain"],
+							["VRF (fvCtx)", "Routing domain / L3 context"],
+							["Bridge Domain (fvBD)", "L2 boundary + subnets + settings"],
+							["Subnet", "Gateway/VRF association"],
+							["Application Profile", "Group of EPGs"],
+							["EPG (fvAEPg)", "Endpoint group; policy boundary"],
+							["Contract", "Policy allowing traffic between EPGs"],
+							["Filter", "L4-L7 match (ports/protocols)" ]
+						]
+					},
+					"example": "# ACI: think 'EPGs talk only if a contract permits it'."
+				},
+				{
+					"title": "Common fabric terms",
+					"description": null,
+					"table": {
+						"headers": ["Term", "Meaning"],
+						"rows": [
+							["Leaf/Spine", "ACI fabric switches"],
+							["APIC", "Policy controller"],
+							["AEP", "Attachable Access Entity Profile"],
+							["Domain", "VMM/Physical/L2/L3 domains"],
+							["VLAN pool", "VLAN allocation for domains"],
+							["Policy Group", "Set of interface policies"],
+							["L3Out", "External routed connectivity" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "ACI Build: Tenant/VRF/BD/EPG (Checklist)",
+			"description": "High-level steps for a typical ACI application segment.",
+			"items": [
+				{
+					"title": "Typical build order",
+					"description": "Exact navigation differs by APIC version, but the object flow is consistent.",
+					"table": {
+						"headers": ["Step", "Object"],
+						"rows": [
+							["1", "Create Tenant"],
+							["2", "Create VRF"],
+							["3", "Create BD (associate to VRF)"],
+							["4", "Create BD Subnet(s)"],
+							["5", "Create Application Profile"],
+							["6", "Create EPG (associate to BD)"],
+							["7", "Bind EPG to Domain (Physical/VMM)"],
+							["8", "Add static paths or VMM binding"],
+							["9", "Add Contracts/Filters" ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Common gotchas",
+					"description": null,
+					"table": {
+						"headers": ["Gotcha", "Impact"],
+						"rows": [
+							["EPG not bound to a domain", "No VLAN/VXLAN allocation; endpoints won’t come up"],
+							["No static path/VMM binding", "No attachment; endpoints not learned"],
+							["No contract", "Traffic denied by policy (default)"],
+							["BD/VRF mismatch", "Gateway exists but routing policy differs" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "ACI Contracts and Filters",
+			"description": "Allow traffic between EPGs with contracts (provider/consumer) and filters.",
+			"items": [
+				{
+					"title": "Contract components",
+					"description": null,
+					"table": {
+						"headers": ["Component", "Purpose"],
+						"rows": [
+							["Filter", "L4-L7 match entries"],
+							["Subject", "Binds filters to contract"],
+							["Contract", "Provided/consumed between EPGs"],
+							["vzAny", "Contract at VRF scope (when used)" ]
+						]
+					},
+					"example": "# Remember: EPG A provides, EPG B consumes (directional)."
+				},
+				{
+					"title": "Troubleshoot contracts",
+					"description": "If endpoints are learned but traffic is blocked, contract/filter is a top suspect.",
+					"table": {
+						"headers": ["Check", "Where"],
+						"rows": [
+							["Provider/consumer links", "APIC: EPG -> Contracts"],
+							["Filter entries", "APIC: Filter -> Entries"],
+							["vzAny usage", "APIC: VRF -> Policies" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "ACI L3Out (External Connectivity)",
+			"description": "Route to/from external networks using L3Out and external EPGs.",
+			"items": [
+				{
+					"title": "Key objects",
+					"description": null,
+					"table": {
+						"headers": ["Object", "Meaning"],
+						"rows": [
+							["L3Out", "External routing instance"],
+							["External EPG", "Policy boundary for external subnets"],
+							["Logical node/profile", "Leaf node selection"],
+							["Logical interface", "SVI/subinterface/routed interface"],
+							["Route control", "Import/export controls" ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Common failure modes",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause"],
+						"rows": [
+							["No routes", "BGP/OSPF peer down or route control blocking"],
+							["Routes present but traffic blocked", "Contracts missing between internal EPG and External EPG"],
+							["ARP issues", "Interface attachment/VLAN encaps mismatch" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "APIC CLI Tools (moquery / icurl / acidiag)",
+			"description": "Operational tools on the APIC controller (commands vary by ACI/APIC version).",
+			"items": [
+				{
+					"title": "Common APIC tools",
+					"description": "Use these to query managed objects (MOs), faults, endpoints, and controller health.",
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["moquery", "Query APIC managed objects"],
+							["icurl", "Call APIC REST API locally"],
+							["acidiag", "Diagnostics bundle / fabric/controller troubleshooting"],
+							["show controller", "Controller health summary (if available)" ]
+						]
+					},
+					"example": "moquery -c fvTenant\nmoquery -c faultInst | head\nicurl -k https://127.0.0.1/api/node/class/fvTenant.json"
+				},
+				{
+					"title": "Fault and endpoint queries (examples)",
+					"description": "Class names are stable (faultInst, fvCEp), but attributes vary.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Recent faults", "moquery -c faultInst | head -n 50"],
+							["Find endpoints", "moquery -c fvCEp | grep -i '[mac-or-ip]'"],
+							["Show faults via API", "icurl -k 'https://127.0.0.1/api/node/class/faultInst.json?order-by=faultInst.created|desc&page=0&page-size=50'" ]
+						]
+					},
+					"example": "moquery -c faultInst | head\nmoquery -c fvCEp | grep -i 'aa:bb:cc'"
+				}
+			]
+		},
+		{
+			"title": "APIC REST API (Basics)",
+			"description": "Call the APIC API for inventory, automation, and troubleshooting. Prefer secure handling of credentials/certs.",
+			"items": [
+				{
+					"title": "API query patterns",
+					"description": "APIC provides class-based and DN-based endpoints and rich query parameters.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Class query", "GET /api/node/class/fvTenant.json"],
+							["DN query", "GET /api/node/mo/uni/tn-[tenant].json"],
+							["Filter", "?query-target-filter=eq(fvTenant.name,\"TenantA\")"],
+							["Select attrs", "?rsp-subtree=children&rsp-prop-include=config-only" ]
+						]
+					},
+					"example": "# From a workstation (example only):\n# 1) Login to get APIC-cookie\n# 2) Query a class\n\ncurl -sk -c cookiejar.txt https://apic.example/api/aaaLogin.json \\\n  -X POST -H 'Content-Type: application/json' \\\n  -d '{\"aaaUser\":{\"attributes\":{\"name\":\"admin\",\"pwd\":\"PASSWORD\"}}}'\n\ncurl -sk -b cookiejar.txt 'https://apic.example/api/node/class/fvTenant.json'"
+				}
+			]
+		},
+		{
+			"title": "ACI Troubleshooting",
+			"description": "Faults, endpoint learning, and common fabric checks.",
+			"items": [
+				{
+					"title": "Endpoint learning checks",
+					"description": "Endpoints not learned is usually attachment/binding/path issue.",
+					"table": {
+						"headers": ["Check", "Where"],
+						"rows": [
+							["EPG static path/VMM binding", "APIC: EPG -> Static Ports/VMM"],
+							["Domain binding", "APIC: EPG -> Domains"],
+							["Endpoint seen", "APIC: Operations -> Endpoints"],
+							["Faults", "APIC: Operations -> Faults" ]
+						]
+					},
+					"example": "moquery -c fvCEp | grep -i 'aa:bb:cc'\nmoquery -c faultInst | head"
+				},
+				{
+					"title": "Fabric and leaf-level checks (conceptual)",
+					"description": "On leaf/spine NX-OS-like CLI, verify interface, port-channel, and policy programming.",
+					"table": {
+						"headers": ["Check", "Command examples"],
+						"rows": [
+							["Interface state", "show interface brief"],
+							["Port-channel", "show port-channel summary"],
+							["Endpoint (platform-dependent)", "show endpoint"],
+							["CoPP drops (platform-dependent)", "show system internal copp statistics" ]
+						]
+					},
+					"example": null
+				}
+			]
+		}
+	]
+}
