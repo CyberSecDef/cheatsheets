@@ -1,0 +1,634 @@
+{
+	"title": "Visual Basic for Applications",
+	"description": "A practical VBA quick reference for Office automation: language syntax, procedures, error handling, data structures, file I/O, and common Excel/Office object model patterns.",
+	"language": "visual-basic",
+	"categories": [
+		{
+			"title": "Getting Started (VBE)",
+			"description": "Where to put code and how to run it in the Visual Basic Editor.",
+			"items": [
+				{
+					"title": "Where code lives",
+					"description": "Use standard modules for general procedures; class modules for objects/events; ThisWorkbook/Sheet modules for workbook/sheet events.",
+					"table": {
+						"headers": ["Location", "Use"],
+						"rows": [
+							["Standard Module (Module1)", "General Sub/Function macros."],
+							["Class Module", "Define classes, properties, methods, and event sources."],
+							["ThisWorkbook", "Workbook events (Open, BeforeClose, etc.)."],
+							["Sheet1 (worksheet module)", "Worksheet events (Change, SelectionChange)."],
+							["UserForm", "GUI forms and event handlers." ]
+						]
+					},
+					"example": "' Standard module example\nOption Explicit\n\nPublic Sub Hello()\n    MsgBox \"Hello from VBA\"\nEnd Sub"
+				},
+				{
+					"title": "Run and debug",
+					"description": "Common shortcuts and tools (may vary by host app).",
+					"table": {
+						"headers": ["Action", "Typical shortcut"],
+						"rows": [
+							["Run macro", "F5"],
+							["Step into", "F8"],
+							["Breakpoint", "F9"],
+							["Immediate window", "Ctrl+G"],
+							["Object Browser", "F2" ]
+						]
+					},
+					"example": "' Immediate Window examples:\n? 2 + 2\nDebug.Print Now"
+				},
+				{
+					"title": "Option Explicit",
+					"description": "Forces variable declaration and prevents many bugs.",
+					"table": {
+						"headers": ["Directive", "Effect"],
+						"rows": [
+							["Option Explicit", "Must Dim variables before use."],
+							["Option Base 0/1", "Default array lower bound (discouraged; be explicit instead)."],
+							["Option Compare Text/Binary", "String comparison behavior (rarely needed)." ]
+						]
+					},
+					"example": "Option Explicit\n\nSub Demo()\n    Dim count As Long\n    count = 1\nEnd Sub"
+				}
+			]
+		},
+		{
+			"title": "Variables, Types, and Constants",
+			"description": "Declare variables explicitly and choose types for correctness and performance.",
+			"items": [
+				{
+					"title": "Common data types",
+					"description": "Prefer Long over Integer in modern VBA (Integer is 16-bit).",
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["Boolean", "True/False"],
+							["Byte", "0..255"],
+							["Integer", "-32768..32767 (avoid for counters)"],
+							["Long", "32-bit signed; use for row/column indices"],
+							["LongLong", "64-bit (VBA7; not in all hosts)"],
+							["Single/Double", "Floating point"],
+							["Currency", "Fixed-point; good for money"],
+							["Date", "Date+time"],
+							["String", "Text"],
+							["Variant", "Dynamic; flexible but slower and easier to misuse"],
+							["Object", "COM object reference" ]
+						]
+					},
+					"example": "Option Explicit\n\nSub Types()\n    Dim i As Long\n    Dim name As String\n    Dim when As Date\n    Dim ok As Boolean\nEnd Sub"
+				},
+				{
+					"title": "Constants and enums",
+					"description": "Use Const for compile-time constants; use Enum for readable integer choices.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["Const", "Const MaxRetries As Long = 3"],
+							["Enum", "Enum LogLevel: Info = 1: Warn = 2: Error = 3: End Enum" ]
+						]
+					},
+					"example": "Option Explicit\n\nPublic Enum LogLevel\n    Info = 1\n    Warn = 2\n    Err = 3\nEnd Enum\n\nPublic Const AppName As String = \"Cheatsheets\""
+				},
+				{
+					"title": "Scope: Public / Private / module-level",
+					"description": "Module-level variables keep state; use carefully.",
+					"table": {
+						"headers": ["Keyword", "Scope"],
+						"rows": [
+							["Dim (in procedure)", "Local"],
+							["Private (module)", "Visible within module only"],
+							["Public (module)", "Visible across project"],
+							["Static (procedure)", "Preserves value between calls" ]
+						]
+					},
+					"example": "Option Explicit\n\nPrivate callCount As Long\n\nPublic Sub Bump()\n    callCount = callCount + 1\n    Debug.Print callCount\nEnd Sub"
+				}
+			]
+		},
+		{
+			"title": "Procedures and Functions",
+			"description": "Define macros (Sub) and functions (Function) with parameters and return values.",
+			"items": [
+				{
+					"title": "Sub vs Function",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Returns"],
+						"rows": [
+							["Sub", "No return value; used for actions/macros"],
+							["Function", "Returns a value via the function name" ]
+						]
+					},
+					"example": "Option Explicit\n\nPublic Sub SayHello(ByVal who As String)\n    MsgBox \"Hello, \" & who\nEnd Sub\n\nPublic Function Add(ByVal a As Double, ByVal b As Double) As Double\n    Add = a + b\nEnd Function"
+				},
+				{
+					"title": "ByVal vs ByRef",
+					"description": "ByRef is the default in VBA. Prefer ByVal unless you intend to modify the caller's variable.",
+					"table": {
+						"headers": ["Mode", "Behavior"],
+						"rows": [
+							["ByVal", "Passes a copy (for value types)"],
+							["ByRef", "Passes a reference; callee can change caller value" ]
+						]
+					},
+					"example": "Option Explicit\n\nPrivate Sub Inc(ByRef x As Long)\n    x = x + 1\nEnd Sub\n\nSub DemoByRef()\n    Dim n As Long\n    n = 10\n    Inc n\n    Debug.Print n  ' 11\nEnd Sub"
+				},
+				{
+					"title": "Optional params and ParamArray",
+					"description": "Optional params must come after required params. ParamArray collects remaining args into a Variant array.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Optional", "Optional sep As String = \",\""],
+							["ParamArray", "ParamArray parts() As Variant" ]
+						]
+					},
+					"example": "Option Explicit\n\nPublic Function Join2(Optional ByVal sep As String = \",\", ParamArray parts() As Variant) As String\n    Dim i As Long\n    Dim s As String\n    For i = LBound(parts) To UBound(parts)\n        If i > LBound(parts) Then s = s & sep\n        s = s & CStr(parts(i))\n    Next i\n    Join2 = s\nEnd Function"
+				}
+			]
+		},
+		{
+			"title": "Control Flow",
+			"description": "Branching, loops, and Select Case.",
+			"items": [
+				{
+					"title": "If / ElseIf / Else",
+					"description": null,
+					"table": {
+						"headers": ["Pattern", "Notes"],
+						"rows": [
+							["If ... Then", "Single-line and block forms exist."],
+							["ElseIf", "Multiple conditions."],
+							["Else", "Fallback." ]
+						]
+					},
+					"example": "If score >= 90 Then\n    grade = \"A\"\nElseIf score >= 80 Then\n    grade = \"B\"\nElse\n    grade = \"C\"\nEnd If"
+				},
+				{
+					"title": "Select Case",
+					"description": "Cleaner than multiple ElseIf blocks.",
+					"table": {
+						"headers": ["Form", "Example"],
+						"rows": [
+							["Value", "Select Case n ... Case 1 ... Case Else ... End Select"],
+							["Ranges", "Case 1 To 10"],
+							["Multiple", "Case 1, 3, 5" ]
+						]
+					},
+					"example": "Select Case day\n    Case 1 To 5\n        kind = \"Weekday\"\n    Case 6, 7\n        kind = \"Weekend\"\n    Case Else\n        kind = \"Unknown\"\nEnd Select"
+				},
+				{
+					"title": "Loops",
+					"description": "Use For Each for collections; use Do While/Until for condition-driven loops.",
+					"table": {
+						"headers": ["Loop", "Example"],
+						"rows": [
+							["For", "For i = 1 To 10: ...: Next"],
+							["For Step", "For i = 10 To 1 Step -1"],
+							["For Each", "For Each v In collection"],
+							["Do While", "Do While cond: ...: Loop"],
+							["Do Until", "Do Until cond: ...: Loop"],
+							["Exit", "Exit For / Exit Do" ]
+						]
+					},
+					"example": "Dim i As Long\nFor i = 1 To 3\n    Debug.Print i\nNext i\n\nDim cell As Range\nFor Each cell In Range(\"A1:A3\")\n    Debug.Print cell.Value\nNext cell"
+				}
+			]
+		},
+		{
+			"title": "Strings and Text",
+			"description": "String building, searching, splitting, and formatting.",
+			"items": [
+				{
+					"title": "Common string functions",
+					"description": null,
+					"table": {
+						"headers": ["Function", "Purpose"],
+						"rows": [
+							["Len", "Length"],
+							["Left / Mid / Right", "Substrings"],
+							["InStr / InStrRev", "Find substring index"],
+							["Replace", "Replace occurrences"],
+							["Split", "Split into array"],
+							["Join", "Join array"],
+							["Trim / LTrim / RTrim", "Strip spaces"],
+							["UCase / LCase", "Case conversion"],
+							["StrComp", "Compare with options" ]
+						]
+					},
+					"example": "Dim s As String\ns = \"  a,b,c  \"\nDebug.Print Trim$(s)\nDebug.Print InStr(1, s, \"b\")\nDebug.Print Replace(s, \",\", \"|\")"
+				},
+				{
+					"title": "Formatting values",
+					"description": "Use Format$ for strings; avoid Format for numeric computation.",
+					"table": {
+						"headers": ["Function", "Example"],
+						"rows": [
+							["Format$", "Format$(Now, \"yyyy-mm-dd\")"],
+							["CStr", "CStr(123)"],
+							["Val", "Val(\"12.3\")" ]
+						]
+					},
+					"example": "Debug.Print Format$(Now, \"yyyy-mm-dd HH:nn:ss\")\nDebug.Print Format$(1234.5, \"#,##0.00\")"
+				},
+				{
+					"title": "RegExp (VBScript.RegExp)",
+					"description": "VBA doesn't have built-in regex; use the VBScript.RegExp COM object.",
+					"table": {
+						"headers": ["Property/Method", "Use"],
+						"rows": [
+							["Pattern", "Regex pattern"],
+							["Global", "Replace all"],
+							["IgnoreCase", "Case-insensitive"],
+							["Test", "Boolean match"],
+							["Execute", "Get MatchCollection"],
+							["Replace", "Replace matches" ]
+						]
+					},
+					"example": "Dim re As Object\nSet re = CreateObject(\"VBScript.RegExp\")\nre.Pattern = \"\\b[A-Z]{2}\\d{3}\\b\"\nre.Global = True\nDebug.Print re.Test(\"AB123 and XY999\")\nDebug.Print re.Replace(\"AB123 and XY999\", \"<ID>\")"
+				}
+			]
+		},
+		{
+			"title": "Dates and Times",
+			"description": "Date type, parsing, and arithmetic.",
+			"items": [
+				{
+					"title": "Common date functions",
+					"description": null,
+					"table": {
+						"headers": ["Function", "Purpose"],
+						"rows": [
+							["Now", "Current date/time"],
+							["Date", "Current date"],
+							["Time", "Current time"],
+							["DateSerial", "Build date"],
+							["TimeSerial", "Build time"],
+							["DateAdd", "Add interval"],
+							["DateDiff", "Difference between dates"],
+							["Weekday", "Day of week" ]
+						]
+					},
+					"example": "Dim d As Date\nd = DateSerial(2025, 12, 20)\nDebug.Print DateAdd(\"d\", 7, d)\nDebug.Print DateDiff(\"d\", d, Date)"
+				}
+			]
+		},
+		{
+			"title": "Arrays and Collections",
+			"description": "Work with arrays, dynamic resizing, Collection, and Dictionary.",
+			"items": [
+				{
+					"title": "Arrays",
+					"description": "Use LBound/UBound; ReDim Preserve can only resize the last dimension.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Declare", "Dim a(1 To 10) As Long"],
+							["Dynamic", "Dim a() As Long"],
+							["Resize", "ReDim a(0 To n)"],
+							["Preserve", "ReDim Preserve a(0 To n)"],
+							["Bounds", "LBound(a), UBound(a)" ]
+						]
+					},
+					"example": "Dim a() As Long\nReDim a(0 To 2)\na(0) = 10\nReDim Preserve a(0 To 3)\nDebug.Print UBound(a)"
+				},
+				{
+					"title": "Collection",
+					"description": "Collection is built-in and simple; items are Variants.",
+					"table": {
+						"headers": ["Method", "Notes"],
+						"rows": [
+							["Add", "c.Add item, [key], [before], [after]"],
+							["Item", "c.Item(indexOrKey)"],
+							["Remove", "c.Remove index"],
+							["Count", "c.Count" ]
+						]
+					},
+					"example": "Dim c As Collection\nSet c = New Collection\nc.Add \"A\"\nc.Add \"B\", \"bee\"\nDebug.Print c.Count\nDebug.Print c.Item(1)\nDebug.Print c.Item(\"bee\")"
+				},
+				{
+					"title": "Scripting.Dictionary",
+					"description": "For key/value maps, use Scripting.Dictionary (late-bound or add reference to Microsoft Scripting Runtime).",
+					"table": {
+						"headers": ["Member", "Notes"],
+						"rows": [
+							["Add", "d.Add key, value"],
+							["Exists", "d.Exists(key)"],
+							["Item", "d(key)"],
+							["Keys/Items", "d.Keys / d.Items"],
+							["Remove/RemoveAll", "Delete entries"],
+							["CompareMode", "TextCompare for case-insensitive keys" ]
+						]
+					},
+					"example": "Dim d As Object\nSet d = CreateObject(\"Scripting.Dictionary\")\nd.CompareMode = 1 ' vbTextCompare\nd.Add \"a\", 1\nDebug.Print d.Exists(\"A\")\nDebug.Print d(\"A\")"
+				}
+			]
+		},
+		{
+			"title": "Error Handling",
+			"description": "Use structured error handling with On Error and clean-up patterns.",
+			"items": [
+				{
+					"title": "On Error patterns",
+					"description": "Prefer On Error GoTo Handler over Resume Next; always reset with On Error GoTo 0 when done.",
+					"table": {
+						"headers": ["Statement", "Meaning"],
+						"rows": [
+							["On Error GoTo Handler", "Route errors to label"],
+							["On Error Resume Next", "Ignore errors (dangerous; must check Err)"],
+							["On Error GoTo 0", "Disable error handler (reset)"],
+							["Err.Number / Err.Description", "Inspect current error"],
+							["Err.Clear", "Clear error state" ]
+						]
+					},
+					"example": "Option Explicit\n\nSub SafeOpen()\n    On Error GoTo Handler\n\n    Dim f As Integer\n    f = FreeFile\n    Open \"C:\\missing.txt\" For Input As #f\n    Close #f\n\n    On Error GoTo 0\n    Exit Sub\n\nHandler:\n    Debug.Print \"Error\", Err.Number, Err.Description\n    On Error GoTo 0\nEnd Sub"
+				},
+				{
+					"title": "Cleanup with Exit Sub / Finally-style",
+					"description": "Use a single cleanup label for closing files/restoring app settings.",
+					"table": {
+						"headers": ["Pattern", "Notes"],
+						"rows": [
+							["Exit Sub before handler", "Avoid running handler on success."],
+							["Cleanup label", "Always runs for both success and failure." ]
+						]
+					},
+					"example": "Sub DemoCleanup()\n    On Error GoTo Handler\n\n    ' work\n\nCleanup:\n    ' restore settings, close objects\n    On Error GoTo 0\n    Exit Sub\n\nHandler:\n    Debug.Print Err.Number, Err.Description\n    Resume Cleanup\nEnd Sub"
+				}
+			]
+		},
+		{
+			"title": "Debugging and Diagnostics",
+			"description": "Tools for printing values, assertions, and stepping through code.",
+			"items": [
+				{
+					"title": "Debug.Print and assertions",
+					"description": "Debug.Print writes to the Immediate Window. Use Debug.Assert for development-time checks.",
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["Debug.Print", "Log a value"],
+							["Debug.Assert", "Break when condition is False"],
+							["Stop", "Break into debugger"],
+							["Timer", "Seconds since midnight (timing)" ]
+						]
+					},
+					"example": "Debug.Print \"Row\", i\nDebug.Assert i > 0\nDim t As Double: t = Timer\n' ... work ...\nDebug.Print \"Elapsed\", Timer - t"
+				}
+			]
+		},
+		{
+			"title": "File I/O",
+			"description": "Read and write text files using VBA's Open/Close and FileSystemObject.",
+			"items": [
+				{
+					"title": "VBA Open / Close",
+					"description": "Use FreeFile for a file handle; always Close in a cleanup block.",
+					"table": {
+						"headers": ["Mode", "Example"],
+						"rows": [
+							["Write", "Open path For Output As #f"],
+							["Append", "Open path For Append As #f"],
+							["Read", "Open path For Input As #f"],
+							["Print", "Print #f, line"],
+							["Line Input", "Line Input #f, line" ]
+						]
+					},
+					"example": "Option Explicit\n\nSub WriteText()\n    Dim f As Integer\n    f = FreeFile\n\n    Open Environ$(\"TEMP\") & \"\\demo.txt\" For Output As #f\n    Print #f, \"hello\"\n    Print #f, \"world\"\n    Close #f\nEnd Sub"
+				},
+				{
+					"title": "FileSystemObject (Scripting)",
+					"description": "Convenient file APIs via COM (late-bound or add reference).",
+					"table": {
+						"headers": ["API", "Notes"],
+						"rows": [
+							["CreateObject('Scripting.FileSystemObject')", "Create FSO"],
+							["OpenTextFile(path, iomode)", "Open for read/write/append"],
+							["ReadAll", "Read entire file"],
+							["WriteLine", "Write a line"],
+							["FileExists/FolderExists", "Existence checks" ]
+						]
+					},
+					"example": "Dim fso As Object: Set fso = CreateObject(\"Scripting.FileSystemObject\")\nDim ts As Object: Set ts = fso.OpenTextFile(Environ$(\"TEMP\") & \"\\demo.txt\", 1)\nDebug.Print ts.ReadAll\nts.Close"
+				}
+			]
+		},
+		{
+			"title": "Excel Object Model (Most Common Patterns)",
+			"description": "High-signal Excel automation patterns: Range, Worksheet, Workbook, and performance toggles.",
+			"items": [
+				{
+					"title": "Referencing workbooks and sheets",
+					"description": "Be explicit about which workbook/sheet you are using.",
+					"table": {
+						"headers": ["Object", "Example"],
+						"rows": [
+							["ActiveWorkbook", "Set wb = ActiveWorkbook"],
+							["ThisWorkbook", "Set wb = ThisWorkbook"],
+							["Worksheet", "Set ws = wb.Worksheets(\"Sheet1\")"],
+							["Range", "Set r = ws.Range(\"A1:B10\")" ]
+						]
+					},
+					"example": "Option Explicit\n\nSub RefDemo()\n    Dim wb As Workbook\n    Dim ws As Worksheet\n    Set wb = ThisWorkbook\n    Set ws = wb.Worksheets(1)\n    ws.Range(\"A1\").Value = \"Hello\"\nEnd Sub"
+				},
+				{
+					"title": "Reading/writing values efficiently",
+					"description": "Read/write entire ranges using Variant arrays to avoid slow cell-by-cell loops.",
+					"table": {
+						"headers": ["Pattern", "Why"],
+						"rows": [
+							["arr = rng.Value2", "Pull a 2D Variant array (fast)"],
+							["rng.Value2 = arr", "Push 2D array back (fast)"],
+							["Value2 vs Value", "Value2 avoids Currency/Date conversions" ]
+						]
+					},
+					"example": "Sub FastRange()\n    Dim ws As Worksheet\n    Set ws = ThisWorkbook.Worksheets(1)\n\n    Dim rng As Range\n    Set rng = ws.Range(\"A1:C1000\")\n\n    Dim arr As Variant\n    arr = rng.Value2\n\n    Dim r As Long\n    For r = 1 To UBound(arr, 1)\n        arr(r, 1) = arr(r, 1) & \"!\"\n    Next r\n\n    rng.Value2 = arr\nEnd Sub"
+				},
+				{
+					"title": "Finding last row/column",
+					"description": "Choose method depending on your sheet layout; UsedRange can be misleading if not cleaned.",
+					"table": {
+						"headers": ["Task", "Code"],
+						"rows": [
+							["Last used row in column A", "lastRow = ws.Cells(ws.Rows.Count, \"A\").End(xlUp).Row"],
+							["Last used column in row 1", "lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column"],
+							["UsedRange", "Set ur = ws.UsedRange" ]
+						]
+					},
+					"example": "Dim lastRow As Long\nlastRow = ws.Cells(ws.Rows.Count, \"A\").End(xlUp).Row\nDebug.Print lastRow"
+				},
+				{
+					"title": "Performance toggles",
+					"description": "Disable expensive UI updates during bulk operations; always restore settings.",
+					"table": {
+						"headers": ["Setting", "Notes"],
+						"rows": [
+							["Application.ScreenUpdating", "False speeds up UI redraw"],
+							["Application.Calculation", "Set to xlCalculationManual"],
+							["Application.EnableEvents", "False to avoid event recursion"],
+							["Application.DisplayAlerts", "False to suppress prompts" ]
+						]
+					},
+					"example": "Sub BulkWork()\n    Dim oldCalc As XlCalculation\n    oldCalc = Application.Calculation\n\n    Application.ScreenUpdating = False\n    Application.EnableEvents = False\n    Application.Calculation = xlCalculationManual\n\n    On Error GoTo Cleanup\n    ' ... work ...\n\nCleanup:\n    Application.Calculation = oldCalc\n    Application.EnableEvents = True\n    Application.ScreenUpdating = True\nEnd Sub"
+				}
+			]
+		},
+		{
+			"title": "Events",
+			"description": "Respond to workbook/worksheet/application events.",
+			"items": [
+				{
+					"title": "Worksheet events",
+					"description": "Put handlers in the worksheet's code module.",
+					"table": {
+						"headers": ["Event", "When it fires"],
+						"rows": [
+							["Worksheet_Change(ByVal Target As Range)", "Cell values change"],
+							["Worksheet_SelectionChange(ByVal Target As Range)", "Selection changes"],
+							["Worksheet_BeforeDoubleClick", "Before double-click" ]
+						]
+					},
+					"example": "' In Sheet1 code-behind:\nPrivate Sub Worksheet_Change(ByVal Target As Range)\n    If Not Intersect(Target, Me.Range(\"A:A\")) Is Nothing Then\n        Debug.Print \"Column A changed\"\n    End If\nEnd Sub"
+				},
+				{
+					"title": "Workbook events",
+					"description": "Put handlers in ThisWorkbook.",
+					"table": {
+						"headers": ["Event", "When it fires"],
+						"rows": [
+							["Workbook_Open", "Workbook opens"],
+							["Workbook_BeforeClose", "Before workbook closes"],
+							["Workbook_SheetChange", "Any sheet changed" ]
+						]
+					},
+					"example": "' In ThisWorkbook:\nPrivate Sub Workbook_Open()\n    Debug.Print \"Opened\"\nEnd Sub"
+				}
+			]
+		},
+		{
+			"title": "Classes and OOP",
+			"description": "Class modules, properties, methods, and encapsulation.",
+			"items": [
+				{
+					"title": "Class module basics",
+					"description": "Use Property Get/Let/Set for properties; use Private fields for encapsulation.",
+					"table": {
+						"headers": ["Member", "Purpose"],
+						"rows": [
+							["Private field", "Internal state"],
+							["Property Get", "Read property"],
+							["Property Let", "Set value-type property"],
+							["Property Set", "Set object reference property"],
+							["Class_Initialize / Class_Terminate", "Constructor/finalizer hooks" ]
+						]
+					},
+					"example": "' Class Module: Person\nOption Explicit\nPrivate mName As String\n\nPublic Property Get Name() As String\n    Name = mName\nEnd Property\n\nPublic Property Let Name(ByVal value As String)\n    mName = value\nEnd Property"
+				},
+				{
+					"title": "WithEvents (event sinks)",
+					"description": "Use WithEvents in a class module to handle events from an object.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["WithEvents variable", "Declared in a class module"],
+							["Set the source", "Assign the object instance"],
+							["Handlers", "Sub source_EventName(...)" ]
+						]
+					},
+					"example": "' In class module: AppEvents\nOption Explicit\nPrivate WithEvents App As Application\n\nPublic Sub Hook()\n    Set App = Application\nEnd Sub\n\nPrivate Sub App_WorkbookOpen(ByVal Wb As Workbook)\n    Debug.Print \"Opened: \" & Wb.Name\nEnd Sub"
+				}
+			]
+		},
+		{
+			"title": "Common Built-in Functions (Quick List)",
+			"description": "Frequently used VBA built-ins for conversion, math, and inspection.",
+			"items": [
+				{
+					"title": "Conversions and checks",
+					"description": null,
+					"table": {
+						"headers": ["Function", "Use"],
+						"rows": [
+							["CStr / CLng / CDbl / CDate", "Convert types"],
+							["TypeName / VarType", "Inspect Variant runtime type"],
+							["IsNumeric / IsDate", "Basic parsing checks"],
+							["IsEmpty / IsNull", "Variant checks"],
+							["IIf", "Inline conditional (evaluates both branches!)" ]
+						]
+					},
+					"example": "Dim v As Variant\nv = \"123\"\nIf IsNumeric(v) Then Debug.Print CLng(v)"
+				},
+				{
+					"title": "Math",
+					"description": null,
+					"table": {
+						"headers": ["Function", "Use"],
+						"rows": [
+							["Abs", "Absolute value"],
+							["Sqr", "Square root"],
+							["Rnd / Randomize", "Random numbers"],
+							["Int / Fix", "Truncation"],
+							["Round", "Banker's rounding in VBA"],
+							["Log / Exp", "Natural log / exponent" ]
+						]
+					},
+					"example": "Randomize 1\nDebug.Print Rnd()\nDebug.Print Round(2.5, 0)  ' VBA uses banker's rounding"
+				}
+			]
+		},
+		{
+			"title": "Interop and Automation (Concepts)",
+			"description": "Automate other Office apps and COM servers.",
+			"items": [
+				{
+					"title": "CreateObject / GetObject",
+					"description": "CreateObject starts a new instance; GetObject attaches to an existing instance/file.",
+					"table": {
+						"headers": ["Function", "Notes"],
+						"rows": [
+							["CreateObject(progId)", "Create COM object (late-bound)."],
+							["GetObject([path], progId)", "Bind to existing instance or open file."],
+							["Early vs late binding", "Early needs references; late uses Object + runtime dispatch." ]
+						]
+					},
+					"example": "Dim outlook As Object\nSet outlook = CreateObject(\"Outlook.Application\")\nDebug.Print TypeName(outlook)"
+				},
+				{
+					"title": "Outlook mail (very basic)",
+					"description": "A minimal example; policies/security prompts may apply.",
+					"table": {
+						"headers": ["Object", "Use"],
+						"rows": [
+							["Outlook.Application", "Entry point"],
+							["CreateItem(0)", "New mail item"],
+							["MailItem.To/Subject/Body", "Set fields"],
+							["MailItem.Display/Send", "Show or send" ]
+						]
+					},
+					"example": "Dim ol As Object: Set ol = CreateObject(\"Outlook.Application\")\nDim mail As Object: Set mail = ol.CreateItem(0)\nmail.To = \"someone@example.com\"\nmail.Subject = \"Hello\"\nmail.Body = \"Sent from VBA\"\nmail.Display"
+				}
+			]
+		},
+		{
+			"title": "Security and Macro Hygiene",
+			"description": "Macros can be dangerous; follow safer practices.",
+			"items": [
+				{
+					"title": "Safer defaults",
+					"description": "Avoid auto-running macros unless necessary; never run untrusted macro-enabled files.",
+					"table": {
+						"headers": ["Practice", "Reason"],
+						"rows": [
+							["Digitally sign macros (if your org supports it)", "Reduces tampering and improves trust."],
+							["Use least privilege", "Avoid admin-only automation."],
+							["Limit external calls", "Reduce attack surface."],
+							["Validate inputs", "Treat worksheet/user input as untrusted."],
+							["Avoid storing secrets", "Prefer secure stores; don't hardcode credentials." ]
+						]
+					},
+					"example": "' Good habit\nOption Explicit\n' Validate cell input before using it in file paths / SQL / etc."
+				}
+			]
+		}
+	]
+}

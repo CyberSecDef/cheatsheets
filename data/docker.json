@@ -61,10 +61,10 @@
                         "headers": ["Command", "Description"],
                         "rows": [
                             ["docker images", "Lists images on your machine."],
-                            ["docker pull <image>:<tag>", "Downloads an image from a registry."],
-                            ["docker build -t <name>:<tag> .", "Builds an image from a Dockerfile in the current directory."],
-                            ["docker tag <src> <dst>", "Adds a new tag to an image."],
-                            ["docker rmi <image>", "Removes an image by name or ID."],
+                            ["docker pull [image]:[tag]", "Downloads an image from a registry."],
+                            ["docker build -t [name]:[tag] .", "Builds an image from a Dockerfile in the current directory."],
+                            ["docker tag [src] [dst]", "Adds a new tag to an image."],
+                            ["docker rmi [image]", "Removes an image by name or ID."],
                             ["docker image prune", "Removes dangling images."]
                         ]
                     },
@@ -76,8 +76,8 @@
                     "table": {
                         "headers": ["Command", "Description"],
                         "rows": [
-                            ["docker inspect <image>", "Shows detailed JSON metadata."],
-                            ["docker history <image>", "Shows layer history."],
+                            ["docker inspect [image]", "Shows detailed JSON metadata."],
+                            ["docker history [image]", "Shows layer history."],
                             ["docker image ls --digests", "Shows repo digests for pulled images."]
                         ]
                     },
@@ -95,12 +95,12 @@
                     "table": {
                         "headers": ["Flag", "Meaning"],
                         "rows": [
-                            ["--name <name>", "Assigns a name to the container."],
+                            ["--name [name]", "Assigns a name to the container."],
                             ["-d", "Runs in detached mode (background)."],
                             ["-it", "Interactive + pseudo-TTY (good for shells)."],
                             ["--rm", "Deletes the container when it exits."],
-                            ["-p <host>:<container>", "Publishes a container port to the host."],
-                            ["-v <host>:<container>", "Bind-mounts a host path into the container."],
+                            ["-p [host]:[contanier]", "Publishes a container port to the host."],
+                            ["-v [host]:[contanier]", "Bind-mounts a host path into the container."],
                             ["-e KEY=VALUE", "Sets environment variables."],
                             ["--restart unless-stopped", "Restart policy for long-running services."]
                         ]
@@ -115,11 +115,11 @@
                         "rows": [
                             ["docker ps", "Lists running containers."],
                             ["docker ps -a", "Lists all containers (including stopped)."],
-                            ["docker start <container>", "Starts a stopped container."],
-                            ["docker stop <container>", "Stops a running container (SIGTERM then SIGKILL)."],
-                            ["docker restart <container>", "Restarts a container."],
-                            ["docker rm <container>", "Removes a stopped container."],
-                            ["docker rm -f <container>", "Forcibly removes a running container."]
+                            ["docker start [contanier]", "Starts a stopped container."],
+                            ["docker stop [contanier]", "Stops a running container (SIGTERM then SIGKILL)."],
+                            ["docker restart [contanier]", "Restarts a container."],
+                            ["docker rm [contanier]", "Removes a stopped container."],
+                            ["docker rm -f [contanier]", "Forcibly removes a running container."]
                         ]
                     },
                     "example": "docker ps\ndocker stop web\ndocker rm web"
@@ -136,10 +136,10 @@
                     "table": {
                         "headers": ["Command", "Description"],
                         "rows": [
-                            ["docker logs <container>", "Shows container stdout/stderr logs."],
-                            ["docker logs -f <container>", "Follows logs (stream)."],
-                            ["docker inspect <container>", "Shows container config and runtime state as JSON."],
-                            ["docker top <container>", "Shows running processes inside the container."],
+                            ["docker logs [contanier]", "Shows container stdout/stderr logs."],
+                            ["docker logs -f [contanier]", "Follows logs (stream)."],
+                            ["docker inspect [contanier]", "Shows container config and runtime state as JSON."],
+                            ["docker top [contanier]", "Shows running processes inside the container."],
                             ["docker stats", "Shows live resource usage."]
                         ]
                     },
@@ -151,9 +151,9 @@
                     "table": {
                         "headers": ["Command", "Description"],
                         "rows": [
-                            ["docker exec -it <container> sh", "Open a shell (alpine/busybox often use sh)."],
-                            ["docker exec -it <container> bash", "Open bash (if installed)."],
-                            ["docker exec <container> <cmd>", "Run a single command."]
+                            ["docker exec -it [contanier] sh", "Open a shell (alpine/busybox often use sh)."],
+                            ["docker exec -it [contanier] bash", "Open bash (if installed)."],
+                            ["docker exec [contanier] [cmd]", "Run a single command."]
                         ]
                     },
                     "example": "docker exec -it web sh\ndocker exec web nginx -t"
@@ -171,11 +171,11 @@
                         "headers": ["Command", "Description"],
                         "rows": [
                             ["docker network ls", "Lists networks."],
-                            ["docker network create <name>", "Creates a user-defined bridge network."],
-                            ["docker network inspect <name>", "Shows network details and connected containers."],
-                            ["docker network connect <net> <container>", "Connects a container to a network."],
-                            ["docker network disconnect <net> <container>", "Disconnects a container from a network."],
-                            ["docker network rm <name>", "Removes a network."]
+                            ["docker network create [name]", "Creates a user-defined bridge network."],
+                            ["docker network inspect [name]", "Shows network details and connected containers."],
+                            ["docker network connect [net] [contanier]", "Connects a container to a network."],
+                            ["docker network disconnect [net] [contanier]", "Disconnects a container from a network."],
+                            ["docker network rm [name]", "Removes a network."]
                         ]
                     },
                     "example": "docker network create appnet\ndocker run -d --name db --network appnet postgres:16\ndocker run -d --name api --network appnet myapi:dev\ndocker network inspect appnet"
@@ -193,9 +193,9 @@
                         "headers": ["Command", "Description"],
                         "rows": [
                             ["docker volume ls", "Lists volumes."],
-                            ["docker volume create <name>", "Creates a named volume."],
-                            ["docker volume inspect <name>", "Shows volume details."],
-                            ["docker volume rm <name>", "Removes a volume (must not be in use)."],
+                            ["docker volume create [name]", "Creates a named volume."],
+                            ["docker volume inspect [name]", "Shows volume details."],
+                            ["docker volume rm [name]", "Removes a volume (must not be in use)."],
                             ["docker volume prune", "Removes unused volumes."]
                         ]
                     },
@@ -230,7 +230,7 @@
                             ["docker compose down", "Stops and removes containers/networks (keeps named volumes unless -v)."],
                             ["docker compose logs -f", "Follows logs for all services."],
                             ["docker compose ps", "Lists compose services."],
-                            ["docker compose exec <svc> <cmd>", "Exec into a service container."],
+                            ["docker compose exec [svc] [cmd]", "Exec into a service container."],
                             ["docker compose build", "Builds service images."]
                         ]
                     },
@@ -250,9 +250,9 @@
                         "rows": [
                             ["docker login", "Authenticates to a registry."],
                             ["docker logout", "Removes stored credentials for a registry."],
-                            ["docker push <image>:<tag>", "Uploads an image to a registry."],
-                            ["docker pull <image>:<tag>", "Downloads an image from a registry."],
-                            ["docker tag <local> <registry>/<repo>:<tag>", "Tags for pushing to a specific registry/repo."]
+                            ["docker push [image]:[tag]", "Uploads an image to a registry."],
+                            ["docker pull [image]:[tag]", "Downloads an image from a registry."],
+                            ["docker tag [local] [registry]/[repo]:[tag]", "Tags for pushing to a specific registry/repo."]
                         ]
                     },
                     "example": "docker login\ndocker tag myapp:dev myrepo/myapp:dev\ndocker push myrepo/myapp:dev"
@@ -287,10 +287,10 @@
                         "headers": ["Question", "Command"],
                         "rows": [
                             ["Is the container running?", "docker ps -a"],
-                            ["Why did it exit?", "docker logs <container>"],
-                            ["What command is it running?", "docker inspect <container>"],
-                            ["Are ports mapped?", "docker port <container>"],
-                            ["What networks is it on?", "docker inspect <container> | grep -i network"],
+                            ["Why did it exit?", "docker logs [contanier]"],
+                            ["What command is it running?", "docker inspect [contanier]"],
+                            ["Are ports mapped?", "docker port [contanier]"],
+                            ["What networks is it on?", "docker inspect [contanier] | grep -i network"],
                             ["Is the image correct?", "docker image ls"]
                         ]
                     },
