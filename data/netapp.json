@@ -1,0 +1,638 @@
+{
+	"title": "NetApp ONTAP",
+	"description": "A practical, command-heavy reference for NetApp ONTAP administration (clusters, SVMs, volumes, LIFs), NAS (NFS/SMB), SAN (iSCSI/FC/NVMe), snapshots, SnapMirror replication, networking, security/RBAC, monitoring, and automation via REST, PowerShell Toolkit, Ansible, and Python.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Architecture",
+			"description": "Core ONTAP concepts and how the platform is structured.",
+			"items": [
+				{
+					"title": "Key concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Cluster", "A group of nodes managed as one storage system."],
+							["Node", "A physical controller or ONTAP Select instance in a cluster."],
+							["HA pair", "Two nodes configured for failover."],
+							["SVM (Vserver)", "Storage Virtual Machine; logical tenant containing data interfaces, volumes, and protocol configuration."],
+							["Aggregate", "A pool of disks/partitions providing storage to volumes."],
+							["Volume (FlexVol)", "Logical container for NAS/SAN data; thin provisioning, snapshots, efficiency."],
+							["LIF", "Logical Interface (IP or FC); the data/network endpoint clients connect to."],
+							["Junction path", "The NFS namespace mount point (e.g., /data/projects)."],
+							["Export policy", "NFS access control rules."],
+							["Share", "SMB/CIFS share definition."],
+							["LUN", "Block device presented over iSCSI/FC/NVMe (mapped to initiator groups)."],
+							["Snapshot", "Space-efficient, point-in-time copy of a volume."],
+							["SnapMirror", "Replication technology (DR, mirror-vault, etc.)."],
+							["S3", "ONTAP S3 object storage service (feature dependent)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "CLI modes and common help",
+					"description": "ONTAP has privilege levels (admin/advanced). Be cautious in advanced mode.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show version", "version"],
+							["Show cluster identity", "cluster identity show"],
+							["Enter advanced mode", "set -privilege advanced"],
+							["Back to admin", "set -privilege admin"],
+							["Search commands", "? <pattern>"],
+							["Show command syntax", "<command> ?"],
+							["Show history", "history" ]
+						]
+					},
+					"example": "version\ncluster identity show\nset -privilege advanced"
+				}
+			]
+		},
+		{
+			"title": "Access, Accounts, and RBAC",
+			"description": "Authentication, users, roles, and SSH access.",
+			"items": [
+				{
+					"title": "Users and roles (cluster)",
+					"description": "Roles and logins can be scoped to the cluster or an SVM.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List logins", "security login show"],
+							["List roles", "security login role show"],
+							["Create role", "security login role create -role <role> -cmddirname <cmd_dir> -access all"],
+							["Create admin login", "security login create -user-or-group-name <user> -application ssh -authentication-method password -role admin"],
+							["Lock/unlock user", "security login lock|unlock -user-or-group-name <user>" ]
+						]
+					},
+					"example": "security login show\nsecurity login role show"
+				},
+				{
+					"title": "SSH and session controls",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show SSH settings", "security ssh show"],
+							["Show current sessions", "security session show"],
+							["Terminate session", "security session kill -session-id <id>" ]
+						]
+					},
+					"example": "security session show"
+				}
+			]
+		},
+		{
+			"title": "Cluster and Node Administration",
+			"description": "Inventory, health, HA state, and basic node operations.",
+			"items": [
+				{
+					"title": "Cluster status and health",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Show nodes", "cluster show"],
+							["Show node details", "system node show -instance"],
+							["Show health", "system health status show"],
+							["Show alerts", "system health alert show"],
+							["Show services (advanced)", "system services web show" ]
+						]
+					},
+					"example": "cluster show\nsystem health status show\nsystem health alert show"
+				},
+				{
+					"title": "HA and takeover/giveback",
+					"description": "Exact commands/availability can vary by ONTAP version and platform.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show HA status", "storage failover show"],
+							["Initiate takeover", "storage failover takeover -ofnode <partner_node>"],
+							["Initiate giveback", "storage failover giveback -ofnode <partner_node>"],
+							["Show giveback status", "storage failover show-giveback" ]
+						]
+					},
+					"example": "storage failover show"
+				},
+				{
+					"title": "Time, DNS, NTP (cluster)",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show DNS", "dns show"],
+							["Create DNS config", "dns create -domains <domain> -name-servers <ip1>,<ip2>"],
+							["Show NTP", "system services ntp server show"],
+							["Add NTP server", "system services ntp server create -server <ntp_host>"],
+							["Show date/time", "cluster time-service ntp server show" ]
+						]
+					},
+					"example": "dns show\nsystem services ntp server show"
+				}
+			]
+		},
+		{
+			"title": "Networking",
+			"description": "Ports, VLANs, interfaces (LIFs), failover groups, and routing.",
+			"items": [
+				{
+					"title": "Ports, VLANs, and broadcast domains",
+					"description": "Network object model differs by ONTAP version; these are common show commands.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show physical ports", "network port show"],
+							["Show interface groups", "network port ifgrp show"],
+							["Show VLANs", "network port vlan show"],
+							["Show broadcast domains", "network port broadcast-domain show"],
+							["Show failover groups", "network interface failover-groups show" ]
+						]
+					},
+					"example": "network port show\nnetwork port vlan show"
+				},
+				{
+					"title": "LIF management",
+					"description": "LIFs are your data endpoints. Plan home ports and failover policies carefully.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List LIFs", "network interface show"],
+							["Show LIF details", "network interface show -instance"],
+							["Create data LIF", "network interface create -vserver <svm> -lif <lif> -service-policy default-data-files -home-node <node> -home-port <port> -address <ip> -netmask <mask>"],
+							["Modify LIF (move home)", "network interface modify -vserver <svm> -lif <lif> -home-node <node> -home-port <port>"],
+							["Revert to home", "network interface revert -vserver <svm> -lif <lif>"],
+							["Show LIF failover", "network interface show -fields failover-policy,failover-group,home-node,home-port" ]
+						]
+					},
+					"example": "network interface show -fields vserver,lif,role,data-protocol,address,home-node,home-port,admin-status,oper-status"
+				},
+				{
+					"title": "Routing",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show routes", "network route show"],
+							["Add default route (SVM)", "network route create -vserver <svm> -destination 0.0.0.0/0 -gateway <gw>"],
+							["Show routing domains (advanced)", "network routing-groups show" ]
+						]
+					},
+					"example": "network route show"
+				}
+			]
+		},
+		{
+			"title": "Storage Aggregates and Disks",
+			"description": "Physical storage inventory, aggregates, and capacity management.",
+			"items": [
+				{
+					"title": "Disks and shelves (inventory)",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Show disks", "storage disk show"],
+							["Show disk ownership", "storage disk show -fields owner,home"],
+							["Show shelves (platform dependent)", "storage shelf show"],
+							["Show pool usage", "storage aggregate show-spare-disks" ]
+						]
+					},
+					"example": "storage disk show\nstorage aggregate show-spare-disks"
+				},
+				{
+					"title": "Aggregates",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List aggregates", "storage aggregate show"],
+							["Aggregate details", "storage aggregate show -instance"],
+							["Capacity view", "storage aggregate show -fields size,usedsize,avail,percent-used"],
+							["Show RAID status", "storage aggregate show-status" ]
+						]
+					},
+					"example": "storage aggregate show -fields state,size,usedsize,avail,percent-used"
+				}
+			]
+		},
+		{
+			"title": "SVMs (Vservers)",
+			"description": "Tenant/namespace administration: create, list, and manage SVM settings.",
+			"items": [
+				{
+					"title": "SVM lifecycle and settings",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List SVMs", "vserver show"],
+							["SVM details", "vserver show -instance"],
+							["Start/stop SVM", "vserver start|stop -vserver <svm>"],
+							["Show protocols", "vserver show -fields allowed-protocols"],
+							["Show DNS (SVM)", "vserver services name-service dns show -vserver <svm>" ]
+						]
+					},
+					"example": "vserver show -fields vserver,type,state,subtype,allowed-protocols"
+				}
+			]
+		},
+		{
+			"title": "Volumes (FlexVol)",
+			"description": "Create/manage volumes, junctions, permissions, snapshots, and efficiency.",
+			"items": [
+				{
+					"title": "Volume create and inventory",
+					"description": "Prefer explicit aggregate selection and junction paths for NAS.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List volumes", "volume show"],
+							["Volume details", "volume show -instance"],
+							["Create volume", "volume create -vserver <svm> -volume <vol> -aggregate <aggr> -size 1T -state online"],
+							["Mount in namespace", "volume mount -vserver <svm> -volume <vol> -junction-path /data/<vol>"],
+							["Show junctions", "volume show -fields junction-path"],
+							["Set autosize", "volume autosize -vserver <svm> -volume <vol> -mode grow -maximum-size 2T" ]
+						]
+					},
+					"example": "volume create -vserver svm1 -volume vol1 -aggregate aggr1 -size 200G\nvolume mount -vserver svm1 -volume vol1 -junction-path /data/vol1"
+				},
+				{
+					"title": "Snapshots",
+					"description": "Snapshots are typically per-volume and space-efficient. Retention is controlled via policies.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List snapshots", "volume snapshot show -vserver <svm> -volume <vol>"],
+							["Create snapshot", "volume snapshot create -vserver <svm> -volume <vol> -snapshot <snap>"],
+							["Delete snapshot", "volume snapshot delete -vserver <svm> -volume <vol> -snapshot <snap>"],
+							["Show snapshot policy", "volume show -vserver <svm> -volume <vol> -fields snapshot-policy"],
+							["Assign snapshot policy", "volume modify -vserver <svm> -volume <vol> -snapshot-policy <policy>" ]
+						]
+					},
+					"example": "volume snapshot create -vserver svm1 -volume vol1 -snapshot prechange"
+				},
+				{
+					"title": "Storage efficiency",
+					"description": "Dedupe/compression/compaction settings vary by ONTAP version and platform.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show efficiency", "volume efficiency show -vserver <svm> -volume <vol>"],
+							["Enable efficiency", "volume efficiency on -vserver <svm> -volume <vol>"],
+							["Start efficiency job", "volume efficiency start -vserver <svm> -volume <vol>"],
+							["Show savings", "volume show -vserver <svm> -volume <vol> -fields physical-used,logical-used,space-slo" ]
+						]
+					},
+					"example": "volume efficiency show -vserver svm1 -volume vol1"
+				},
+				{
+					"title": "Quota overview",
+					"description": "User/group/tree quotas (NAS) for controlling consumption.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show quota status", "volume quota show -vserver <svm>"],
+							["Show quota report", "volume quota report -vserver <svm> -volume <vol>"],
+							["Enable quota", "volume quota on -vserver <svm> -volume <vol>"],
+							["Resize quotas", "volume quota resize -vserver <svm> -volume <vol>" ]
+						]
+					},
+					"example": "volume quota report -vserver svm1 -volume vol1"
+				}
+			]
+		},
+		{
+			"title": "NFS (NAS)",
+			"description": "NFS server config, exports, and common diagnostics.",
+			"items": [
+				{
+					"title": "NFS service",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show NFS status", "vserver nfs status -vserver <svm>"],
+							["Show NFS config", "vserver nfs show -vserver <svm>"],
+							["Enable NFS", "vserver nfs create -vserver <svm> -v3 enabled -v4.1 enabled"],
+							["Show NFS clients (advanced)", "vserver nfs connected-clients show -vserver <svm>" ]
+						]
+					},
+					"example": "vserver nfs status -vserver svm1\nvserver nfs show -vserver svm1"
+				},
+				{
+					"title": "Export policies and rules",
+					"description": "Export policies control NFS access; rules are ordered and matched by client/ro/rw/etc.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List export policies", "vserver export-policy show -vserver <svm>"],
+							["List rules", "vserver export-policy rule show -vserver <svm> -policyname <policy>"],
+							["Create policy", "vserver export-policy create -vserver <svm> -policyname <policy>"],
+							["Add rule", "vserver export-policy rule create -vserver <svm> -policyname <policy> -ruleindex 1 -protocol nfs3,nfs4 -clientmatch <cidr_or_host> -rorule sys -rwrule sys"],
+							["Assign policy to volume", "volume modify -vserver <svm> -volume <vol> -policy <policy>" ]
+						]
+					},
+					"example": "vserver export-policy show -vserver svm1\nvserver export-policy rule show -vserver svm1 -policyname default"
+				}
+			]
+		},
+		{
+			"title": "SMB/CIFS (NAS)",
+			"description": "SMB server setup, shares, and common checks.",
+			"items": [
+				{
+					"title": "SMB server and shares",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show SMB status", "vserver cifs status -vserver <svm>"],
+							["Show SMB configuration", "vserver cifs show -vserver <svm>"],
+							["List shares", "vserver cifs share show -vserver <svm>"],
+							["Create share", "vserver cifs share create -vserver <svm> -share-name <share> -path /<junction_path>"],
+							["Share ACLs", "vserver cifs share access-control show -vserver <svm> -share <share>" ]
+						]
+					},
+					"example": "vserver cifs share show -vserver svm1"
+				},
+				{
+					"title": "Sessions and open files",
+					"description": "Useful when troubleshooting locking and access problems.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Show sessions", "vserver cifs session show -vserver <svm>"],
+							["Show open files", "vserver cifs open-file show -vserver <svm>"],
+							["Close open file", "vserver cifs open-file close -vserver <svm> -file-id <id>" ]
+						]
+					},
+					"example": "vserver cifs session show -vserver svm1\nvserver cifs open-file show -vserver svm1"
+				}
+			]
+		},
+		{
+			"title": "SAN (iSCSI/FC/NVMe)",
+			"description": "LUNs, initiator groups (igroups), mappings, and protocol status.",
+			"items": [
+				{
+					"title": "iSCSI",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show iSCSI status", "vserver iscsi status -vserver <svm>"],
+							["Show iSCSI config", "vserver iscsi show -vserver <svm>"],
+							["Show sessions", "vserver iscsi session show -vserver <svm>"],
+							["Show interfaces (LIFs)", "network interface show -vserver <svm> -data-protocol iscsi" ]
+						]
+					},
+					"example": "vserver iscsi status -vserver svm1\nvserver iscsi session show -vserver svm1"
+				},
+				{
+					"title": "LUNs, igroups, and mapping",
+					"description": "Most SAN workflows are: create volume -> create LUN -> create igroup -> map LUN -> set host multipathing.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List LUNs", "lun show -vserver <svm>"],
+							["Create LUN", "lun create -vserver <svm> -path /vol/<vol>/<lun> -size 100G -ostype linux"],
+							["Create igroup", "igroup create -vserver <svm> -igroup <igroup> -protocol iscsi -ostype linux -initiator <iqn>"],
+							["Map LUN", "lun mapping create -vserver <svm> -path /vol/<vol>/<lun> -igroup <igroup>"],
+							["Show mappings", "lun mapping show -vserver <svm>" ]
+						]
+					},
+					"example": "lun create -vserver svm1 -path /vol/vol_san/lun01 -size 100G -ostype linux\nigroup create -vserver svm1 -igroup ig01 -protocol iscsi -ostype linux -initiator iqn.1993-08.org.debian:01:aaaa\nlun mapping create -vserver svm1 -path /vol/vol_san/lun01 -igroup ig01"
+				},
+				{
+					"title": "FC (overview commands)",
+					"description": "FC configuration is environment-specific; use show commands to verify target ports and sessions.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Show FC status", "vserver fcp status -vserver <svm>"],
+							["Show FC config", "vserver fcp show -vserver <svm>"],
+							["Show FC LIFs", "network interface show -vserver <svm> -data-protocol fcp" ]
+						]
+					},
+					"example": "vserver fcp status -vserver svm1\nvserver fcp show -vserver svm1"
+				}
+			]
+		},
+		{
+			"title": "Replication: SnapMirror",
+			"description": "DR and data protection via SnapMirror relationships, schedules, and monitoring.",
+			"items": [
+				{
+					"title": "Relationship inventory and status",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show relationships", "snapmirror show"],
+							["Show details", "snapmirror show -instance"],
+							["Show history", "snapmirror show-history"],
+							["Show transfers", "snapmirror show-transfers"],
+							["Abort transfer", "snapmirror abort -destination-path <dst_svm:vol>" ]
+						]
+					},
+					"example": "snapmirror show\nsnapmirror show-transfers"
+				},
+				{
+					"title": "Initialize and update (high level)",
+					"description": "Exact setup depends on policies, peering, and version. Use these as building blocks.",
+					"table": {
+						"headers": ["Action", "Command"],
+						"rows": [
+							["Create relationship", "snapmirror create -source-path <src_svm:vol> -destination-path <dst_svm:vol> -type XDP -policy <policy> -schedule <schedule>"],
+							["Initialize", "snapmirror initialize -destination-path <dst_svm:vol>"],
+							["Update", "snapmirror update -destination-path <dst_svm:vol>"],
+							["Quiesce", "snapmirror quiesce -destination-path <dst_svm:vol>"],
+							["Resume", "snapmirror resume -destination-path <dst_svm:vol>" ]
+						]
+					},
+					"example": "snapmirror show\n# snapmirror update -destination-path dstSVM:vol1"
+				}
+			]
+		},
+		{
+			"title": "Security: Certificates, TLS, Auditing",
+			"description": "Common security management tasks.",
+			"items": [
+				{
+					"title": "Certificates (common commands)",
+					"description": "Certificate tooling varies by ONTAP version; use show commands to enumerate existing certs.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Show certs", "security certificate show"],
+							["Show cert details", "security certificate show -instance"],
+							["Generate CSR", "security certificate generate-csr -common-name <cn> -size 2048 -country <CC> -state <ST> -locality <LOC> -organization <ORG>"],
+							["Install cert", "security certificate install -type server -vserver <svm>" ]
+						]
+					},
+					"example": "security certificate show"
+				},
+				{
+					"title": "Audit and event basics",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show audit config (SMB)", "vserver audit show -vserver <svm>"],
+							["Show audit events (advanced)", "event log show"],
+							["Show EMS settings", "event config show" ]
+						]
+					},
+					"example": "event log show -time >1h"
+				}
+			]
+		},
+		{
+			"title": "Monitoring, Logs, and Support",
+			"description": "Where to look when something breaks.",
+			"items": [
+				{
+					"title": "Event management system (EMS)",
+					"description": "EMS is central for troubleshooting; filter by time, severity, message-name.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Show recent events", "event log show -time >1h"],
+							["Filter by severity", "event log show -severity ALERT,EMERGENCY"],
+							["Show event destinations", "event notification destination show"],
+							["Show event routes", "event notification show" ]
+						]
+					},
+					"example": "event log show -time >2h -severity ALERT,EMERGENCY"
+				},
+				{
+					"title": "System performance quick checks",
+					"description": "Use the performance subsystem for high-level checks; deeper analysis may require Active IQ/Harvest/Perfstat.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show system health", "system health status show"],
+							["Show volume IOPS (basic)", "statistics show -object volume -instance"],
+							["Show interface stats", "statistics show -object lif -instance" ]
+						]
+					},
+					"example": "statistics show -object volume -instance -counter read_ops,write_ops,total_ops"
+				},
+				{
+					"title": "AutoSupport",
+					"description": "AutoSupport is used for support bundles and proactive health reporting.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show AutoSupport config", "system node autosupport show"],
+							["Trigger AutoSupport message", "system node autosupport invoke -node * -type all -message \"manual-trigger\""],
+							["Show AutoSupport history", "system node autosupport history show" ]
+						]
+					},
+					"example": "system node autosupport show\nsystem node autosupport history show"
+				}
+			]
+		},
+		{
+			"title": "Automation: REST API, PowerShell, Ansible, Python",
+			"description": "Common patterns to automate ONTAP operations.",
+			"items": [
+				{
+					"title": "ONTAP REST API (curl patterns)",
+					"description": "Use HTTPS and a least-privileged account. Endpoint paths depend on ONTAP version; query /api for discovery.",
+					"table": {
+						"headers": ["Goal", "Example"],
+						"rows": [
+							["Discover API", "curl -k -u user:pass https://<cluster-mgmt>/api"],
+							["List SVMs", "curl -k -u user:pass 'https://<cluster-mgmt>/api/svm/svms'"],
+							["List volumes", "curl -k -u user:pass 'https://<cluster-mgmt>/api/storage/volumes?fields=name,svm,space'"],
+							["List LIFs", "curl -k -u user:pass 'https://<cluster-mgmt>/api/network/ip/interfaces?fields=name,svm,ip,address'"],
+							["List SnapMirror", "curl -k -u user:pass 'https://<cluster-mgmt>/api/snapmirror/relationships'" ]
+						]
+					},
+					"example": "curl -k -u user:pass https://cluster/api\ncurl -k -u user:pass 'https://cluster/api/storage/volumes?fields=name,svm,space'"
+				},
+				{
+					"title": "PowerShell Toolkit (common)",
+					"description": "Cmdlet names depend on toolkit version; connect then query common objects.",
+					"table": {
+						"headers": ["Task", "Snippet"],
+						"rows": [
+							["Connect", "Connect-NcController -Name <cluster> -Credential (Get-Credential)"],
+							["List volumes", "Get-NcVol"],
+							["List SVMs", "Get-NcVserver"],
+							["List LIFs", "Get-NcNetInterface"],
+							["List SnapMirror", "Get-NcSnapmirror" ]
+						]
+					},
+					"example": "Connect-NcController -Name cluster01 -Credential (Get-Credential)\nGet-NcVserver\nGet-NcVol"
+				},
+				{
+					"title": "Ansible (collection hints)",
+					"description": "NetApp provides Ansible collections for ONTAP; manage SVMs/volumes/LIFs declaratively.",
+					"table": {
+						"headers": ["Goal", "Hint"],
+						"rows": [
+							["Install collection", "ansible-galaxy collection install netapp.ontap"],
+							["Example modules", "na_ontap_volume, na_ontap_svm, na_ontap_interface, na_ontap_snapshot"],
+							["Connection vars", "hostname, username, password, https, validate_certs" ]
+						]
+					},
+					"example": "ansible-galaxy collection install netapp.ontap"
+				},
+				{
+					"title": "Python (netapp_ontap SDK)",
+					"description": "Typical workflow: configure connection -> list/create resources (volumes, SVMs, LIFs).",
+					"table": {
+						"headers": ["Task", "Snippet"],
+						"rows": [
+							["Install SDK", "pip install netapp-ontap"],
+							["Set connection", "from netapp_ontap import HostConnection; HostConnection('cluster', username='u', password='p', verify=False).connect()"],
+							["List volumes", "from netapp_ontap.resources import Volume; [v.name for v in Volume.get_collection()]" ]
+						]
+					},
+					"example": "python3 -c \"from netapp_ontap import HostConnection; from netapp_ontap.resources import Volume; HostConnection('cluster', username='u', password='p', verify=False).connect(); print([v.name for v in Volume.get_collection()])\""
+				}
+			]
+		},
+		{
+			"title": "Common Workflows",
+			"description": "End-to-end sequences you perform often.",
+			"items": [
+				{
+					"title": "Provision NFS volume (typical flow)",
+					"description": "High-level steps: SVM + LIF + volume + junction + export policy + client mount.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["Create volume", "volume create -vserver <svm> -volume <vol> -aggregate <aggr> -size 200G"],
+							["Mount volume", "volume mount -vserver <svm> -volume <vol> -junction-path /data/<vol>"],
+							["Create export policy", "vserver export-policy create -vserver <svm> -policyname <policy>"],
+							["Add export rule", "vserver export-policy rule create -vserver <svm> -policyname <policy> -ruleindex 1 -protocol nfs3,nfs4 -clientmatch <cidr> -rorule sys -rwrule sys"],
+							["Assign policy", "volume modify -vserver <svm> -volume <vol> -policy <policy>" ]
+						]
+					},
+					"example": "volume create -vserver svm1 -volume proj -aggregate aggr1 -size 200G\nvolume mount -vserver svm1 -volume proj -junction-path /data/proj\nvserver export-policy create -vserver svm1 -policyname proj_pol\nvserver export-policy rule create -vserver svm1 -policyname proj_pol -ruleindex 1 -protocol nfs3,nfs4 -clientmatch 10.0.0.0/24 -rorule sys -rwrule sys\nvolume modify -vserver svm1 -volume proj -policy proj_pol"
+				},
+				{
+					"title": "Provision iSCSI LUN (typical flow)",
+					"description": "High-level steps: data LIFs + iSCSI service + volume + LUN + igroup + map.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["Enable iSCSI", "vserver iscsi create -vserver <svm>"],
+							["Create volume", "volume create -vserver <svm> -volume <vol> -aggregate <aggr> -size 500G"],
+							["Create LUN", "lun create -vserver <svm> -path /vol/<vol>/<lun> -size 100G -ostype linux"],
+							["Create igroup", "igroup create -vserver <svm> -igroup <igroup> -protocol iscsi -ostype linux -initiator <iqn>"],
+							["Map LUN", "lun mapping create -vserver <svm> -path /vol/<vol>/<lun> -igroup <igroup>" ]
+						]
+					},
+					"example": "vserver iscsi create -vserver svm1\nvolume create -vserver svm1 -volume vol_san -aggregate aggr1 -size 500G\nlun create -vserver svm1 -path /vol/vol_san/lun01 -size 100G -ostype linux\nigroup create -vserver svm1 -igroup ig01 -protocol iscsi -ostype linux -initiator iqn.1993-08.org.debian:01:aaaa\nlun mapping create -vserver svm1 -path /vol/vol_san/lun01 -igroup ig01"
+				}
+			]
+		}
+	]
+}

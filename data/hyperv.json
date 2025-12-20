@@ -1,0 +1,513 @@
+{
+	"title": "Microsoft Hyper-V",
+	"description": "A command-heavy reference for Microsoft Hyper-V: architecture, host configuration, VM lifecycle, storage (VHDX), networking (vSwitch), checkpoints, replication, clustering, security, troubleshooting, and automation (PowerShell).",
+	"language": "powershell",
+	"categories": [
+		{
+			"title": "Fundamentals and Architecture",
+			"description": "Core concepts and how Hyper-V is structured.",
+			"items": [
+				{
+					"title": "Key components",
+					"description": null,
+					"table": {
+						"headers": ["Component", "Purpose"],
+						"rows": [
+							["Hypervisor", "Type-1 hypervisor running beneath the management OS (root partition)."],
+							["Root partition (management OS)", "Hosts Hyper-V management stack, VSPs, and device drivers."],
+							["Child partition (VM)", "Guest VM partition; talks to root via VMBus."],
+							["VMBus", "High-performance communication channel between partitions."],
+							["VSP/VSC", "Virtual Service Provider (host) / Virtual Service Client (guest) devices."],
+							["Virtual Switch", "Software switch providing VM network connectivity."],
+							["Integration Services", "Guest components enabling time sync, shutdown, heartbeat, etc."],
+							["VMMS", "Virtual Machine Management Service (core management service)."],
+							["vmcompute / HCS", "Compute stack used by Windows containers and sometimes VM workflows (context-dependent)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Generation 1 vs Generation 2 VMs",
+					"description": "Gen2 uses UEFI and synthetic devices; Gen1 uses BIOS and legacy device emulation.",
+					"table": {
+						"headers": ["Feature", "Gen 1", "Gen 2"],
+						"rows": [
+							["Firmware", "BIOS", "UEFI"],
+							["Boot devices", "IDE/legacy NIC", "SCSI/synthetic NIC"],
+							["Secure Boot", "No", "Yes (configurable)"],
+							["Recommended", "Legacy OS needs", "Modern Windows/Linux"]
+						]
+					},
+					"example": "Get-VM | Select-Object Name,Generation,State"
+				},
+				{
+					"title": "Quick discovery commands",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["List Hyper-V cmdlets", "Get-Command -Module Hyper-V"],
+							["List VMs", "Get-VM"],
+							["Get host info", "Get-VMHost"],
+							["List switches", "Get-VMSwitch"],
+							["List adapters", "Get-VMNetworkAdapter"],
+							["List VM disks", "Get-VMHardDiskDrive" ]
+						]
+					},
+					"example": "Get-VMHost\nGet-VMSwitch"
+				}
+			]
+		},
+		{
+			"title": "Install and Host Configuration",
+			"description": "Enable Hyper-V, configure defaults, and verify virtualization support.",
+			"items": [
+				{
+					"title": "Install/enable Hyper-V",
+					"description": "Requires hardware virtualization (Intel VT-x/AMD-V) and SLAT for many scenarios.",
+					"table": {
+						"headers": ["Scenario", "Command"],
+						"rows": [
+							["Windows Server (role)", "Install-WindowsFeature -Name Hyper-V -IncludeManagementTools -Restart"],
+							["Windows client (feature)", "Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All"],
+							["Check optional features", "Get-WindowsOptionalFeature -Online | Where-Object FeatureName -like 'Microsoft-Hyper-V*'"],
+							["Check virtualization support", "systeminfo | Select-String -Pattern 'Hyper-V Requirements' -Context 0,5" ]
+						]
+					},
+					"example": "systeminfo | Select-String -Pattern 'Hyper-V Requirements' -Context 0,5"
+				},
+				{
+					"title": "Set default VM paths",
+					"description": "Control default locations for VM configuration and VHDs.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Show defaults", "Get-VMHost | Select-Object VirtualMachinePath,VirtualHardDiskPath"],
+							["Set defaults", "Set-VMHost -VirtualMachinePath 'D:\\HyperV\\VMs' -VirtualHardDiskPath 'D:\\HyperV\\VHDs'" ]
+						]
+					},
+					"example": "Get-VMHost | Select VirtualMachinePath,VirtualHardDiskPath"
+				},
+				{
+					"title": "Hyper-V services",
+					"description": "Hyper-V management depends on core services like VMMS.",
+					"table": {
+						"headers": ["Service", "PowerShell"],
+						"rows": [
+							["VMMS status", "Get-Service vmms"],
+							["Start/stop", "Start-Service vmms ; Stop-Service vmms"],
+							["Hyper-V host compute service (if present)", "Get-Service vmcompute" ]
+						]
+					},
+					"example": "Get-Service vmms"
+				}
+			]
+		},
+		{
+			"title": "VM Lifecycle",
+			"description": "Create VMs, control state, and inspect configuration.",
+			"items": [
+				{
+					"title": "Create and register VMs",
+					"description": "Use Generation 2 for modern OSes unless you need Gen1 compatibility.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Create VM", "New-VM -Name vm01 -Generation 2 -MemoryStartupBytes 4GB -NewVHDPath 'D:\\HyperV\\VHDs\\vm01.vhdx' -NewVHDSizeBytes 60GB -Path 'D:\\HyperV\\VMs'"],
+							["Attach ISO", "Add-VMDvdDrive -VMName vm01 -Path 'D:\\ISO\\installer.iso'"],
+							["Set boot order (UEFI)", "Set-VMFirmware -VMName vm01 -FirstBootDevice (Get-VMDvdDrive -VMName vm01)"],
+							["Start VM", "Start-VM -Name vm01"],
+							["Connect console", "vmconnect.exe localhost vm01" ]
+						]
+					},
+					"example": "New-VM -Name vm01 -Generation 2 -MemoryStartupBytes 4GB -NewVHDPath 'D:\\HyperV\\VHDs\\vm01.vhdx' -NewVHDSizeBytes 60GB"
+				},
+				{
+					"title": "Power operations",
+					"description": null,
+					"table": {
+						"headers": ["Action", "PowerShell"],
+						"rows": [
+							["Start", "Start-VM -Name vm01"],
+							["Stop (graceful)", "Stop-VM -Name vm01"],
+							["Turn off (immediate)", "Stop-VM -Name vm01 -TurnOff"],
+							["Save state", "Save-VM -Name vm01"],
+							["Pause/Resume", "Suspend-VM -Name vm01 ; Resume-VM -Name vm01"],
+							["Restart", "Restart-VM -Name vm01 -Force" ]
+						]
+					},
+					"example": "Get-VM | Select Name,State,CPUUsage,MemoryAssigned"
+				},
+				{
+					"title": "Inspect and reconfigure",
+					"description": "Hyper-V cmdlets expose VM configuration and runtime state.",
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["Show VM config", "Get-VM -Name vm01 | Format-List *"],
+							["Set memory", "Set-VM -Name vm01 -MemoryStartupBytes 8GB"],
+							["Set CPUs", "Set-VMProcessor -VMName vm01 -Count 4"],
+							["Enable dynamic memory", "Set-VMMemory -VMName vm01 -DynamicMemoryEnabled $true -MinimumBytes 2GB -StartupBytes 4GB -MaximumBytes 12GB"],
+							["Integration services", "Get-VMIntegrationService -VMName vm01"],
+							["Rename VM", "Rename-VM -Name vm01 -NewName vm01-prod" ]
+						]
+					},
+					"example": "Get-VMIntegrationService -VMName vm01"
+				}
+			]
+		},
+		{
+			"title": "Storage: VHD/VHDX and Controllers",
+			"description": "Create/convert VHDX, attach disks, and manage virtual SCSI/IDE controllers.",
+			"items": [
+				{
+					"title": "Create, inspect, resize, convert",
+					"description": null,
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Create VHDX", "New-VHD -Path 'D:\\HyperV\\VHDs\\data01.vhdx' -SizeBytes 200GB -Dynamic"],
+							["Inspect VHD", "Get-VHD -Path 'D:\\HyperV\\VHDs\\data01.vhdx'"],
+							["Resize VHD", "Resize-VHD -Path 'D:\\HyperV\\VHDs\\data01.vhdx' -SizeBytes 300GB"],
+							["Convert VHD/VHDX", "Convert-VHD -Path 'D:\\src.vhd' -DestinationPath 'D:\\dst.vhdx' -VHDType Dynamic"],
+							["Optimize VHD", "Optimize-VHD -Path 'D:\\HyperV\\VHDs\\data01.vhdx' -Mode Full"],
+							["Mount/Dismount", "Mount-VHD -Path 'D:\\HyperV\\VHDs\\data01.vhdx' ; Dismount-VHD -Path 'D:\\HyperV\\VHDs\\data01.vhdx'" ]
+						]
+					},
+					"example": "Get-VHD -Path 'D:\\HyperV\\VHDs\\data01.vhdx'"
+				},
+				{
+					"title": "Attach/detach VM disks",
+					"description": "Gen2 uses SCSI for boot; Gen1 uses IDE for boot.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List disks", "Get-VMHardDiskDrive -VMName vm01"],
+							["Add disk", "Add-VMHardDiskDrive -VMName vm01 -ControllerType SCSI -ControllerNumber 0 -ControllerLocation 1 -Path 'D:\\HyperV\\VHDs\\data01.vhdx'"],
+							["Remove disk", "Remove-VMHardDiskDrive -VMName vm01 -ControllerType SCSI -ControllerNumber 0 -ControllerLocation 1"],
+							["Add DVD drive", "Add-VMDvdDrive -VMName vm01 -Path 'D:\\ISO\\installer.iso'"],
+							["Get DVD drive", "Get-VMDvdDrive -VMName vm01" ]
+						]
+					},
+					"example": "Get-VMHardDiskDrive -VMName vm01"
+				},
+				{
+					"title": "Differencing disks (labs/VDI workflows)",
+					"description": "Differencing disks depend on a parent VHDX; treat parent as immutable.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Create differencing disk", "New-VHD -Path 'D:\\HyperV\\VHDs\\child.vhdx' -ParentPath 'D:\\HyperV\\VHDs\\golden.vhdx' -Differencing"],
+							["Inspect parent chain", "Get-VHD -Path 'D:\\HyperV\\VHDs\\child.vhdx' | Select-Object Path,VhdType,ParentPath"],
+							["Merge disk", "Merge-VHD -Path 'D:\\HyperV\\VHDs\\child.vhdx' -DestinationPath 'D:\\HyperV\\VHDs\\merged.vhdx'" ]
+						]
+					},
+					"example": "Get-VHD -Path 'D:\\HyperV\\VHDs\\child.vhdx' | Select Path,VhdType,ParentPath"
+				}
+			]
+		},
+		{
+			"title": "Networking: Virtual Switches and VM NICs",
+			"description": "Create vSwitches, attach VM NICs, and manage VLANs and advanced adapter settings.",
+			"items": [
+				{
+					"title": "Switch types",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Behavior"],
+						"rows": [
+							["External", "Bridged to a physical NIC; VMs reach the LAN."],
+							["Internal", "VM-to-host + VM-to-VM, no external LAN."],
+							["Private", "VM-to-VM only on that host."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Create and manage switches",
+					"description": null,
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List switches", "Get-VMSwitch"],
+							["Create external switch", "New-VMSwitch -Name 'vSwitch-External' -NetAdapterName 'Ethernet' -AllowManagementOS $true"],
+							["Create internal switch", "New-VMSwitch -Name 'vSwitch-Internal' -SwitchType Internal"],
+							["Create private switch", "New-VMSwitch -Name 'vSwitch-Private' -SwitchType Private"],
+							["Rename switch", "Rename-VMSwitch -Name 'vSwitch-Internal' -NewName 'vSwitch-Lab'"],
+							["Remove switch", "Remove-VMSwitch -Name 'vSwitch-Private' -Force" ]
+						]
+					},
+					"example": "Get-NetAdapter | Select Name,Status,LinkSpeed\nNew-VMSwitch -Name 'vSwitch-External' -NetAdapterName 'Ethernet' -AllowManagementOS $true"
+				},
+				{
+					"title": "VM network adapters",
+					"description": "Add/modify adapters and connect to switches.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List VM NICs", "Get-VMNetworkAdapter -VMName vm01"],
+							["Connect VM NIC to switch", "Connect-VMNetworkAdapter -VMName vm01 -SwitchName 'vSwitch-External'"],
+							["Add VM NIC", "Add-VMNetworkAdapter -VMName vm01 -Name 'nic2' -SwitchName 'vSwitch-Lab'"],
+							["Set VLAN (access)", "Set-VMNetworkAdapterVlan -VMName vm01 -Access -VlanId 100"],
+							["Set VLAN (trunk)", "Set-VMNetworkAdapterVlan -VMName vm01 -Trunk -NativeVlanId 10 -AllowedVlanIdList '10,100,200'"],
+							["Enable MAC spoofing", "Set-VMNetworkAdapter -VMName vm01 -MacAddressSpoofing On" ]
+						]
+					},
+					"example": "Get-VMNetworkAdapter -VMName vm01 | Select Name,SwitchName,MacAddress"
+				},
+				{
+					"title": "IP configuration for Internal switch (host vNIC)",
+					"description": "Internal switch creates a host virtual NIC (vEthernet <SwitchName>) you can configure like any other NIC.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List vEthernet adapters", "Get-NetAdapter | Where-Object Name -like 'vEthernet*'"],
+							["Set IP", "New-NetIPAddress -InterfaceAlias 'vEthernet (vSwitch-Lab)' -IPAddress 192.168.56.1 -PrefixLength 24"],
+							["Set DNS", "Set-DnsClientServerAddress -InterfaceAlias 'vEthernet (vSwitch-Lab)' -ServerAddresses 192.168.56.1" ]
+						]
+					},
+					"example": "Get-NetAdapter | Where Name -like 'vEthernet*'"
+				}
+			]
+		},
+		{
+			"title": "Checkpoints (Snapshots)",
+			"description": "Checkpoints help with short-lived rollback; plan for performance and storage impact.",
+			"items": [
+				{
+					"title": "Checkpoint types",
+					"description": "Production checkpoints are preferred for many workloads; standard checkpoints capture memory state.",
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["Production", "App-consistent via VSS (Windows) or FS freeze (Linux), no memory capture."],
+							["Standard", "Includes memory state; less app-consistent; useful for labs."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Checkpoint operations",
+					"description": null,
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List checkpoints", "Get-VMSnapshot -VMName vm01"],
+							["Create checkpoint", "Checkpoint-VM -Name vm01 -SnapshotName 'prechange'"],
+							["Restore checkpoint", "Restore-VMSnapshot -VMName vm01 -Name 'prechange' -Confirm:$false"],
+							["Remove checkpoint", "Remove-VMSnapshot -VMName vm01 -Name 'prechange'"],
+							["Remove all", "Get-VMSnapshot -VMName vm01 | Remove-VMSnapshot" ]
+						]
+					},
+					"example": "Checkpoint-VM -Name vm01 -SnapshotName prechange\nGet-VMSnapshot -VMName vm01"
+				}
+			]
+		},
+		{
+			"title": "Live Migration and Storage Migration",
+			"description": "Move running VMs between hosts (live migration) and relocate VM storage.",
+			"items": [
+				{
+					"title": "Live migration (concepts)",
+					"description": null,
+					"table": {
+						"headers": ["Topic", "Notes"],
+						"rows": [
+							["Auth", "Kerberos (domain) or CredSSP depending on setup and delegation."],
+							["Network", "Dedicated migration networks improve performance and isolation."],
+							["Compatibility", "CPU compatibility and VM config versions matter in some scenarios."],
+							["Shared storage", "Clustered scenarios often use shared storage (CSV/SMB)." ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Move VM storage",
+					"description": "Storage migration can move config, VHDs, and snapshots.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Move everything", "Move-VMStorage -VMName vm01 -DestinationStoragePath 'E:\\HyperV\\VMs'"],
+							["Move only VHDs (mapping)", "Move-VMStorage -VMName vm01 -Vhds @{'D:\\HyperV\\VHDs\\vm01.vhdx'='E:\\VHDs\\vm01.vhdx'}"],
+							["Show current path", "Get-VM -Name vm01 | Select-Object Name,Path" ]
+						]
+					},
+					"example": "Move-VMStorage -VMName vm01 -DestinationStoragePath 'E:\\HyperV\\VMs'"
+				}
+			]
+		},
+		{
+			"title": "Hyper-V Replica",
+			"description": "Asynchronous replication of VMs between hosts/sites for DR.",
+			"items": [
+				{
+					"title": "Replica commands",
+					"description": "Requires configuration on both primary and replica hosts (certs/Kerberos, firewall rules, storage).",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Get replication state", "Get-VMReplication -VMName vm01"],
+							["Enable replication (example)", "Enable-VMReplication -VMName vm01 -ReplicaServerName hv02.contoso.local -ReplicaServerPort 80 -AuthenticationType Kerberos -CompressionEnabled $true"],
+							["Start initial replication", "Start-VMInitialReplication -VMName vm01"],
+							["Test failover", "Start-VMFailover -VMName vm01 -Prepare"],
+							["Planned failover", "Start-VMFailover -VMName vm01 -Planned"],
+							["Stop replication", "Remove-VMReplication -VMName vm01" ]
+						]
+					},
+					"example": "Get-VMReplication -VMName vm01"
+				}
+			]
+		},
+		{
+			"title": "Failover Clustering (Hyper-V Cluster)",
+			"description": "High availability for VMs using Windows Failover Clustering (common in server environments).",
+			"items": [
+				{
+					"title": "Cluster basics (quick commands)",
+					"description": "Run on cluster nodes with FailoverClusters module.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List cluster nodes", "Get-ClusterNode"],
+							["List cluster groups", "Get-ClusterGroup"],
+							["List cluster resources", "Get-ClusterResource"],
+							["List clustered VMs", "Get-ClusterGroup | Where-Object GroupType -eq 'VirtualMachine'"],
+							["Move clustered role (VM)", "Move-ClusterGroup -Name 'vm01' -Node hv02"],
+							["Validate cluster", "Test-Cluster -Node hv01,hv02" ]
+						]
+					},
+					"example": "Get-ClusterGroup\nGet-ClusterGroup | Where GroupType -eq VirtualMachine"
+				},
+				{
+					"title": "Cluster Shared Volumes (CSV) (concept)",
+					"description": "CSV provides shared storage access for clustered workloads.",
+					"table": {
+						"headers": ["Topic", "Notes"],
+						"rows": [
+							["Path", "Typically C:\\ClusterStorage\\VolumeX"],
+							["Use", "Hosts VHDX and VM configuration for clustered VMs."],
+							["IO", "Redirected IO may occur during failures or maintenance."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Security and Isolation",
+			"description": "Secure Boot, vTPM, Shielded VMs (where available), and host hardening basics.",
+			"items": [
+				{
+					"title": "Secure Boot and TPM (Gen2)",
+					"description": "vTPM requires a Host Guardian Service / key protector workflow in some environments.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Enable Secure Boot", "Set-VMFirmware -VMName vm01 -EnableSecureBoot On"],
+							["Set Secure Boot template", "Set-VMFirmware -VMName vm01 -SecureBootTemplate 'MicrosoftUEFICertificateAuthority'"],
+							["Add vTPM", "Enable-VMTPM -VMName vm01"],
+							["Get firmware settings", "Get-VMFirmware -VMName vm01" ]
+						]
+					},
+					"example": "Get-VMFirmware -VMName vm01"
+				},
+				{
+					"title": "Host resource controls",
+					"description": "Limit/weight CPU and memory consumption.",
+					"table": {
+						"headers": ["Control", "PowerShell"],
+						"rows": [
+							["CPU reserve/limit/weight", "Set-VMProcessor -VMName vm01 -Reserve 10 -Maximum 75 -RelativeWeight 100"],
+							["Memory buffer/priority", "Set-VMMemory -VMName vm01 -Buffer 20 -Priority 50"],
+							["NUMA settings", "Get-VMHostNumaNode" ]
+						]
+					},
+					"example": "Set-VMProcessor -VMName vm01 -Maximum 75"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting and Operations",
+			"description": "Logs, events, common problems, and useful diagnostics.",
+			"items": [
+				{
+					"title": "Event logs to check",
+					"description": "Hyper-V issues often show up in dedicated event log channels.",
+					"table": {
+						"headers": ["Log", "PowerShell"],
+						"rows": [
+							["Hyper-V VMMS", "Get-WinEvent -LogName 'Microsoft-Windows-Hyper-V-VMMS/Admin' -MaxEvents 50"],
+							["Hyper-V Worker", "Get-WinEvent -LogName 'Microsoft-Windows-Hyper-V-Worker/Admin' -MaxEvents 50"],
+							["Hyper-V VMSP", "Get-WinEvent -LogName 'Microsoft-Windows-Hyper-V-VmSwitch/Admin' -MaxEvents 50"],
+							["Failover Clustering", "Get-WinEvent -LogName 'Microsoft-Windows-FailoverClustering/Operational' -MaxEvents 50" ]
+						]
+					},
+					"example": "Get-WinEvent -LogName 'Microsoft-Windows-Hyper-V-VMMS/Admin' -MaxEvents 20 | Format-Table TimeCreated,Id,LevelDisplayName,Message -Auto"
+				},
+				{
+					"title": "VM state and resource quick checks",
+					"description": null,
+					"table": {
+						"headers": ["Check", "PowerShell"],
+						"rows": [
+							["VM state overview", "Get-VM | Sort-Object Name | Select-Object Name,State,CPUUsage,MemoryAssigned,Uptime"],
+							["Integration services", "Get-VMIntegrationService -VMName vm01 | Select-Object Name,Enabled,PrimaryStatusDescription"],
+							["NICs", "Get-VMNetworkAdapter -VMName vm01 | Select Name,SwitchName,MacAddress,Status"],
+							["Disks", "Get-VMHardDiskDrive -VMName vm01 | Select Path,ControllerType,ControllerNumber,ControllerLocation" ]
+						]
+					},
+					"example": "Get-VM | Select Name,State,CPUUsage,MemoryAssigned"
+				},
+				{
+					"title": "Common issues (quick map)",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "What to check"],
+						"rows": [
+							["VM won't start", "VMMS service, disk path permissions, stale checkpoints, event logs."],
+							["No network", "Switch binding to correct NIC, VLAN config, vEthernet adapter IP, firewall."],
+							["Slow IO", "Storage tier, VHDX type (fixed vs dynamic), antivirus exclusions, CSV redirected IO."],
+							["Time drift", "Integration service time sync, guest NTP, host clock."],
+							["Live migration fails", "Credential delegation, migration network/firewall, compatibility."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Automation Patterns",
+			"description": "Repeatable provisioning and reporting with PowerShell.",
+			"items": [
+				{
+					"title": "Bulk operations examples",
+					"description": "Use the pipeline to apply consistent config across many VMs.",
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["Start all VMs in a group", "Get-VM -Name 'lab-*' | Start-VM"],
+							["Stop all VMs (graceful)", "Get-VM -Name 'lab-*' | Stop-VM"],
+							["Set memory on many VMs", "Get-VM -Name 'lab-*' | Set-VM -MemoryStartupBytes 2GB"],
+							["Report VM inventory", "Get-VM | Select Name,State,Generation,ProcessorCount,MemoryStartup,Path | Export-Csv vms.csv -NoTypeInformation"],
+							["Find large VHDX files", "Get-VMHardDiskDrive -VMName (Get-VM).Name | ForEach-Object { Get-VHD -Path $_.Path } | Sort-Object Size -Descending" ]
+						]
+					},
+					"example": "Get-VM | Select Name,State,Generation\nGet-VM | Export-Csv .\\vms.csv -NoTypeInformation"
+				},
+				{
+					"title": "Remoting to manage remote Hyper-V hosts",
+					"description": "Most Hyper-V cmdlets support -ComputerName; PowerShell remoting (WinRM) is also common.",
+					"table": {
+						"headers": ["Approach", "PowerShell"],
+						"rows": [
+							["-ComputerName", "Get-VM -ComputerName hv01"],
+							["Invoke-Command", "Invoke-Command -ComputerName hv01 -ScriptBlock { Get-VMHost }"],
+							["CIM session", "$s = New-CimSession hv01 ; Get-VMHost -CimSession $s" ]
+						]
+					},
+					"example": "Invoke-Command -ComputerName hv01 -ScriptBlock { Get-VM | Select Name,State }"
+				}
+			]
+		}
+	]
+}

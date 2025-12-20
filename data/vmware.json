@@ -1,0 +1,510 @@
+{
+	"title": "VMware vSphere",
+	"description": "A practical, command-heavy reference for VMware's hypervisor platform: ESXi hosts, vCenter Server, clusters (HA/DRS), vMotion, storage, networking, lifecycle, security, and automation (PowerCLI/govc).",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Platform Structure",
+			"description": "What vSphere is made of and how the pieces fit together.",
+			"items": [
+				{
+					"title": "Core components",
+					"description": null,
+					"table": {
+						"headers": ["Component", "Purpose"],
+						"rows": [
+							["ESXi", "Type-1 bare-metal hypervisor running VMs."],
+							["vCenter Server", "Central management plane for hosts, clusters, inventory, and APIs."],
+							["VCSA", "vCenter Server Appliance (Linux-based) packaging of vCenter."],
+							["Cluster", "Grouping of ESXi hosts enabling HA/DRS/vMotion policies."],
+							["Datastore", "Storage container for VM files (VMFS/NFS/vVols/vSAN)."],
+							["Network", "Standard vSwitch or vSphere Distributed Switch (VDS)."],
+							["vSphere APIs", "Automation via PowerCLI, govc, pyvmomi, REST where available."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Inventory objects (mental model)",
+					"description": "Common hierarchy: Datacenter → Cluster → Hosts; plus folders, resource pools, networks, datastores.",
+					"table": {
+						"headers": ["Object", "Notes"],
+						"rows": [
+							["Datacenter", "Top-level boundary for inventory and permissions."],
+							["Cluster", "Policies for HA/DRS/EVC; shared resources."],
+							["Host", "Physical server running ESXi."],
+							["Resource pool", "CPU/mem shares/reservations/limits grouping."],
+							["Folder", "Organization (does not affect compute behavior)."],
+							["Datastore cluster", "Storage DRS / datastore grouping (when used)."],
+							["Content library", "Templates/ISOs/items for provisioning."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "vCenter Server Appliance (VCSA) Operations",
+			"description": "Useful commands on the VCSA shell for health checks, services, identity, and certificates.",
+			"items": [
+				{
+					"title": "Shell access and service control",
+					"description": "On VCSA you may need to enable Bash/SSH from the appliance management UI or console.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List vCenter services", "service-control --status"],
+							["Start a service", "service-control --start <service-name>"],
+							["Stop a service", "service-control --stop <service-name>"],
+							["Restart all services", "service-control --stop --all && service-control --start --all"],
+							["vMon service status", "vmon-cli -l"],
+							["vMon start/stop", "vmon-cli -s <service> ; vmon-cli -k <service>" ]
+						]
+					},
+					"example": "service-control --status\nvmon-cli -l"
+				},
+				{
+					"title": "Logs and journal",
+					"description": "VCSA is systemd-based; many services log to journald and also to /var/log/vmware.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["VMware log directory", "ls -lah /var/log/vmware | head"],
+							["journal for a service", "journalctl -u <unit> -n 200 --no-pager"],
+							["Follow journal", "journalctl -u <unit> -f"],
+							["Disk space quick check", "df -h"],
+							["Top CPU/mem processes", "top" ]
+						]
+					},
+					"example": "journalctl -u vmware-vpxd -n 200 --no-pager"
+				},
+				{
+					"title": "Certificates and trust (high-level)",
+					"description": "Certificate operations are environment-specific; use supported VMware workflows to rotate/replace.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List VECS stores", "vecs-cli store list"],
+							["List entries in a store", "vecs-cli entry list --store <store>"],
+							["Check machine SSL cert (store depends)", "vecs-cli entry list --store MACHINE_SSL_CERT"],
+							["Show cert details (PEM)", "openssl x509 -in /path/to/cert.pem -text -noout" ]
+						]
+					},
+					"example": "vecs-cli store list\nvecs-cli entry list --store MACHINE_SSL_CERT"
+				}
+			]
+		},
+		{
+			"title": "Identity, SSO, and RBAC",
+			"description": "Authentication and authorization concepts and common checks.",
+			"items": [
+				{
+					"title": "Identity building blocks",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["SSO domain", "Identity boundary for vCenter (users, groups, token issuance)."],
+							["vCenter permissions", "Permissions are assigned on inventory objects with propagation."],
+							["Roles", "Set of privileges; assign roles to users/groups on objects."],
+							["Global permissions", "Apply across vCenter inventory (use sparingly)."],
+							["ESXi local users", "Host-local accounts; in vCenter-managed setups, prefer centralized identity."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "PowerCLI: users, roles, permissions",
+					"description": "PowerCLI provides high-level access to roles/permissions.",
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["Connect", "Connect-VIServer -Server vcsa.example.com"],
+							["List roles", "Get-VIRole"],
+							["List privileges", "Get-VIPrivilege"],
+							["List permissions on an object", "Get-VIPermission -Entity (Get-VMHost esx01)"],
+							["List local SSO users (varies)", "Get-SsoPersonUser" ]
+						]
+					},
+					"example": "Connect-VIServer vcsa.example.com\nGet-VIRole"
+				}
+			]
+		},
+		{
+			"title": "Clusters: HA, DRS, EVC",
+			"description": "High availability and resource scheduling are cluster features, not standalone host features.",
+			"items": [
+				{
+					"title": "Feature overview",
+					"description": null,
+					"table": {
+						"headers": ["Feature", "Purpose"],
+						"rows": [
+							["HA", "Restarts VMs on surviving hosts after host failure."],
+							["DRS", "Balances VM placement based on CPU/memory demand."],
+							["vMotion", "Live migration of running VMs across hosts."],
+							["EVC", "Masks CPU features to enable vMotion compatibility."],
+							["Admission control", "Reserves capacity for HA failover (policy choice)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "PowerCLI cluster checks",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["List clusters", "Get-Cluster"],
+							["Show HA/DRS state", "Get-Cluster | Select Name,HAEnabled,DrsEnabled"],
+							["Set DRS (example)", "Set-Cluster -Cluster Prod -DrsEnabled:$true -DrsAutomationLevel FullyAutomated"],
+							["Enter host maintenance mode", "Set-VMHost -VMHost esx01 -State Maintenance"],
+							["Exit host maintenance mode", "Set-VMHost -VMHost esx01 -State Connected" ]
+						]
+					},
+					"example": "Get-Cluster | Select Name,HAEnabled,DrsEnabled"
+				}
+			]
+		},
+		{
+			"title": "VM Lifecycle and Operations",
+			"description": "Provisioning, templates, snapshots, and common VM operations.",
+			"items": [
+				{
+					"title": "PowerCLI VM lifecycle",
+					"description": null,
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List VMs", "Get-VM"],
+							["Create VM (example)", "New-VM -Name vm01 -ResourcePool (Get-Cluster Prod | Get-ResourcePool | Select -First 1) -Datastore ds01 -NumCpu 2 -MemoryGB 4 -DiskGB 40"],
+							["Power on/off", "Start-VM vm01 ; Stop-VM vm01 -Confirm:$false"],
+							["Reconfigure CPU/mem", "Set-VM -VM vm01 -NumCpu 4 -MemoryGB 8 -Confirm:$false"],
+							["Get VM tools status", "Get-VM vm01 | Get-VMGuest | Select HostName,ToolsStatus"],
+							["Remove VM", "Remove-VM vm01 -DeletePermanently -Confirm:$false" ]
+						]
+					},
+					"example": "Get-VM | Select Name,PowerState,VMHost"
+				},
+				{
+					"title": "Snapshots (operational cautions)",
+					"description": "Snapshots are not backups; keep them short-lived. Snapshot sprawl impacts performance and datastore space.",
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["List snapshots", "Get-VM vm01 | Get-Snapshot"],
+							["Create snapshot", "New-Snapshot -VM vm01 -Name prechange -Description 'Before change' -Quiesce:$false"],
+							["Remove snapshot", "Remove-Snapshot -Snapshot (Get-Snapshot -VM vm01 -Name prechange) -Confirm:$false"],
+							["Remove all snapshots", "Get-VM vm01 | Get-Snapshot | Remove-Snapshot -Confirm:$false" ]
+						]
+					},
+					"example": "Get-VM | Get-Snapshot"
+				},
+				{
+					"title": "govc VM operations (lightweight automation)",
+					"description": "govc is a convenient CLI for scripts/CI.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Set auth env (example)", "export GOVC_URL='https://vcsa.example.com/sdk' GOVC_USERNAME='user' GOVC_PASSWORD='pass' GOVC_INSECURE=1"],
+							["List VMs", "govc ls /.../vm"],
+							["Power on/off", "govc vm.power -on /.../vm/vm01 ; govc vm.power -off /.../vm/vm01"],
+							["VM info", "govc vm.info /.../vm/vm01"],
+							["Clone from template", "govc vm.clone -vm /.../vm/tpl-ubuntu -on=false vm01" ]
+						]
+					},
+					"example": "govc vm.info /.../vm/vm01"
+				}
+			]
+		},
+		{
+			"title": "vMotion and Storage vMotion",
+			"description": "Live migrations require correct networking, shared storage (or storage vMotion), and CPU compatibility.",
+			"items": [
+				{
+					"title": "Key prerequisites",
+					"description": null,
+					"table": {
+						"headers": ["Migration", "Typical prerequisites"],
+						"rows": [
+							["vMotion", "vMotion VMkernel network, compatible CPUs/EVC, correct licensing, adequate bandwidth."],
+							["Storage vMotion", "Datastore access to source/target or vCenter-managed copy; space on destination."],
+							["Cross-vSwitch/vDS", "Portgroups with matching VLAN/security policies; or use network mappings."],
+							["Encrypted vMotion (optional)", "Consistent security posture and compatibility."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "PowerCLI: migrate VMs",
+					"description": null,
+					"table": {
+						"headers": ["Task", "PowerShell"],
+						"rows": [
+							["Compute vMotion", "Move-VM -VM vm01 -Destination (Get-VMHost esx02)"],
+							["Storage vMotion", "Move-VM -VM vm01 -Datastore ds02"],
+							["Both compute + storage", "Move-VM -VM vm01 -Destination (Get-VMHost esx02) -Datastore ds02"],
+							["List recent tasks", "Get-Task | Sort StartTime -Descending | Select -First 20" ]
+						]
+					},
+					"example": "Move-VM -VM vm01 -Destination (Get-VMHost esx02)"
+				}
+			]
+		},
+		{
+			"title": "Networking: Standard vSwitch and VDS",
+			"description": "vSphere networking spans ESXi host switching and vCenter-managed distributed switching.",
+			"items": [
+				{
+					"title": "Standard vs Distributed switch",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["Standard vSwitch", "Configured per-host; simpler; common in small environments."],
+							["VDS", "Centralized config; consistent port groups; supports advanced features (NIOC, LACP, etc.)."],
+							["Port group", "Defines VLAN, security, shaping, teaming policies."],
+							["Uplinks", "Physical NICs assigned to vSwitch/vDS for external connectivity."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "PowerCLI networking inventory",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["List portgroups", "Get-VirtualPortGroup"],
+							["List standard switches", "Get-VirtualSwitch -Standard"],
+							["List distributed switches", "Get-VDSwitch"],
+							["List distributed portgroups", "Get-VDPortgroup"],
+							["List host NICs", "Get-VMHostNetworkAdapter -VMHost esx01 -Physical"],
+							["List VMkernel NICs", "Get-VMHostNetworkAdapter -VMHost esx01 -VMKernel" ]
+						]
+					},
+					"example": "Get-VDSwitch\nGet-VDPortgroup"
+				},
+				{
+					"title": "ESXi-side quick checks (host)",
+					"description": "Useful when debugging on the host directly.",
+					"table": {
+						"headers": ["Check", "Command"],
+						"rows": [
+							["Physical NIC state", "esxcli network nic list"],
+							["VMkernel NICs", "esxcli network ip interface list"],
+							["Standard vSwitch list", "esxcli network vswitch standard list"],
+							["Portgroups", "esxcli network vswitch standard portgroup list"],
+							["MTU / jumbo test", "vmkping -I vmk0 -s 8972 -d <peer-ip>" ]
+						]
+					},
+					"example": "esxcli network nic list\nesxcli network ip interface list"
+				}
+			]
+		},
+		{
+			"title": "Storage: VMFS, NFS, vVols (and visibility)",
+			"description": "Storage in vSphere is presented as datastores; underlying paths/devices matter for performance and resilience.",
+			"items": [
+				{
+					"title": "Storage concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["VMFS", "Cluster filesystem on block storage (FC/iSCSI/SAS)."],
+							["NFS datastore", "File-based datastore mounted over NFS."],
+							["vVols", "Storage array-managed volumes with policy-based management."],
+							["Multipathing", "PSP/SATP control path selection and failover."],
+							["Storage policies", "Used to express requirements (e.g., vSAN FTT, encryption)." ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "ESXi storage visibility",
+					"description": "When troubleshooting storage, start with adapter/device/path states.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List datastores", "esxcli storage filesystem list"],
+							["Rescan adapters", "esxcli storage core adapter rescan --all"],
+							["List devices", "esxcli storage core device list | head"],
+							["List paths", "esxcli storage core path list | head"],
+							["NMP device view", "esxcli storage nmp device list -d <naa.id>" ]
+						]
+					},
+					"example": "esxcli storage filesystem list\nesxcli storage core adapter rescan --all"
+				},
+				{
+					"title": "PowerCLI datastore inventory",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["List datastores", "Get-Datastore"],
+							["Datastore capacity", "Get-Datastore | Select Name,CapacityGB,FreeSpaceGB"],
+							["Datastore mount details", "Get-Datastore | Get-VMHost | Select Name"],
+							["List storage policies", "Get-SpbmStoragePolicy" ]
+						]
+					},
+					"example": "Get-Datastore | Select Name,CapacityGB,FreeSpaceGB"
+				}
+			]
+		},
+		{
+			"title": "vSAN (if used)",
+			"description": "vSAN provides distributed storage across hosts; operational health checks are critical.",
+			"items": [
+				{
+					"title": "vSAN concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Disk groups", "Each disk group has one cache device and one or more capacity devices."],
+							["Object health", "VM storage objects are composed of components; policy defines placement."],
+							["Storage policy", "Controls FTT/RAID level, stripe width, etc."],
+							["Network", "Dedicated vSAN VMkernel recommended; consistent MTU/QoS."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Host-side vSAN checks (ESXi)",
+					"description": "Exact commands vary by version; these are common entry points.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["vSAN status", "esxcli vsan cluster get"],
+							["Disk list", "esxcli vsan storage list"],
+							["Network list", "esxcli vsan network list"],
+							["Health summary (if available)", "esxcli vsan health cluster list" ]
+						]
+					},
+					"example": "esxcli vsan cluster get\nesxcli vsan storage list"
+				}
+			]
+		},
+		{
+			"title": "Lifecycle, Patching, and Compliance",
+			"description": "Keep hosts and clusters consistent using supported update mechanisms and baselines/profiles.",
+			"items": [
+				{
+					"title": "Lifecycle approaches",
+					"description": null,
+					"table": {
+						"headers": ["Approach", "Notes"],
+						"rows": [
+							["vSphere Lifecycle Manager", "Centralized patching/upgrades (vCenter feature); recommended in many environments."],
+							["Offline bundle (host-local)", "Upload zip and apply via esxcli in maintenance mode."],
+							["Host profiles", "Capture/validate config drift across hosts (feature/licensing dependent)."],
+							["Image-based management", "Desired-state images for clusters (newer workflows)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "ESXi patching (host-local example)",
+					"description": "Upload offline bundle to a datastore and use an image profile update.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["Enter maintenance mode", "esxcli system maintenanceMode set --enable true"],
+							["List profiles", "esxcli software sources profile list -d /vmfs/volumes/<ds>/bundle.zip"],
+							["Profile update", "esxcli software profile update -d /vmfs/volumes/<ds>/bundle.zip -p <profileName>"],
+							["Reboot", "reboot"],
+							["Exit maintenance mode", "esxcli system maintenanceMode set --enable false" ]
+						]
+					},
+					"example": "esxcli software sources profile list -d /vmfs/volumes/datastore1/ESXi-Offline-Bundle.zip"
+				}
+			]
+		},
+		{
+			"title": "Monitoring, Events, and Troubleshooting",
+			"description": "Where to look for issues and how to pull signals quickly.",
+			"items": [
+				{
+					"title": "Common ESXi logs",
+					"description": "Host-side logs are often the fastest way to root-cause device/network/storage problems.",
+					"table": {
+						"headers": ["Log", "Use"],
+						"rows": [
+							["/var/log/vmkernel.log", "Kernel events (drivers, storage pathing, vmkernel networking)."],
+							["/var/log/hostd.log", "Host management agent tasks and API operations."],
+							["/var/log/vpxa.log", "vCenter agent issues when host is managed."],
+							["/var/log/auth.log", "Authentication issues."],
+							["/var/log/vobd.log", "VOB events."]
+						]
+					},
+					"example": "tail -n 200 /var/log/vmkernel.log\ntail -n 200 /var/log/hostd.log"
+				},
+				{
+					"title": "Collect evidence",
+					"description": "Support bundle and quick snapshots of state are helpful during incident response.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Generate ESXi support bundle", "vm-support -w /vmfs/volumes/<ds>/support"],
+							["Restart host agents (common fix)", "/etc/init.d/hostd restart ; /etc/init.d/vpxa restart"],
+							["Real-time performance", "esxtop"],
+							["Recent vCenter tasks (PowerCLI)", "Get-Task | Sort StartTime -Descending | Select -First 30"],
+							["Events (govc)", "govc events -n 50" ]
+						]
+					},
+					"example": "vm-support -w /vmfs/volumes/datastore1/support"
+				}
+			]
+		},
+		{
+			"title": "Automation and Scripting",
+			"description": "PowerCLI is the main admin toolkit; govc is great for lightweight automation; APIs enable deep integration.",
+			"items": [
+				{
+					"title": "PowerCLI connection and discovery",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["Connect", "Connect-VIServer -Server vcsa.example.com"],
+							["Inventory overview", "Get-Datacenter; Get-Cluster; Get-VMHost; Get-VM"],
+							["Find by name", "Get-VM -Name vm01"],
+							["Export inventory", "Get-VM | Select Name,PowerState,VMHost | Export-Csv vms.csv -NoTypeInformation"],
+							["Disconnect", "Disconnect-VIServer -Confirm:$false" ]
+						]
+					},
+					"example": "Connect-VIServer vcsa.example.com\nGet-VMHost\nGet-VM | Select Name,PowerState,VMHost"
+				},
+				{
+					"title": "govc environment and common patterns",
+					"description": "Prefer injecting credentials via environment variables in CI secrets; treat GOVC_INSECURE=1 as a risk.",
+					"table": {
+						"headers": ["Topic", "Example"],
+						"rows": [
+							["Environment", "export GOVC_URL='https://vcsa.example.com/sdk' GOVC_USERNAME='user' GOVC_PASSWORD='pass' GOVC_INSECURE=1"],
+							["List datacenters", "govc datacenter.info"],
+							["List folders", "govc folder.info"],
+							["Find objects", "govc find / -type m -name 'vm01'"],
+							["Recent tasks/events", "govc tasks -n 20 ; govc events -n 20" ]
+						]
+					},
+					"example": "govc find / -type m -name 'vm01'\ngovc vm.info /.../vm/vm01"
+				},
+				{
+					"title": "pyvmomi (Python) skeleton",
+					"description": "For custom integrations, pyvmomi provides SDK bindings; keep credentials safe and validate certificates.",
+					"table": {
+						"headers": ["Task", "Snippet"],
+						"rows": [
+							["Install", "pip install pyvmomi"],
+							["Connect (pseudo)", "from pyVim.connect import SmartConnect\n# connect with host/user/pwd, then query inventory"],
+							["Typical objects", "Datacenter, ClusterComputeResource, HostSystem, VirtualMachine" ]
+						]
+					},
+					"example": "# See pyvmomi docs for a complete, secure connection example\n# (certificate validation and secrets handling are environment-specific)."
+				}
+			]
+		}
+	]
+}

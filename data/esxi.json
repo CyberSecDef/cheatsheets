@@ -1,0 +1,718 @@
+{
+	"title": "VMware ESXi",
+	"description": "A practical, command-heavy reference for VMware ESXi host administration: architecture, networking, storage, VM operations, patching, security, troubleshooting, and automation.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Architecture",
+			"description": "Core ESXi concepts and how the platform is structured.",
+			"items": [
+				{
+					"title": "Key building blocks",
+					"description": null,
+					"table": {
+						"headers": ["Component", "Purpose"],
+						"rows": [
+							["VMkernel", "Core OS kernel providing CPU/memory scheduling, networking, storage, and drivers."],
+							["Hostd / vpxa", "Management agents (Hostd for local APIs; vpxa when managed by vCenter)."],
+							["vSwitch / Port Group", "Virtual switching and logical L2 segments for VM or VMkernel traffic."],
+							["VMkernel NIC (vmkX)", "Host-side interfaces for Management, vMotion, vSAN, iSCSI, NFS, etc."],
+							["Datastore", "Storage container for VM files (VMFS on block; NFS; vSAN)."],
+							["VIB / Image profile", "Packaging and update mechanism for drivers and ESXi components."],
+							["Acceptance level", "Trust level for installed VIBs (VMwareCertified/PartnerSupported/CommunitySupported)."],
+							["Maintenance mode", "State required for many disruptive operations (patching, some storage changes)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Common traffic types (VMkernel)",
+					"description": "VMkernel adapters are used for host services; VMs use vNICs attached to port groups.",
+					"table": {
+						"headers": ["Traffic", "Typical interface"],
+						"rows": [
+							["Management", "vmk0 or dedicated vmk"],
+							["vMotion", "Dedicated vmk with jumbo MTU often used"],
+							["vSAN", "Dedicated vmk; requires L2/L3 planning"],
+							["iSCSI", "Dedicated vmk(s), often with port binding"],
+							["NFS", "Dedicated vmk optional; depends on design"],
+							["Provisioning / FT / Replication", "Depends on feature and design"]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Where things live on disk",
+					"description": "Useful when debugging logs, configs, and persistent state.",
+					"table": {
+						"headers": ["Path", "What"],
+						"rows": [
+							["/vmfs/volumes", "Datastores and their mount points."],
+							["/etc/vmware", "Key configuration files."],
+							["/var/log", "Primary log directory (vmkernel.log, hostd.log, vpxa.log, etc.)."],
+							["/scratch", "Scratch partition (may be on datastore if not configured)."],
+							["/bootbank and /altbootbank", "Boot banks used for image/profile updates and rollback."]
+						]
+					},
+					"example": "ls -lah /var/log | head\nls -lah /vmfs/volumes"
+				}
+			]
+		},
+		{
+			"title": "Host Access and Management",
+			"description": "Ways to access ESXi and common management endpoints.",
+			"items": [
+				{
+					"title": "Access methods",
+					"description": null,
+					"table": {
+						"headers": ["Method", "Notes"],
+						"rows": [
+							["DCUI", "Direct Console User Interface (physical console / iLO/iDRAC)."],
+							["ESXi Host Client", "Browser UI at https://<host>/ui (limited vs vCenter)."],
+							["SSH", "Enable for troubleshooting/automation; restrict with firewall/ACL."],
+							["ESXi Shell", "Local shell (DCUI) useful when network is down."],
+							["vCenter", "Centralized management, DRS, clusters, lifecycle manager, templates, etc."],
+							["APIs", "Hostd/vSphere APIs for automation (PowerCLI, pyvmomi, govc)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Enable/disable SSH and ESXi Shell",
+					"description": "Service control varies by version; these are common patterns.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Start SSH", "/etc/init.d/SSH start"],
+							["Stop SSH", "/etc/init.d/SSH stop"],
+							["Start ESXi Shell", "/etc/init.d/ESXiShell start"],
+							["Stop ESXi Shell", "/etc/init.d/ESXiShell stop"],
+							["List services", "chkconfig --list | head"],
+							["Check a service status", "/etc/init.d/SSH status"]
+						]
+					},
+					"example": "/etc/init.d/SSH start\n/etc/init.d/SSH status"
+				},
+				{
+					"title": "Maintenance mode",
+					"description": "Most patching and some hardware/storage actions require the host in maintenance mode.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Enter maintenance mode", "esxcli system maintenanceMode set --enable true"],
+							["Exit maintenance mode", "esxcli system maintenanceMode set --enable false"],
+							["Check current state", "esxcli system maintenanceMode get"]
+						]
+					},
+					"example": "esxcli system maintenanceMode get"
+				},
+				{
+					"title": "Lockdown mode (concept)",
+					"description": "Lockdown restricts direct host access; manage primarily via vCenter for consistency.",
+					"table": {
+						"headers": ["Mode", "Behavior"],
+						"rows": [
+							["Normal", "Direct access (Host Client/SSH/API) permitted per auth rules."],
+							["Lockdown", "Direct access reduced; typically requires vCenter roles or exception users."],
+							["Strict lockdown", "Even more restrictive; design break-glass procedures carefully."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "CLI Toolkit: esxcli, localcli, vim-cmd",
+			"description": "Core CLIs you’ll use most often on an ESXi host.",
+			"items": [
+				{
+					"title": "esxcli basics",
+					"description": "esxcli is the primary CLI for host management. localcli is similar but bypasses some management layers (use carefully).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show namespaces", "esxcli --help | less"],
+							["Get help for a namespace", "esxcli network --help"],
+							["Get help for a command", "esxcli network ip interface list --help"],
+							["Use localcli", "localcli software vib list"],
+							["JSON output (where supported)", "esxcli --formatter=json network ip interface list"],
+							["CSV output (where supported)", "esxcli --formatter=csv network ip interface list"]
+						]
+					},
+					"example": "esxcli system version get\nesxcli --formatter=keyvalue system version get"
+				},
+				{
+					"title": "vim-cmd essentials",
+					"description": "vim-cmd is a lower-level CLI that can interact with inventory and VM operations.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List all VMs", "vim-cmd vmsvc/getallvms"],
+							["Get VM summary", "vim-cmd vmsvc/get.summary <vmid>"],
+							["Power on/off", "vim-cmd vmsvc/power.on <vmid> ; vim-cmd vmsvc/power.off <vmid>"],
+							["Reset VM", "vim-cmd vmsvc/power.reset <vmid>"],
+							["Unregister/register", "vim-cmd vmsvc/unregister <vmid> ; vim-cmd solo/registervm /vmfs/volumes/<ds>/<vm>/<vm>.vmx"],
+							["List host services", "vim-cmd hostsvc/hostsummary"]
+						]
+					},
+					"example": "vim-cmd vmsvc/getallvms"
+				},
+				{
+					"title": "Common supporting tools",
+					"description": null,
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["esxtop", "Real-time CPU/mem/disk/net performance (interactive)."],
+							["vmkping", "Ping via VMkernel stack; test MTU with -s and -d."],
+							["tcpdump-uw", "Packet capture on vmk/vmnic/port; invaluable for network debugging."],
+							["lspci / esxcli hardware", "Hardware enumeration."],
+							["tail/less/grep", "Log and config inspection."],
+							["vsish", "Deep inspection (advanced; use with caution)."]
+						]
+					},
+					"example": "esxtop"
+				}
+			]
+		},
+		{
+			"title": "System: Identity, Time, DNS, Services",
+			"description": "Common host configuration tasks.",
+			"items": [
+				{
+					"title": "Hostname, domain, DNS",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["View hostname", "esxcli system hostname get"],
+							["Set hostname", "esxcli system hostname set --host=<name>"],
+							["Set domain", "esxcli system hostname set --domain=<domain>"],
+							["View DNS", "esxcli network ip dns server list"],
+							["Add DNS server", "esxcli network ip dns server add --server=<ip>"],
+							["List search domains", "esxcli network ip dns search list"]
+						]
+					},
+					"example": "esxcli system hostname get\nesxcli network ip dns server list"
+				},
+				{
+					"title": "NTP and time",
+					"description": "Time drift causes authentication and certificate issues. Prefer NTP on all hosts.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List NTP servers", "esxcli system ntp get"],
+							["Set NTP servers", "esxcli system ntp set --servers=<ip1,ip2>"],
+							["Enable NTP client", "esxcli system ntp set --enabled true"],
+							["Start NTP service", "/etc/init.d/ntpd start"],
+							["Check date/time", "date"],
+							["Check timezone", "esxcli system time zone get"]
+						]
+					},
+					"example": "esxcli system ntp set --servers=0.pool.ntp.org,1.pool.ntp.org\nesxcli system ntp set --enabled true\n/etc/init.d/ntpd restart"
+				},
+				{
+					"title": "Syslog forwarding",
+					"description": "Forward logs to a central syslog collector for retention and correlation.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show current syslog config", "esxcli system syslog config get"],
+							["Set syslog host", "esxcli system syslog config set --loghost='udp://syslog.example.com:514'"],
+							["Reload syslog", "esxcli system syslog reload"],
+							["List log directories", "esxcli system syslog config logger list | head"]
+						]
+					},
+					"example": "esxcli system syslog config set --loghost='tcp://syslog.example.com:514'\nesxcli system syslog reload"
+				},
+				{
+					"title": "List and manage services",
+					"description": "On ESXi, services are typically controlled via /etc/init.d scripts.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List available init scripts", "ls /etc/init.d | sort | head"],
+							["Restart management agents", "/etc/init.d/hostd restart ; /etc/init.d/vpxa restart"],
+							["Restart syslog", "/etc/init.d/syslog restart"],
+							["Restart ntpd", "/etc/init.d/ntpd restart"],
+							["Check hostd log", "tail -n 200 /var/log/hostd.log"]
+						]
+					},
+					"example": "/etc/init.d/hostd restart\n/etc/init.d/vpxa restart"
+				}
+			]
+		},
+		{
+			"title": "Security: Users, Firewall, Certificates",
+			"description": "Hardening and access control operations.",
+			"items": [
+				{
+					"title": "Local users and authentication",
+					"description": "Many environments integrate with directory services via vCenter; hosts can also have local users.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List users", "cut -d: -f1 /etc/passwd | sort"],
+							["List groups", "cut -d: -f1 /etc/group | sort"],
+							["Show password policy", "esxcli system account policy get"],
+							["Set password policy", "esxcli system account policy set --min=14 --max=90 --warn=7"],
+							["List permissions (high-level)", "vim-cmd vimsvc/auth/entity_permission_list" ]
+						]
+					},
+					"example": "esxcli system account policy get"
+				},
+				{
+					"title": "ESXi firewall",
+					"description": "Enable only required rulesets. Firewall rulesets protect services like SSH, NTP, CIM, etc.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Firewall status", "esxcli network firewall get"],
+							["List rulesets", "esxcli network firewall ruleset list"],
+							["Enable a ruleset", "esxcli network firewall ruleset set -e true -r sshServer"],
+							["Disable a ruleset", "esxcli network firewall ruleset set -e false -r sshServer"],
+							["List allowed IPs", "esxcli network firewall ruleset allowedip list"],
+							["Set allowed IPs", "esxcli network firewall ruleset allowedip set -r sshServer -i 192.0.2.10,192.0.2.11" ]
+						]
+					},
+					"example": "esxcli network firewall ruleset list | head"
+				},
+				{
+					"title": "TLS certificates (overview)",
+					"description": "Hosts use certificates for HTTPS/API endpoints. In vCenter-managed environments, prefer centralized certificate management.",
+					"table": {
+						"headers": ["Topic", "Notes"],
+						"rows": [
+							["Host certificate", "Used by Host Client and APIs; rotation affects connections."],
+							["Trust chain", "Ensure clients trust the issuing CA (especially with custom certs)."],
+							["Time dependency", "Correct time is critical for certificate validity and SSO."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Networking",
+			"description": "Physical NICs, vSwitches, port groups, VMkernel adapters, and troubleshooting.",
+			"items": [
+				{
+					"title": "List NICs and link state",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List physical NICs", "esxcli network nic list"],
+							["NIC details", "esxcli network nic get -n vmnic0"],
+							["List VMkernel interfaces", "esxcli network ip interface list"],
+							["List IP addresses", "esxcli network ip interface ipv4 get"],
+							["List routes", "esxcli network ip route ipv4 list"],
+							["View ARP table", "esxcli network ip neighbor list" ]
+						]
+					},
+					"example": "esxcli network nic list\nesxcli network ip interface list"
+				},
+				{
+					"title": "Standard vSwitch and port groups",
+					"description": "vSphere Standard Switch commands are available via esxcli namespaces.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List standard switches", "esxcli network vswitch standard list"],
+							["List port groups", "esxcli network vswitch standard portgroup list"],
+							["Add port group", "esxcli network vswitch standard portgroup add -p PG-VLAN100 -v vSwitch0"],
+							["Set port group VLAN", "esxcli network vswitch standard portgroup set -p PG-VLAN100 -v 100"],
+							["Add uplink to vSwitch", "esxcli network vswitch standard uplink add -u vmnic1 -v vSwitch0"],
+							["Set vSwitch MTU", "esxcli network vswitch standard set -m 9000 -v vSwitch0" ]
+						]
+					},
+					"example": "esxcli network vswitch standard list\nesxcli network vswitch standard portgroup list"
+				},
+				{
+					"title": "VMkernel NIC operations",
+					"description": "VMkernel NICs are used for host services (mgmt, vMotion, iSCSI, etc.).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List VMkernel NICs", "esxcli network ip interface list"],
+							["Show VMkernel NIC TCP/IP stack", "esxcli network ip interface tag get -i vmk0"],
+							["Test ping via a vmk", "vmkping -I vmk0 192.0.2.1"],
+							["Test jumbo MTU", "vmkping -I vmk1 -s 8972 -d 192.0.2.2"],
+							["View TCP/IP stacks", "esxcli network ip netstack list"],
+							["View vmk routes", "esxcli network ip route ipv4 list" ]
+						]
+					},
+					"example": "vmkping -I vmk0 <gateway-ip>\nvmkping -I vmk1 -s 8972 -d <peer-ip>"
+				},
+				{
+					"title": "Packet capture and troubleshooting",
+					"description": "tcpdump-uw is the usual capture utility on ESXi.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Capture on vmnic", "tcpdump-uw -i vmnic0 -nn"],
+							["Capture on vmk", "tcpdump-uw -i vmk0 -nn"],
+							["Write capture to disk", "tcpdump-uw -i vmk0 -s 0 -w /vmfs/volumes/<ds>/capture.pcap"],
+							["Capture specific host/port", "tcpdump-uw -i vmk0 -nn host 192.0.2.10 and port 443"],
+							["Check vmkernel network logs", "tail -n 200 /var/log/vmkernel.log"]
+						]
+					},
+					"example": "tcpdump-uw -i vmk0 -nn host <peer-ip>"
+				}
+			]
+		},
+		{
+			"title": "Storage: Datastores, Devices, Multipathing",
+			"description": "Enumerate and manage storage devices, filesystems, and adapters.",
+			"items": [
+				{
+					"title": "List datastores and mounts",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List datastores", "esxcli storage filesystem list"],
+							["VMFS extents", "esxcli storage vmfs extent list"],
+							["List mounted volumes", "ls -lah /vmfs/volumes"],
+							["Rescan all storage adapters", "esxcli storage core adapter rescan --all"],
+							["List core devices", "esxcli storage core device list | head"],
+							["List paths", "esxcli storage core path list | head" ]
+						]
+					},
+					"example": "esxcli storage filesystem list\nesxcli storage core adapter rescan --all"
+				},
+				{
+					"title": "HBA adapters and iSCSI basics",
+					"description": "iSCSI configuration is often done via vCenter, but visibility and rescans can be done via CLI.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List storage adapters", "esxcli storage core adapter list"],
+							["List iSCSI adapters", "esxcli iscsi adapter list"],
+							["List iSCSI sessions", "esxcli iscsi session list"],
+							["List iSCSI discovery addresses", "esxcli iscsi adapter discovery sendtarget list -A <vmhbaX>"],
+							["List iSCSI targets", "esxcli iscsi adapter discovery sendtarget list -A <vmhbaX>"],
+							["Rescan a single adapter", "esxcli storage core adapter rescan -A <vmhbaX>" ]
+						]
+					},
+					"example": "esxcli storage core adapter list\nesxcli iscsi session list"
+				},
+				{
+					"title": "Multipathing",
+					"description": "Diagnose PSP/SATP selection and path states (Active/Standby/Dead).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List multipath plugins", "esxcli storage nmp satp list"],
+							["List PSPs", "esxcli storage nmp psp list"],
+							["Device path info", "esxcli storage nmp device list -d <naa.id>"],
+							["Path states", "esxcli storage core path list -d <naa.id>"],
+							["Claim rules", "esxcli storage nmp satp rule list" ]
+						]
+					},
+					"example": "esxcli storage core path list | head"
+				}
+			]
+		},
+		{
+			"title": "VM Operations",
+			"description": "Inventory, power operations, and useful VM-level actions from the host.",
+			"items": [
+				{
+					"title": "List VMs and basic power control",
+					"description": "Use vim-cmd to find VMIDs and perform host-side operations.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List all VMs", "vim-cmd vmsvc/getallvms"],
+							["Power on", "vim-cmd vmsvc/power.on <vmid>"],
+							["Power off", "vim-cmd vmsvc/power.off <vmid>"],
+							["Suspend", "vim-cmd vmsvc/power.suspend <vmid>"],
+							["Reset", "vim-cmd vmsvc/power.reset <vmid>"],
+							["Get power state", "vim-cmd vmsvc/power.getstate <vmid>" ]
+						]
+					},
+					"example": "vim-cmd vmsvc/getallvms\nvim-cmd vmsvc/power.getstate <vmid>"
+				},
+				{
+					"title": "Guest operations (tools dependent)",
+					"description": "Some guest operations require VMware Tools and appropriate permissions.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Query tools status", "vim-cmd vmsvc/get.guest <vmid> | head"],
+							["Shutdown guest", "vim-cmd vmsvc/power.shutdown <vmid>"],
+							["Reboot guest", "vim-cmd vmsvc/power.reboot <vmid>"],
+							["List snapshots", "vim-cmd vmsvc/snapshot.get <vmid>"],
+							["Create snapshot", "vim-cmd vmsvc/snapshot.create <vmid> name description 0 0"],
+							["Remove all snapshots", "vim-cmd vmsvc/snapshot.removeall <vmid>" ]
+						]
+					},
+					"example": "vim-cmd vmsvc/snapshot.get <vmid>"
+				},
+				{
+					"title": "Register/unregister a VM",
+					"description": "Useful when restoring from datastore or after manual file moves.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Register", "vim-cmd solo/registervm /vmfs/volumes/<ds>/<vm>/<vm>.vmx"],
+							["Unregister", "vim-cmd vmsvc/unregister <vmid>"],
+							["Reload VMX", "vim-cmd vmsvc/reload <vmid>" ]
+						]
+					},
+					"example": "vim-cmd solo/registervm /vmfs/volumes/datastore1/myvm/myvm.vmx"
+				}
+			]
+		},
+		{
+			"title": "Software and Patching (VIBs, Profiles)",
+			"description": "Manage installed components and update ESXi using profiles and depots.",
+			"items": [
+				{
+					"title": "Inventory and version",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["ESXi version/build", "esxcli system version get"],
+							["List installed VIBs", "esxcli software vib list | head"],
+							["Show acceptance level", "esxcli software acceptance get"],
+							["Set acceptance level", "esxcli software acceptance set --level=PartnerSupported"],
+							["List image profiles from a depot", "esxcli software sources profile list -d /vmfs/volumes/<ds>/VMware-ESXi-depot.zip" ]
+						]
+					},
+					"example": "esxcli system version get\nesxcli software acceptance get"
+				},
+				{
+					"title": "Update/patch using an offline bundle",
+					"description": "Common workflow: upload offline bundle to a datastore, enter maintenance mode, apply profile update.",
+					"table": {
+						"headers": ["Action", "Command"],
+						"rows": [
+							["Enter maintenance mode", "esxcli system maintenanceMode set --enable true"],
+							["List profiles", "esxcli software sources profile list -d /vmfs/volumes/<ds>/bundle.zip"],
+							["Profile update", "esxcli software profile update -d /vmfs/volumes/<ds>/bundle.zip -p <profileName>"],
+							["Profile install", "esxcli software profile install -d /vmfs/volumes/<ds>/bundle.zip -p <profileName>"],
+							["Reboot", "reboot"],
+							["Exit maintenance mode", "esxcli system maintenanceMode set --enable false" ]
+						]
+					},
+					"example": "esxcli software sources profile list -d /vmfs/volumes/datastore1/ESXi-Offline-Bundle.zip"
+				},
+				{
+					"title": "VIB install/remove",
+					"description": "Prefer vendor guidance; validate acceptance levels and dependencies.",
+					"table": {
+						"headers": ["Action", "Command"],
+						"rows": [
+							["Install VIB", "esxcli software vib install -v /vmfs/volumes/<ds>/vendor.vib"],
+							["Install from offline bundle", "esxcli software vib install -d /vmfs/volumes/<ds>/vendor-offline-bundle.zip"],
+							["Remove VIB", "esxcli software vib remove -n <vibname>"],
+							["Get VIB details", "esxcli software vib get -n <vibname>" ]
+						]
+					},
+					"example": "esxcli software vib list | grep -i driver"
+				}
+			]
+		},
+		{
+			"title": "Logs, Support Bundles, Troubleshooting",
+			"description": "Where to look when things go wrong and how to collect evidence.",
+			"items": [
+				{
+					"title": "High-value logs",
+					"description": null,
+					"table": {
+						"headers": ["Log", "What it helps diagnose"],
+						"rows": [
+							["/var/log/vmkernel.log", "Kernel-level events: drivers, storage paths, networking, PSOD context."],
+							["/var/log/hostd.log", "Host management agent: tasks, API operations, inventory updates."],
+							["/var/log/vpxa.log", "vCenter agent issues (if managed by vCenter)."],
+							["/var/log/auth.log", "Authentication attempts and security events."],
+							["/var/log/syslog.log", "General system messages (depends on configuration)."],
+							["/var/log/vobd.log", "VMware Observation events (VOBs)." ]
+						]
+					},
+					"example": "tail -n 200 /var/log/vmkernel.log\ntail -n 200 /var/log/hostd.log"
+				},
+				{
+					"title": "Generate a support bundle",
+					"description": "Collect logs/config for VMware Support or deep troubleshooting.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create bundle", "vm-support"],
+							["Send output to datastore", "vm-support -w /vmfs/volumes/<ds>/support"],
+							["Include specific logs (example)", "vm-support -l" ]
+						]
+					},
+					"example": "vm-support -w /vmfs/volumes/datastore1/support"
+				},
+				{
+					"title": "Restart management agents",
+					"description": "Common first response to UI/API issues (use change control in production).",
+					"table": {
+						"headers": ["Agent", "Command"],
+						"rows": [
+							["hostd", "/etc/init.d/hostd restart"],
+							["vpxa", "/etc/init.d/vpxa restart"],
+							["Both", "/etc/init.d/hostd restart ; /etc/init.d/vpxa restart" ]
+						]
+					},
+					"example": "/etc/init.d/hostd restart ; /etc/init.d/vpxa restart"
+				},
+				{
+					"title": "Network checks",
+					"description": "Validate connectivity, MTU, routes, and DNS quickly.",
+					"table": {
+						"headers": ["Check", "Command"],
+						"rows": [
+							["Default gateway", "esxcli network ip route ipv4 list"],
+							["DNS", "esxcli network ip dns server list"],
+							["Ping via vmk", "vmkping -I vmk0 <ip>"],
+							["Jumbo test", "vmkping -I vmk1 -s 8972 -d <ip>"],
+							["Listen ports (limited)", "esxcli network ip connection list | head" ]
+						]
+					},
+					"example": "esxcli network ip route ipv4 list\nesxcli network ip dns server list"
+				}
+			]
+		},
+		{
+			"title": "Performance and Capacity",
+			"description": "On-host performance tools and quick inventory views.",
+			"items": [
+				{
+					"title": "esxtop quick notes",
+					"description": "Interactive tool. Common keys: c (CPU), m (memory), d (disk), n (network), v (VM).",
+					"table": {
+						"headers": ["Area", "What to watch"],
+						"rows": [
+							["CPU", "%RDY, %CSTP (contention), co-scheduling."],
+							["Memory", "Ballooning, swapping, compression."],
+							["Disk", "DAVG/KAVG/GAVG latency; queue depths."],
+							["Network", "Dropped packets, errors, throughput." ]
+						]
+					},
+					"example": "esxtop"
+				},
+				{
+					"title": "Hardware inventory",
+					"description": null,
+					"table": {
+						"headers": ["Info", "Command"],
+						"rows": [
+							["CPU list", "esxcli hardware cpu list | head"],
+							["Memory", "esxcli hardware memory get"],
+							["PCI devices", "esxcli hardware pci list | head"],
+							["NICs", "esxcli network nic list"],
+							["Storage adapters", "esxcli storage core adapter list" ]
+						]
+					},
+					"example": "esxcli hardware memory get"
+				},
+				{
+					"title": "System stats",
+					"description": "Quick host-level metrics (varies by version).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["CPU stats", "esxcli system stats compute get"],
+							["Memory stats", "esxcli system stats memory get"],
+							["Network stats", "esxcli network nic stats get -n vmnic0"],
+							["Disk stats", "esxcli storage core device stats get -d <naa.id>" ]
+						]
+					},
+					"example": "esxcli system stats compute get"
+				}
+			]
+		},
+		{
+			"title": "Backup/Restore Host Configuration",
+			"description": "Host config backups help recover from failed updates or misconfiguration (not a substitute for VM backups).",
+			"items": [
+				{
+					"title": "Backup and restore via vim-cmd",
+					"description": "These commands can provide a backup URL and restore the configuration bundle.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Get backup config URL", "vim-cmd hostsvc/firmware/backup_config"],
+							["Restore config (bundle)", "vim-cmd hostsvc/firmware/restore_config <bundlePath>"],
+							["Reboot after restore", "reboot" ]
+						]
+					},
+					"example": "vim-cmd hostsvc/firmware/backup_config"
+				},
+				{
+					"title": "What host config backup covers",
+					"description": null,
+					"table": {
+						"headers": ["Includes", "Notes"],
+						"rows": [
+							["Network/storage config", "vSwitches, VMkernel NICs, datastore mounts (varies)."],
+							["Users/permissions", "Local accounts and some authorization state (varies)."],
+							["Advanced settings", "Many ESXi advanced configuration keys."],
+							["Does not replace VM backups", "VM disks/config need separate backup strategy."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Automation and Scripting",
+			"description": "Common automation approaches: PowerCLI, govc, and API clients.",
+			"items": [
+				{
+					"title": "PowerCLI essentials (vCenter-managed)",
+					"description": "PowerCLI is the most common admin automation toolkit for vSphere.",
+					"table": {
+						"headers": ["Goal", "PowerShell"],
+						"rows": [
+							["Connect", "Connect-VIServer -Server vcsa.example.com"],
+							["List hosts", "Get-VMHost"],
+							["Enter maintenance mode", "Set-VMHost -VMHost esx01 -State Maintenance"],
+							["Get VM list", "Get-VM"],
+							["Get datastore", "Get-Datastore"],
+							["Host services", "Get-VMHostService -VMHost esx01" ]
+						]
+					},
+					"example": "Connect-VIServer -Server vcsa.example.com\nGet-VMHost\nGet-VM"
+				},
+				{
+					"title": "govc quick commands",
+					"description": "govc (CLI for vSphere) is popular in CI/CD and lightweight automation.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Set env (example)", "export GOVC_URL='https://vcsa.example.com/sdk' GOVC_USERNAME='user' GOVC_PASSWORD='pass' GOVC_INSECURE=1"],
+							["List datacenters", "govc datacenter.info"],
+							["List hosts", "govc ls /.../host"],
+							["List VMs", "govc ls /.../vm"],
+							["Host info", "govc host.info -host esx01"],
+							["Get events", "govc events -n 20" ]
+						]
+					},
+					"example": "govc host.info -host esx01"
+				},
+				{
+					"title": "Shell scripting patterns (host-local)",
+					"description": "Small snippets for collecting state quickly.",
+					"table": {
+						"headers": ["Task", "Snippet"],
+						"rows": [
+							["Inventory snapshot", "esxcli system version get; esxcli network nic list; esxcli storage filesystem list"],
+							["Dump network to a file", "esxcli network ip interface list > /tmp/net.txt"],
+							["Find recent errors", "grep -iE 'error|warning|fail' /var/log/vmkernel.log | tail -n 50"],
+							["Collect vm list", "vim-cmd vmsvc/getallvms > /tmp/vms.txt" ]
+						]
+					},
+					"example": "esxcli system version get\nesxcli network nic list\nesxcli storage filesystem list"
+				}
+			]
+		}
+	]
+}

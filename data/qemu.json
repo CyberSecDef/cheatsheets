@@ -1,0 +1,424 @@
+{
+	"title": "QEMU (with KVM)",
+	"description": "A practical, command-heavy reference for QEMU virtualization and emulation, including KVM acceleration, qemu-system usage, qemu-img disk operations, networking (user/tap/bridge), UEFI/OVMF, QMP/monitor control, snapshots, performance tuning, and troubleshooting.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Architecture",
+			"description": "How QEMU works, when to use KVM, and key concepts.",
+			"items": [
+				{
+					"title": "Core concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["QEMU", "Userspace emulator + virtualizer (CPU/device emulation, machine models, I/O)."],
+							["KVM", "Linux kernel virtualization API enabling near-native CPU virtualization (requires VT-x/AMD-V)."],
+							["TCG", "Tiny Code Generator (software CPU emulation; slower, works without KVM)."],
+							["Machine type", "Defines chipset/platform model (e.g., pc/q35 for x86_64)."],
+							["CPU model", "Exposed CPU features (host passthrough vs named models)."],
+							["Firmware", "BIOS or UEFI (OVMF) used to boot the guest."],
+							["Block device", "Virtual disk backend (raw/qcow2; file/NBD/LVM/etc.)."],
+							["Frontends", "libvirt/virt-manager/virt-install wrap QEMU with management and security policies."],
+							["Monitor/QMP", "Control interfaces for runtime actions (HMP human monitor; QMP JSON)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Common binaries",
+					"description": "Names vary by distro; this list is typical.",
+					"table": {
+						"headers": ["Tool", "Purpose"],
+						"rows": [
+							["qemu-system-x86_64", "Run x86_64 VMs."],
+							["qemu-img", "Create/inspect/convert/resize disk images."],
+							["qemu-nbd", "Expose a disk image via Network Block Device."],
+							["qemu-storage-daemon", "Dedicated storage backend (newer setups)."],
+							["virtiofsd", "Virtio-fs daemon for host/guest filesystem sharing."],
+							["qemu-ga", "QEMU guest agent (runs inside the guest)."]
+						]
+					},
+					"example": "qemu-system-x86_64 --version\nqemu-img --help | head"
+				}
+			]
+		},
+		{
+			"title": "Install and Host Prereqs (Linux)",
+			"description": "KVM modules, permissions, and quick host validation.",
+			"items": [
+				{
+					"title": "KVM availability and kernel modules",
+					"description": null,
+					"table": {
+						"headers": ["Check", "Command"],
+						"rows": [
+							["CPU virtualization flags", "egrep -c '(vmx|svm)' /proc/cpuinfo"],
+							["Loaded KVM modules", "lsmod | grep -E '^kvm'"],
+							["Load Intel KVM", "sudo modprobe kvm_intel"],
+							["Load AMD KVM", "sudo modprobe kvm_amd"],
+							["KVM device node", "ls -lah /dev/kvm"],
+							["KVM kernel messages", "dmesg | grep -i kvm | tail -n 50" ]
+						]
+					},
+					"example": "ls -lah /dev/kvm\nlsmod | grep kvm"
+				},
+				{
+					"title": "Permissions (typical)",
+					"description": "Most distros gate /dev/kvm and networking devices via groups (kvm/libvirt).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Check group ownership", "stat -c '%A %U:%G %n' /dev/kvm"],
+							["Add user to kvm", "sudo usermod -aG kvm $USER"],
+							["Add user to libvirt", "sudo usermod -aG libvirt $USER"],
+							["Re-evaluate groups (current shell)", "newgrp kvm" ]
+						]
+					},
+					"example": "stat -c '%A %U:%G %n' /dev/kvm"
+				}
+			]
+		},
+		{
+			"title": "qemu-img (Disk Images)",
+			"description": "Create, inspect, convert, compress, and snapshot disk images.",
+			"items": [
+				{
+					"title": "Create and inspect",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create qcow2", "qemu-img create -f qcow2 disk.qcow2 40G"],
+							["Create raw", "qemu-img create -f raw disk.raw 40G"],
+							["Inspect image", "qemu-img info disk.qcow2"],
+							["Check image consistency", "qemu-img check -r all disk.qcow2"],
+							["Compare two images (advanced)", "qemu-img compare -f qcow2 a.qcow2 -F qcow2 b.qcow2" ]
+						]
+					},
+					"example": "qemu-img create -f qcow2 ubuntu.qcow2 30G\nqemu-img info ubuntu.qcow2"
+				},
+				{
+					"title": "Convert and resize",
+					"description": "Conversions can change performance characteristics. Be explicit about formats.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["qcow2 → raw", "qemu-img convert -p -f qcow2 -O raw in.qcow2 out.raw"],
+							["raw → qcow2", "qemu-img convert -p -f raw -O qcow2 in.raw out.qcow2"],
+							["vmdk → qcow2", "qemu-img convert -p -f vmdk -O qcow2 disk.vmdk disk.qcow2"],
+							["Resize (grow)", "qemu-img resize disk.qcow2 +10G"],
+							["Resize (absolute)", "qemu-img resize disk.qcow2 80G" ]
+						]
+					},
+					"example": "qemu-img convert -p -f qcow2 -O raw in.qcow2 out.raw"
+				},
+				{
+					"title": "Sparsify, compress, and commit",
+					"description": "qcow2 supports refcounting, compression, and backing files.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Rebase (change backing)", "qemu-img rebase -f qcow2 -u -b new-base.qcow2 overlay.qcow2"],
+							["Commit overlay into base", "qemu-img commit overlay.qcow2"],
+							["Create overlay", "qemu-img create -f qcow2 -b base.qcow2 overlay.qcow2"],
+							["Convert with compression", "qemu-img convert -p -O qcow2 -c in.qcow2 out.qcow2"],
+							["Sparsify raw via convert", "qemu-img convert -p -f raw -O raw in.raw out.raw" ]
+						]
+					},
+					"example": "qemu-img create -f qcow2 -b base.qcow2 overlay.qcow2"
+				}
+			]
+		},
+		{
+			"title": "qemu-system Basics (x86_64)",
+			"description": "Common VM command lines and frequently used flags.",
+			"items": [
+				{
+					"title": "Minimal boot from ISO",
+					"description": "Example: boot an installer ISO, create a qcow2 disk, and attach both.",
+					"table": {
+						"headers": ["Purpose", "Command"],
+						"rows": [
+							["Create disk", "qemu-img create -f qcow2 vm.qcow2 40G"],
+							["Boot ISO (KVM)", "qemu-system-x86_64 -enable-kvm -m 4096 -smp 2 -cpu host -drive file=vm.qcow2,if=virtio,cache=none -cdrom installer.iso -boot d"],
+							["Boot ISO (TCG)", "qemu-system-x86_64 -m 4096 -smp 2 -drive file=vm.qcow2,if=virtio -cdrom installer.iso -boot d" ]
+						]
+					},
+					"example": "qemu-img create -f qcow2 vm.qcow2 40G\nqemu-system-x86_64 -enable-kvm -m 4096 -smp 2 -cpu host -drive file=vm.qcow2,if=virtio,cache=none -cdrom installer.iso -boot d"
+				},
+				{
+					"title": "Common runtime flags",
+					"description": null,
+					"table": {
+						"headers": ["Flag", "Meaning"],
+						"rows": [
+							["-enable-kvm", "Use KVM acceleration (Linux)."],
+							["-accel tcg", "Force software emulation (portable, slower)."],
+							["-m <MiB>", "Guest memory."],
+							["-smp <n>", "Guest vCPU count (can use topology)."],
+							["-cpu host", "Expose host CPU features (best perf; limits migration portability)."],
+							["-machine q35|pc", "Select chipset/platform (q35 common for modern x86)."],
+							["-drive ...", "Attach disks; use if=virtio for performance."],
+							["-nic user", "User-mode networking (simple NAT)."],
+							["-display gtk|sdl|none", "Select display frontend; use none for headless."],
+							["-serial mon:stdio", "Multiplex serial + monitor on stdio (handy for headless)." ]
+						]
+					},
+					"example": "qemu-system-x86_64 -enable-kvm -cpu host -machine q35 -m 4096 -smp 4 -drive file=vm.qcow2,if=virtio,cache=none -nic user -display gtk"
+				},
+				{
+					"title": "UEFI boot (OVMF)",
+					"description": "Use OVMF firmware for UEFI guests. Paths vary by distro.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["UEFI with OVMF (example)", "qemu-system-x86_64 -enable-kvm -m 4096 -smp 2 -cpu host -machine q35 -drive file=vm.qcow2,if=virtio,cache=none -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE.fd -drive if=pflash,format=raw,file=OVMF_VARS.fd -cdrom installer.iso -boot d"],
+							["Copy VARS template", "cp /usr/share/OVMF/OVMF_VARS.fd ./OVMF_VARS.fd" ]
+						]
+					},
+					"example": "cp /usr/share/OVMF/OVMF_VARS.fd ./OVMF_VARS.fd"
+				}
+			]
+		},
+		{
+			"title": "Networking",
+			"description": "User-mode NAT, tap/bridge, port forwarding, and troubleshooting.",
+			"items": [
+				{
+					"title": "User-mode networking (quick NAT)",
+					"description": "Simple and works without root, but limited (no inbound by default unless forwarded).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Basic NAT", "qemu-system-x86_64 ... -nic user"],
+							["Forward host port to guest SSH", "qemu-system-x86_64 ... -nic user,hostfwd=tcp::2222-:22"],
+							["Forward host port to guest HTTP", "qemu-system-x86_64 ... -nic user,hostfwd=tcp::8080-:80"],
+							["Set guest DNS", "qemu-system-x86_64 ... -nic user,dns=8.8.8.8" ]
+						]
+					},
+					"example": "qemu-system-x86_64 -enable-kvm -m 2048 -smp 2 -drive file=vm.qcow2,if=virtio -nic user,hostfwd=tcp::2222-:22"
+				},
+				{
+					"title": "Tap networking (bridged)",
+					"description": "More flexible; typically requires root/net-admin capabilities and a host bridge.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create tap (iproute2)", "sudo ip tuntap add dev tap0 mode tap user $USER"],
+							["Bring tap up", "sudo ip link set tap0 up"],
+							["Create bridge", "sudo ip link add br0 type bridge"],
+							["Add uplink to bridge", "sudo ip link set dev eth0 master br0"],
+							["Add tap to bridge", "sudo ip link set dev tap0 master br0"],
+							["QEMU with tap", "qemu-system-x86_64 ... -netdev tap,id=n1,ifname=tap0,script=no,downscript=no -device virtio-net-pci,netdev=n1" ]
+						]
+					},
+					"example": "sudo ip tuntap add dev tap0 mode tap user $USER\nsudo ip link set tap0 up"
+				},
+				{
+					"title": "Traffic capture and debugging",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Capture on tap", "sudo tcpdump -i tap0 -nn"],
+							["Capture on bridge", "sudo tcpdump -i br0 -nn"],
+							["List QEMU network devices", "qemu-system-x86_64 -device help | grep -i net | head" ]
+						]
+					},
+					"example": "sudo tcpdump -i tap0 -nn host <guest-ip>"
+				}
+			]
+		},
+		{
+			"title": "Console, Monitor, QMP",
+			"description": "Interact with a running VM: HMP monitor, QMP JSON, and common runtime actions.",
+			"items": [
+				{
+					"title": "HMP monitor on stdio",
+					"description": "serial+monitor on stdio is a quick way to access the monitor for one-off VMs.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Start with monitor", "qemu-system-x86_64 ... -serial mon:stdio"],
+							["Show devices (in monitor)", "info qtree"],
+							["Show block devices", "info block"],
+							["Quit (in monitor)", "quit" ]
+						]
+					},
+					"example": "# In the QEMU monitor:\ninfo block\nquit"
+				},
+				{
+					"title": "QMP over Unix socket",
+					"description": "QMP is the JSON control channel. You can talk to it with socat/nc (framing matters).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Expose QMP socket", "qemu-system-x86_64 ... -qmp unix:/tmp/qmp.sock,server,nowait"],
+							["Connect (socat)", "socat - UNIX-CONNECT:/tmp/qmp.sock"],
+							["Capabilities (send JSON)", "{\"execute\":\"qmp_capabilities\"}"],
+							["Query status", "{\"execute\":\"query-status\"}" ]
+						]
+					},
+					"example": "# Example session (type JSON lines):\n# {\"execute\":\"qmp_capabilities\"}\n# {\"execute\":\"query-status\"}"
+				}
+			]
+		},
+		{
+			"title": "Snapshots and Backups",
+			"description": "Snapshots vary by disk format and whether you use qcow2 internal snapshots or overlays.",
+			"items": [
+				{
+					"title": "qcow2 internal snapshots (qemu-img)",
+					"description": "Internal snapshots are convenient but may not be ideal for long-lived production patterns.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List snapshots", "qemu-img snapshot -l disk.qcow2"],
+							["Create snapshot", "qemu-img snapshot -c prechange disk.qcow2"],
+							["Apply snapshot", "qemu-img snapshot -a prechange disk.qcow2"],
+							["Delete snapshot", "qemu-img snapshot -d prechange disk.qcow2" ]
+						]
+					},
+					"example": "qemu-img snapshot -c prechange disk.qcow2\nqemu-img snapshot -l disk.qcow2"
+				},
+				{
+					"title": "Overlay-based workflow",
+					"description": "Overlay snapshots use backing files; great for labs and reproducible environments.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create overlay", "qemu-img create -f qcow2 -b base.qcow2 overlay.qcow2"],
+							["Run VM on overlay", "qemu-system-x86_64 ... -drive file=overlay.qcow2,if=virtio,cache=none"],
+							["Commit overlay", "qemu-img commit overlay.qcow2"],
+							["Discard overlay", "rm -f overlay.qcow2" ]
+						]
+					},
+					"example": "qemu-img create -f qcow2 -b base.qcow2 overlay.qcow2"
+				}
+			]
+		},
+		{
+			"title": "Performance and Tuning",
+			"description": "Common knobs for CPU, memory, and storage performance (host + QEMU flags).",
+			"items": [
+				{
+					"title": "CPU and acceleration",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command/Setting"],
+						"rows": [
+							["Use KVM", "-enable-kvm"],
+							["CPU passthrough", "-cpu host"],
+							["Pin vCPUs (host taskset)", "taskset -cp 0-3 <qemu-pid>"],
+							["NUMA awareness (advanced)", "-numa node,memdev=mem0 -object memory-backend-ram,id=mem0,size=4G"],
+							["Measure host CPU", "pidstat -p <qemu-pid> 1" ]
+						]
+					},
+					"example": "qemu-system-x86_64 -enable-kvm -cpu host -smp 4 -m 8192 ..."
+				},
+				{
+					"title": "Disk performance basics",
+					"description": "Virtio + appropriate caching/IO modes matter. Be careful: wrong cache settings risk data loss on power failure.",
+					"table": {
+						"headers": ["Goal", "Flag/Pattern"],
+						"rows": [
+							["Virtio block", "-drive file=vm.qcow2,if=virtio"],
+							["Reduce host page cache", "cache=none (often paired with aio=native)"],
+							["Async IO", "aio=native (Linux)"],
+							["Enable discard/TRIM", "discard=unmap (guest + storage must support)"],
+							["Inspect with iostat", "iostat -xz 1" ]
+						]
+					},
+					"example": "qemu-system-x86_64 ... -drive file=vm.qcow2,if=virtio,cache=none,aio=native,discard=unmap"
+				}
+			]
+		},
+		{
+			"title": "Administration and Automation",
+			"description": "Scripting patterns, headless runs, and integration with libvirt (common in real deployments).",
+			"items": [
+				{
+					"title": "Headless runs and PID management",
+					"description": "Prefer a supervisor (systemd) for long-running VMs if you are not using libvirt.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["No display", "-display none"],
+							["Serial console", "-nographic (implies display none and redirects)"],
+							["Daemonize", "-daemonize"],
+							["Write PID file", "-pidfile /run/qemu-vm01.pid"],
+							["Control via monitor socket", "-monitor unix:/tmp/mon.sock,server,nowait" ]
+						]
+					},
+					"example": "qemu-system-x86_64 -enable-kvm -daemonize -pidfile /tmp/vm.pid -display none -serial mon:stdio ..."
+				},
+				{
+					"title": "libvirt quick notes",
+					"description": "libvirt (virsh/virt-manager/virt-install) is the common management layer for QEMU/KVM on Linux.",
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["virsh", "CLI for VM lifecycle, networks, storage pools."],
+							["virt-install", "Provision new VMs from CLI."],
+							["virt-manager", "GUI management."],
+							["virt-viewer", "Console viewer (SPICE/VNC)."]
+						]
+					},
+					"example": "virsh list --all\nvirsh dominfo <name>"
+				},
+				{
+					"title": "Bash scripting patterns",
+					"description": "Simple patterns for reproducible builds.",
+					"table": {
+						"headers": ["Goal", "Snippet"],
+						"rows": [
+							["Create base + overlay", "qemu-img create -f qcow2 base.qcow2 20G && qemu-img create -f qcow2 -b base.qcow2 run.qcow2"],
+							["Inventory host KVM", "test -e /dev/kvm && echo KVM_OK || echo NO_KVM"],
+							["Dump image info", "for i in *.qcow2; do qemu-img info \"$i\"; done"],
+							["Expose image via NBD", "sudo modprobe nbd max_part=8 && sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2" ]
+						]
+					},
+					"example": "sudo modprobe nbd max_part=8\nsudo qemu-nbd --connect=/dev/nbd0 disk.qcow2\nlsblk\nsudo qemu-nbd --disconnect /dev/nbd0"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Common failure modes and where to look.",
+			"items": [
+				{
+					"title": "Common problems",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "What to check"],
+						"rows": [
+							["KVM not available", "/dev/kvm exists, modules loaded, BIOS VT-x/AMD-V enabled, permissions."],
+							["Guest has no network", "Correct -nic/-netdev wiring, user-mode vs tap, host firewall/bridge."],
+							["Disk corruption/perf issues", "Cache/aio settings, host storage health, qemu-img check, fsync behavior."],
+							["UEFI boot fails", "OVMF paths, VARS file writable copy, correct machine type (q35)."],
+							["High CPU usage", "Accidentally using TCG, missing -enable-kvm, bad CPU model, overcommit."]
+						]
+					},
+					"example": "ls -lah /dev/kvm\nlsmod | grep kvm\ndmesg | grep -i kvm | tail"
+				},
+				{
+					"title": "Useful debug flags",
+					"description": "QEMU has extensive tracing/logging; start simple.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Print supported devices", "qemu-system-x86_64 -device help | less"],
+							["Print supported machines", "qemu-system-x86_64 -machine help"],
+							["Print supported CPUs", "qemu-system-x86_64 -cpu help | head"],
+							["Run with debug output", "qemu-system-x86_64 ... -d guest_errors -D qemu.log"],
+							["Trace events (advanced)", "qemu-system-x86_64 ... -trace help" ]
+						]
+					},
+					"example": "qemu-system-x86_64 -machine help | head\nqemu-system-x86_64 -device help | head"
+				}
+			]
+		}
+	]
+}

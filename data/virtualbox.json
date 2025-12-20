@@ -1,0 +1,524 @@
+{
+	"title": "Oracle VirtualBox",
+	"description": "A practical, command-heavy reference for VirtualBox administration and automation (primarily via VBoxManage): VM lifecycle, storage, networking, snapshots, cloning/export, headless/VRDE, Guest Additions, and troubleshooting.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Concepts",
+			"description": "How VirtualBox is structured and the terms you’ll see in commands and UI.",
+			"items": [
+				{
+					"title": "Core concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["VM", "A virtual machine definition (hardware config + attached media + state)."],
+							["Storage controller", "Virtual controller (SATA/SCSI/NVMe/IDE) that disks attach to."],
+							["Medium", "A disk/ISO image or other attachable media (VDI/VMDK/VHD/ISO)."],
+							["NAT / Bridged / Host-only", "Common networking modes for VM connectivity."],
+							["Snapshots", "Point-in-time VM state; can include disk + memory + config (depending)."],
+							["OVF/OVA", "Packaging format to export/import VMs."],
+							["Guest Additions", "In-guest drivers/tools improving integration (graphics, time sync, shared folders)."],
+							["Extension Pack", "Adds features like USB 2/3, VRDE, PXE for some adapters (license-dependent)."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Where VirtualBox stores things (typical)",
+					"description": "Defaults vary by OS; VirtualBox has a base folder for VMs and a global config.",
+					"table": {
+						"headers": ["Item", "Notes"],
+						"rows": [
+							["VM base folder", "Configured in VirtualBox preferences; contains VM directories."],
+							["VM config (.vbox)", "XML file describing VM hardware and media attachments."],
+							["Disk images", "Commonly stored alongside the VM or in a central media directory."],
+							["Logs", "Per-VM logs (VBox.log, VBoxHardening.log on Windows, etc.)."]
+						]
+					},
+					"example": "VBoxManage list systemproperties"
+				}
+			]
+		},
+		{
+			"title": "Installation and Version Checks",
+			"description": "Install/verify VirtualBox, Extension Pack, and basic environment details.",
+			"items": [
+				{
+					"title": "Version and capabilities",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["VirtualBox version", "VBoxManage --version"],
+							["VirtualBox help", "VBoxManage --help | head"],
+							["List system properties", "VBoxManage list systemproperties"],
+							["List host-only interfaces", "VBoxManage list hostonlyifs"],
+							["List extension packs", "VBoxManage list extpacks"],
+							["List global config", "VBoxManage list systemproperties | grep -i -E 'Base|Default|Folder'" ]
+						]
+					},
+					"example": "VBoxManage --version\nVBoxManage list systemproperties"
+				},
+				{
+					"title": "Extension Pack (install/uninstall)",
+					"description": "Required for some features (e.g., USB 2/3, VRDE). Read the license terms.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Install extpack", "VBoxManage extpack install --replace Oracle_VirtualBox_Extension_Pack.vbox-extpack"],
+							["Uninstall extpack", "VBoxManage extpack uninstall 'Oracle VM VirtualBox Extension Pack'"],
+							["List extpacks", "VBoxManage list extpacks" ]
+						]
+					},
+					"example": "VBoxManage list extpacks"
+				}
+			]
+		},
+		{
+			"title": "Inventory and Global Configuration",
+			"description": "List VMs and inspect global VirtualBox settings.",
+			"items": [
+				{
+					"title": "List objects",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List registered VMs", "VBoxManage list vms"],
+							["List running VMs", "VBoxManage list runningvms"],
+							["List VM groups", "VBoxManage list groups"],
+							["List host CPU info", "VBoxManage list hostcpuids | head"],
+							["List host USB devices", "VBoxManage list usbhost"],
+							["List DHCP servers", "VBoxManage list dhcpservers" ]
+						]
+					},
+					"example": "VBoxManage list vms\nVBoxManage list runningvms"
+				},
+				{
+					"title": "Show VM details",
+					"description": "Use --machinereadable for scripting.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Human-readable", "VBoxManage showvminfo <vmname>"],
+							["Machine-readable", "VBoxManage showvminfo <vmname> --machinereadable"],
+							["Show attached media", "VBoxManage showvminfo <vmname> | grep -i -E 'Storage|SATA|IDE|SCSI|NVMe' -n" ]
+						]
+					},
+					"example": "VBoxManage showvminfo <vmname> --machinereadable"
+				}
+			]
+		},
+		{
+			"title": "VM Creation and Hardware Configuration",
+			"description": "Create VMs, set CPU/memory/firmware, and configure common virtual hardware.",
+			"items": [
+				{
+					"title": "Create and register",
+					"description": "Create a VM definition and register it with VirtualBox.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create VM", "VBoxManage createvm --name <vmname> --ostype <ostype> --register"],
+							["List OS types", "VBoxManage list ostypes | head"],
+							["Set base folder (global)", "VBoxManage setproperty machinefolder /path/to/VMs"],
+							["Unregister (keep files)", "VBoxManage unregistervm <vmname>"],
+							["Unregister + delete files", "VBoxManage unregistervm <vmname> --delete" ]
+						]
+					},
+					"example": "VBoxManage list ostypes | head\nVBoxManage createvm --name lab-ubuntu --ostype Ubuntu_64 --register"
+				},
+				{
+					"title": "CPU, memory, firmware",
+					"description": null,
+					"table": {
+						"headers": ["Setting", "Command"],
+						"rows": [
+							["Set RAM", "VBoxManage modifyvm <vmname> --memory 4096"],
+							["Set VRAM", "VBoxManage modifyvm <vmname> --vram 128"],
+							["Set CPUs", "VBoxManage modifyvm <vmname> --cpus 2"],
+							["Enable IO-APIC", "VBoxManage modifyvm <vmname> --ioapic on"],
+							["Set firmware (BIOS/EFI)", "VBoxManage modifyvm <vmname> --firmware efi"],
+							["Set boot order", "VBoxManage modifyvm <vmname> --boot1 dvd --boot2 disk --boot3 none --boot4 none" ]
+						]
+					},
+					"example": "VBoxManage modifyvm <vmname> --memory 4096 --cpus 2 --firmware efi"
+				},
+				{
+					"title": "Graphics and clipboard integration",
+					"description": "Many of these work best with Guest Additions installed.",
+					"table": {
+						"headers": ["Feature", "Command"],
+						"rows": [
+							["Enable 3D accel", "VBoxManage modifyvm <vmname> --accelerate3d on"],
+							["Set graphics controller", "VBoxManage modifyvm <vmname> --graphicscontroller vmsvga"],
+							["Clipboard", "VBoxManage modifyvm <vmname> --clipboard bidirectional"],
+							["Drag-and-drop", "VBoxManage modifyvm <vmname> --draganddrop bidirectional" ]
+						]
+					},
+					"example": "VBoxManage modifyvm <vmname> --graphicscontroller vmsvga --accelerate3d on"
+				}
+			]
+		},
+		{
+			"title": "Storage: Disks, Controllers, ISOs",
+			"description": "Create disks, attach media, and manage controllers.",
+			"items": [
+				{
+					"title": "Create and manage virtual disks",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create VDI", "VBoxManage createmedium disk --filename <path>.vdi --size 40960"],
+							["List media", "VBoxManage list hdds"],
+							["Show disk info", "VBoxManage showmediuminfo disk <uuid|path>"],
+							["Resize disk (some formats)", "VBoxManage modifymedium disk <uuid|path> --resize 61440"],
+							["Compact disk (VDI)", "VBoxManage modifymedium disk <uuid|path> --compact"],
+							["Close (unregister) disk", "VBoxManage closemedium disk <uuid|path>" ]
+						]
+					},
+					"example": "VBoxManage createmedium disk --filename ./lab.vdi --size 40960\nVBoxManage showmediuminfo disk ./lab.vdi"
+				},
+				{
+					"title": "Attach controllers and media",
+					"description": "SATA is common; NVMe can be used for newer guests.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Add SATA controller", "VBoxManage storagectl <vmname> --name SATA --add sata --controller IntelAhci"],
+							["Add NVMe controller", "VBoxManage storagectl <vmname> --name NVME --add nvme"],
+							["Attach disk", "VBoxManage storageattach <vmname> --storagectl SATA --port 0 --device 0 --type hdd --medium <path>.vdi"],
+							["Attach ISO", "VBoxManage storageattach <vmname> --storagectl SATA --port 1 --device 0 --type dvddrive --medium <path>.iso"],
+							["Eject ISO", "VBoxManage storageattach <vmname> --storagectl SATA --port 1 --device 0 --type dvddrive --medium none"],
+							["Show storage config", "VBoxManage showvminfo <vmname> | grep -n -i 'Storage'" ]
+						]
+					},
+					"example": "VBoxManage storagectl <vmname> --name SATA --add sata --controller IntelAhci"
+				},
+				{
+					"title": "Clone disk / convert formats",
+					"description": "Useful for interoperability with other hypervisors.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Clone disk", "VBoxManage clonemedium disk <src> <dst> --format VDI"],
+							["Convert to VMDK", "VBoxManage clonemedium disk <src>.vdi <dst>.vmdk --format VMDK"],
+							["Convert to VHD", "VBoxManage clonemedium disk <src>.vdi <dst>.vhd --format VHD"],
+							["Create immutable (diff) disk", "VBoxManage modifymedium disk <uuid|path> --type immutable" ]
+						]
+					},
+					"example": "VBoxManage clonemedium disk ./lab.vdi ./lab.vmdk --format VMDK"
+				}
+			]
+		},
+		{
+			"title": "Networking",
+			"description": "Configure NAT, bridged, host-only, port forwarding, and troubleshooting.",
+			"items": [
+				{
+					"title": "Common NIC modes",
+					"description": null,
+					"table": {
+						"headers": ["Mode", "Behavior"],
+						"rows": [
+							["NAT", "Guest gets outbound access via host NAT; easiest default."],
+							["NAT Network", "Shared NAT across multiple VMs; managed NAT network object."],
+							["Bridged", "Guest appears on the physical LAN (requires suitable host NIC)."],
+							["Host-only", "Network only between host and guests; optional DHCP."],
+							["Internal", "Network only between guests (no host access)."],
+							["Generic/Cloud", "Specialized modes; less common."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Set adapter type and attachment",
+					"description": "Most operations use modifyvm and the nic1/nictype1/nicpromisc1 properties.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["NAT on adapter 1", "VBoxManage modifyvm <vmname> --nic1 nat"],
+							["Bridged on adapter 1", "VBoxManage modifyvm <vmname> --nic1 bridged --bridgeadapter1 <host-ifname>"],
+							["Host-only on adapter 1", "VBoxManage modifyvm <vmname> --nic1 hostonly --hostonlyadapter1 <vboxnet0>"],
+							["Set NIC model", "VBoxManage modifyvm <vmname> --nictype1 virtio"],
+							["Promiscuous mode", "VBoxManage modifyvm <vmname> --nicpromisc1 allow-all"],
+							["Cable connected", "VBoxManage modifyvm <vmname> --cableconnected1 on" ]
+						]
+					},
+					"example": "VBoxManage modifyvm <vmname> --nic1 nat --nictype1 virtio"
+				},
+				{
+					"title": "NAT port forwarding",
+					"description": "Forward host ports to guest ports on NAT adapter.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Add SSH forward", "VBoxManage modifyvm <vmname> --natpf1 'ssh,tcp,,2222,,22'"],
+							["Add HTTP forward", "VBoxManage modifyvm <vmname> --natpf1 'http,tcp,,8080,,80'"],
+							["List current NIC config", "VBoxManage showvminfo <vmname> --machinereadable | grep -i natpf"],
+							["Remove a rule", "VBoxManage modifyvm <vmname> --natpf1 delete ssh" ]
+						]
+					},
+					"example": "VBoxManage modifyvm <vmname> --natpf1 'ssh,tcp,,2222,,22'"
+				},
+				{
+					"title": "Host-only and NAT networks",
+					"description": "Create reusable network objects.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List host-only IFs", "VBoxManage list hostonlyifs"],
+							["Create host-only IF", "VBoxManage hostonlyif create"],
+							["Set host-only IP", "VBoxManage hostonlyif ipconfig vboxnet0 --ip 192.168.56.1 --netmask 255.255.255.0"],
+							["List NAT networks", "VBoxManage list natnetworks"],
+							["Add NAT network", "VBoxManage natnetwork add --netname natnet1 --network '10.10.0.0/24' --enable --dhcp on"],
+							["Remove NAT network", "VBoxManage natnetwork remove --netname natnet1" ]
+						]
+					},
+					"example": "VBoxManage hostonlyif create\nVBoxManage natnetwork add --netname natnet1 --network '10.10.0.0/24' --enable --dhcp on"
+				}
+			]
+		},
+		{
+			"title": "VM Lifecycle: Start/Stop, Headless, Save State",
+			"description": "Control VM runtime state and interact with the console.",
+			"items": [
+				{
+					"title": "Start/stop and state transitions",
+					"description": "Use 'acpipowerbutton' for graceful shutdown if the guest supports ACPI.",
+					"table": {
+						"headers": ["Action", "Command"],
+						"rows": [
+							["Start (GUI)", "VBoxManage startvm <vmname> --type gui"],
+							["Start (headless)", "VBoxManage startvm <vmname> --type headless"],
+							["Pause/Resume", "VBoxManage controlvm <vmname> pause ; VBoxManage controlvm <vmname> resume"],
+							["ACPI shutdown", "VBoxManage controlvm <vmname> acpipowerbutton"],
+							["Power off", "VBoxManage controlvm <vmname> poweroff"],
+							["Save state", "VBoxManage controlvm <vmname> savestate" ]
+						]
+					},
+					"example": "VBoxManage startvm <vmname> --type headless\nVBoxManage controlvm <vmname> acpipowerbutton"
+				},
+				{
+					"title": "Console and input",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Send keyboard scancodes", "VBoxManage controlvm <vmname> keyboardputscancode <hex...>"],
+							["Take screenshot", "VBoxManage controlvm <vmname> screenshotpng /tmp/<vmname>.png"],
+							["Show running VMs", "VBoxManage list runningvms" ]
+						]
+					},
+					"example": "VBoxManage controlvm <vmname> screenshotpng ./screen.png"
+				}
+			]
+		},
+		{
+			"title": "Snapshots and Cloning",
+			"description": "Snapshots help with short-lived change points; cloning and linked clones support lab workflows.",
+			"items": [
+				{
+					"title": "Snapshot operations",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List snapshots", "VBoxManage snapshot <vmname> list"],
+							["Take snapshot", "VBoxManage snapshot <vmname> take <snapname> --description '...'"],
+							["Restore snapshot", "VBoxManage snapshot <vmname> restore <snapname>"],
+							["Delete snapshot", "VBoxManage snapshot <vmname> delete <snapname>"],
+							["Show snapshot tree", "VBoxManage snapshot <vmname> list --details" ]
+						]
+					},
+					"example": "VBoxManage snapshot <vmname> take prechange --description 'Before update'"
+				},
+				{
+					"title": "Clone VMs",
+					"description": "Full clone vs linked clone depends on snapshot state and use-case.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Full clone", "VBoxManage clonevm <src> --name <dst> --register"],
+							["Linked clone (from snapshot)", "VBoxManage clonevm <src> --snapshot <snapname> --options link --name <dst> --register"],
+							["Clone and keep MACs", "VBoxManage clonevm <src> --options keepallmacs --name <dst> --register" ]
+						]
+					},
+					"example": "VBoxManage clonevm base-ubuntu --name dev-ubuntu --register"
+				}
+			]
+		},
+		{
+			"title": "Import/Export (OVF/OVA)",
+			"description": "Move VMs between systems and archive builds.",
+			"items": [
+				{
+					"title": "Export and import",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Export OVF", "VBoxManage export <vmname> --output <file>.ovf"],
+							["Export OVA", "VBoxManage export <vmname> --output <file>.ova"],
+							["Import", "VBoxManage import <file>.ova"],
+							["Dry-run import", "VBoxManage import <file>.ova --dry-run"],
+							["Import and set VM name", "VBoxManage import <file>.ova --vsys 0 --vmname <newname>" ]
+						]
+					},
+					"example": "VBoxManage export <vmname> --output ./vm.ova\nVBoxManage import ./vm.ova"
+				},
+				{
+					"title": "Export with NIC and disk options (example patterns)",
+					"description": "Options vary by appliance; inspect --help for supported arguments.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Inspect export help", "VBoxManage export --help | less"],
+							["Inspect import help", "VBoxManage import --help | less"],
+							["List appliances (not applicable)", "# OVF/OVA are files; manage them with your filesystem and versioning." ]
+						]
+					},
+					"example": "VBoxManage import --help | head"
+				}
+			]
+		},
+		{
+			"title": "Guest Additions and Shared Folders",
+			"description": "Improve guest integration and configure file sharing.",
+			"items": [
+				{
+					"title": "Guest Additions (overview)",
+					"description": "Install in the guest OS for better drivers, time sync, clipboard, etc.",
+					"table": {
+						"headers": ["Guest", "Typical install approach"],
+						"rows": [
+							["Windows", "Mount Guest Additions ISO and run installer."],
+							["Linux", "Mount ISO and run VBoxLinuxAdditions.run (requires build tools/headers)."],
+							["macOS", "VirtualBox support varies; verify version compatibility."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Shared folders",
+					"description": "Shared folders can be permanent or transient; automount requires guest support.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Add shared folder", "VBoxManage sharedfolder add <vmname> --name share --hostpath /path --automount"],
+							["Remove shared folder", "VBoxManage sharedfolder remove <vmname> --name share"],
+							["List shared folders", "VBoxManage showvminfo <vmname> | grep -i -n 'Shared Folders' -A5" ]
+						]
+					},
+					"example": "VBoxManage sharedfolder add <vmname> --name share --hostpath $PWD --automount"
+				}
+			]
+		},
+		{
+			"title": "Headless and Remote Display (VRDE)",
+			"description": "Run VMs without a GUI and optionally expose an RDP-like console via VRDE (Extension Pack).",
+			"items": [
+				{
+					"title": "Headless operation",
+					"description": "Ideal for servers/CI labs; combine with NAT port forwarding for SSH access.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Start headless", "VBoxManage startvm <vmname> --type headless"],
+							["Stop gracefully", "VBoxManage controlvm <vmname> acpipowerbutton"],
+							["Stop immediately", "VBoxManage controlvm <vmname> poweroff"],
+							["Show running VMs", "VBoxManage list runningvms" ]
+						]
+					},
+					"example": "VBoxManage startvm <vmname> --type headless"
+				},
+				{
+					"title": "VRDE (remote console)",
+					"description": "Requires Extension Pack in many cases.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Enable VRDE", "VBoxManage modifyvm <vmname> --vrde on"],
+							["Set VRDE port", "VBoxManage modifyvm <vmname> --vrdeport 5000"],
+							["Set VRDE auth", "VBoxManage modifyvm <vmname> --vrdeauthtype null"],
+							["Show VRDE settings", "VBoxManage showvminfo <vmname> --machinereadable | grep -i vrde" ]
+						]
+					},
+					"example": "VBoxManage modifyvm <vmname> --vrde on --vrdeport 5000"
+				}
+			]
+		},
+		{
+			"title": "Automation and Scripting",
+			"description": "Patterns for repeatable VM creation and CI-style workflows.",
+			"items": [
+				{
+					"title": "Bash: quick VM provision (skeleton)",
+					"description": "Minimal pattern: create VM, attach disk/ISO, set NAT forward, start headless.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["Create", "VBoxManage createvm --name lab --ostype Ubuntu_64 --register"],
+							["HW", "VBoxManage modifyvm lab --memory 4096 --cpus 2 --nic1 nat"],
+							["Disk", "VBoxManage createmedium disk --filename ./lab.vdi --size 40960"],
+							["Attach", "VBoxManage storagectl lab --name SATA --add sata --controller IntelAhci"],
+							["Attach disk", "VBoxManage storageattach lab --storagectl SATA --port 0 --device 0 --type hdd --medium ./lab.vdi"],
+							["Port forward", "VBoxManage modifyvm lab --natpf1 'ssh,tcp,,2222,,22'" ]
+						]
+					},
+					"example": "# After attaching an installer ISO, start headless\nVBoxManage startvm lab --type headless"
+				},
+				{
+					"title": "Machine-readable parsing",
+					"description": "Use --machinereadable output for scripts.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Get VM UUID", "VBoxManage showvminfo <vmname> --machinereadable | grep -E '^UUID='"],
+							["Get VM state", "VBoxManage showvminfo <vmname> --machinereadable | grep -E '^VMState='"],
+							["List NAT PF rules", "VBoxManage showvminfo <vmname> --machinereadable | grep -i natpf" ]
+						]
+					},
+					"example": "VBoxManage showvminfo <vmname> --machinereadable"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Common failure modes and where to look.",
+			"items": [
+				{
+					"title": "Useful diagnostics",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "What to check"],
+						"rows": [
+							["VM won't start", "VBox.log for the VM; hardware virtualization settings; permissions/paths."],
+							["No network", "NIC mode (NAT/bridged/host-only), host firewall, correct bridge adapter, DHCP settings."],
+							["Poor performance", "VT-x/AMD-V enabled, Hyper-V conflicts on Windows, CPU/mem allocation, disk type."],
+							["Shared folder not mounted", "Guest Additions installed and running; automount support; mount points."],
+							["USB passthrough fails", "Extension Pack installed; USB filters; host permissions." ]
+						]
+					},
+					"example": "VBoxManage startvm <vmname> --type gui\n# If it fails, inspect the VM's VBox.log"
+				},
+				{
+					"title": "Log locations (quick pointers)",
+					"description": "Per-VM logs live in the VM directory; global logs and hardening logs vary by OS.",
+					"table": {
+						"headers": ["Log", "Notes"],
+						"rows": [
+							["VBox.log", "Primary per-VM log; start/stop details and device init."],
+							["VBoxHardening.log", "Windows hardening failures (DLL injection/AV conflicts)."],
+							["VBoxSVC.log", "VirtualBox service log (global)." ]
+						]
+					},
+					"example": "# Find a VM folder via showvminfo\nVBoxManage showvminfo <vmname> | grep -i -n 'Config file'"
+				}
+			]
+		}
+	]
+}
