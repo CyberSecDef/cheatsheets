@@ -1,0 +1,679 @@
+{
+	"title": "Linux",
+	"description": "A practical Linux quick reference covering fundamentals, filesystem layout, permissions, users/groups, processes, systemd, packages, networking basics, storage, logs, scripting, and common administration/troubleshooting workflows.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Navigation",
+			"description": "Basic shell navigation, help, and command discovery.",
+			"items": [
+				{
+					"title": "Help and discovery",
+					"description": "Learn what a command does and what options exist.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["man [cmd]", "Manual page (use / to search, q to quit)."],
+							["[cmd] --help", "Quick help output (common)."],
+							["info [cmd]", "GNU info pages (sometimes richer than man)."],
+							["apropos [keyword]", "Search man page descriptions."],
+							["whatis [cmd]", "One-line description."],
+							["type [cmd]", "Shows if cmd is alias/builtin/file."],
+							["which [cmd]", "Path to executable found in PATH."],
+							["command -v [cmd]", "POSIX way to locate commands." ]
+						]
+					},
+					"example": "man ls\napropos network\ntype cd\ncommand -v python3"
+				},
+				{
+					"title": "Navigate the filesystem",
+					"description": "The core commands you’ll use constantly.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Where am I?", "pwd"],
+							["List", "ls -lah"],
+							["Change dir", "cd /path; cd ..; cd -; cd ~"],
+							["Make dir", "mkdir -p a/b/c"],
+							["Remove", "rm -rf path (careful)"],
+							["Copy", "cp -a src dst"],
+							["Move/rename", "mv src dst"],
+							["Create empty file", "touch file" ]
+						]
+					},
+					"example": "pwd\nls -lah\nmkdir -p /tmp/demo/a\ncd /tmp/demo"
+				},
+				{
+					"title": "Viewing files quickly",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["cat file", "Print file (small files)."],
+							["less file", "Pager (search with /, quit q)."],
+							["head -n 50 file", "First lines."],
+							["tail -n 50 file", "Last lines."],
+							["tail -f file", "Follow appended logs."],
+							["nl -ba file", "Show with line numbers." ]
+						]
+					},
+					"example": "less /etc/passwd\nhead -n 20 /etc/os-release\ntail -f /var/log/syslog"
+				}
+			]
+		},
+		{
+			"title": "Filesystem Layout (FHS)",
+			"description": "Understand common directories on Linux systems.",
+			"items": [
+				{
+					"title": "Key directories",
+					"description": "High-signal map of typical locations (varies by distro).",
+					"table": {
+						"headers": ["Path", "Purpose"],
+						"rows": [
+							["/", "Root of filesystem tree."],
+							["/home", "User home directories."],
+							["/root", "Root user home."],
+							["/etc", "System configuration."],
+							["/var", "Variable data (logs, spool, cache)."],
+							["/tmp", "Temporary files (often cleared)."],
+							["/usr", "Userland programs and libraries."],
+							["/bin, /sbin", "Essential binaries (often symlinks to /usr/bin)."],
+							["/opt", "Optional third-party software."],
+							["/srv", "Service data (rare, but intended for servers)."],
+							["/proc", "Process/kernel virtual filesystem."],
+							["/sys", "Kernel device and system interface."],
+							["/dev", "Device nodes." ]
+						]
+					},
+					"example": "ls -lah /etc\nls -lah /var/log\ncat /etc/os-release"
+				},
+				{
+					"title": "Mounts and disk usage",
+					"description": "See what’s mounted and where space is used.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["df -h", "Filesystem usage."],
+							["df -i", "Inodes usage."],
+							["mount | less", "Mounted filesystems."],
+							["findmnt", "Tree view of mounts."],
+							["lsblk -f", "Block devices with filesystem/UUID."],
+							["du -sh *", "Disk usage by directory (run inside a folder)."],
+							["du -xhd1 /", "One level deep, stay on one filesystem." ]
+						]
+					},
+					"example": "df -h\nlsblk -f\nfindmnt"
+				}
+			]
+		},
+		{
+			"title": "Permissions and Ownership",
+			"description": "Users/groups, rwx bits, umask, and special modes (SUID/SGID/sticky).",
+			"items": [
+				{
+					"title": "Read rwx permissions",
+					"description": "Example: -rwxr-x--- means owner=rwx, group=rx, others=---.",
+					"table": {
+						"headers": ["Permission", "Meaning"],
+						"rows": [
+							["r", "Read"],
+							["w", "Write"],
+							["x", "Execute / traverse (for directories)"],
+							["u/g/o", "User (owner) / group / others"],
+							["chmod 640 file", "rw- r-- ---"],
+							["chmod u+x script.sh", "Add execute for owner" ]
+						]
+					},
+					"example": "ls -l\nchmod 640 config.yaml\nchmod u+x script.sh"
+				},
+				{
+					"title": "Ownership and groups",
+					"description": "chown changes owner/group; chgrp changes group.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["id", "Show your UID/GIDs."],
+							["groups", "Show groups."],
+							["chown user file", "Change owner."],
+							["chown user:group file", "Change owner and group."],
+							["chgrp group file", "Change group."],
+							["chmod -R ... dir", "Recursive change (careful)." ]
+						]
+					},
+					"example": "id\nchown root:root /etc/some.conf"
+				},
+				{
+					"title": "Special modes (SUID/SGID/sticky)",
+					"description": "Important for shared directories and privileged helpers.",
+					"table": {
+						"headers": ["Mode", "Example", "Effect"],
+						"rows": [
+							["SUID", "chmod u+s file", "Executable runs as file owner."],
+							["SGID", "chmod g+s dir", "New files inherit group; on file, runs as group."],
+							["Sticky", "chmod +t dir", "Only owner/root can delete files in dir (e.g., /tmp)." ]
+						]
+					},
+					"example": "ls -ld /tmp\nchmod +t /shared"
+				},
+				{
+					"title": "umask",
+					"description": "umask masks out default permissions for newly created files/dirs.",
+					"table": {
+						"headers": ["Value", "Typical result"],
+						"rows": [
+							["022", "Files 644, dirs 755"],
+							["027", "Files 640, dirs 750"],
+							["077", "Files 600, dirs 700" ]
+						]
+					},
+					"example": "umask\numask 027"
+				}
+			]
+		},
+		{
+			"title": "Users, Groups, and sudo",
+			"description": "Account management and privilege escalation.",
+			"items": [
+				{
+					"title": "User/group management (common)",
+					"description": "Commands vary slightly by distro.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Add user", "sudo useradd -m -s /bin/bash alice"],
+							["Set password", "sudo passwd alice"],
+							["Add group", "sudo groupadd dev"],
+							["Add user to group", "sudo usermod -aG dev alice"],
+							["Lock/unlock user", "sudo usermod -L alice; sudo usermod -U alice"],
+							["Show user info", "getent passwd alice; id alice" ]
+						]
+					},
+					"example": "sudo useradd -m -s /bin/bash alice\nsudo usermod -aG sudo alice\nid alice"
+				},
+				{
+					"title": "sudo basics",
+					"description": "Use sudo carefully; prefer least privilege.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sudo -l", "Show what you can run."],
+							["sudo -i", "Root login shell."],
+							["sudo -u user cmd", "Run as specific user."],
+							["sudoedit file", "Edit file safely with your editor."],
+							["visudo", "Safely edit sudoers." ]
+						]
+					},
+					"example": "sudo -l\nsudoedit /etc/hosts"
+				}
+			]
+		},
+		{
+			"title": "Processes and Jobs",
+			"description": "Inspect processes, signals, job control, and resource usage.",
+			"items": [
+				{
+					"title": "Process listing and search",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ps aux", "Snapshot of processes."],
+							["ps -ef", "Alternative full format."],
+							["pgrep -a name", "Find PIDs by name."],
+							["pidof name", "Find PID(s) of a program."],
+							["top / htop", "Interactive process monitor."],
+							["pstree -ap", "Process tree with PIDs." ]
+						]
+					},
+					"example": "ps aux | head\npgrep -a sshd\npstree -ap | less"
+				},
+				{
+					"title": "Signals and killing processes",
+					"description": "SIGTERM is polite; SIGKILL is last resort.",
+					"table": {
+						"headers": ["Command", "Meaning"],
+						"rows": [
+							["kill -TERM [pid]", "Request graceful stop."],
+							["kill -KILL [pid]", "Force stop."],
+							["pkill -TERM name", "Signal by process name."],
+							["killall name", "Signal all matching processes."],
+							["kill -l", "List signals." ]
+						]
+					},
+					"example": "kill -TERM 1234\n# if stuck:\nkill -KILL 1234"
+				},
+				{
+					"title": "Job control (shell)",
+					"description": "Background/foreground jobs in an interactive shell.",
+					"table": {
+						"headers": ["Action", "Keys/Command"],
+						"rows": [
+							["Suspend", "Ctrl+Z"],
+							["List jobs", "jobs"],
+							["Resume in foreground", "fg %1"],
+							["Resume in background", "bg %1"],
+							["Start in background", "cmd &"],
+							["Detach", "nohup cmd &" ]
+						]
+					},
+					"example": "sleep 999 &\njobs\nfg %1"
+				},
+				{
+					"title": "Resource inspection",
+					"description": null,
+					"table": {
+						"headers": ["Need", "Command"],
+						"rows": [
+							["CPU/mem overview", "top"],
+							["Per-process CPU/mem", "ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head"],
+							["Open files", "lsof -p [pid]"],
+							["Network sockets", "ss -tulpn"],
+							["I/O", "iostat -xz 1 (sysstat)" ]
+						]
+					},
+					"example": "ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head\nss -tulpn"
+				}
+			]
+		},
+		{
+			"title": "Systemd and Services",
+			"description": "Manage services, logs, and boot targets on systemd-based distros.",
+			"items": [
+				{
+					"title": "systemctl essentials",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["systemctl status [unit]", "Show unit status."],
+							["systemctl start|stop|restart [unit]", "Control a service."],
+							["systemctl enable|disable [unit]", "Enable at boot."],
+							["systemctl is-active [unit]", "Active?"],
+							["systemctl list-units --type=service", "List services."],
+							["systemctl list-unit-files", "List unit enablement." ]
+						]
+					},
+					"example": "sudo systemctl status ssh\nsudo systemctl restart ssh"
+				},
+				{
+					"title": "journalctl essentials",
+					"description": "Query system logs (systemd journal).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["journalctl -xe", "Recent errors with context."],
+							["journalctl -u [unit]", "Logs for a service."],
+							["journalctl -u [unit] -f", "Follow service logs."],
+							["journalctl --since '1 hour ago'", "Time ranges."],
+							["journalctl -b", "Current boot."],
+							["journalctl -b -1", "Previous boot." ]
+						]
+					},
+					"example": "sudo journalctl -u ssh -f"
+				},
+				{
+					"title": "Boot targets",
+					"description": "Targets replace classic SysV runlevels.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["systemctl get-default", "Current default target."],
+							["systemctl set-default multi-user.target", "CLI target."],
+							["systemctl set-default graphical.target", "GUI target."],
+							["systemctl isolate rescue.target", "Switch to rescue." ]
+						]
+					},
+					"example": "systemctl get-default"
+				}
+			]
+		},
+		{
+			"title": "Packages and Updates",
+			"description": "Common package managers and useful patterns.",
+			"items": [
+				{
+					"title": "Debian/Ubuntu (apt)",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Update index", "sudo apt update"],
+							["Upgrade", "sudo apt upgrade"],
+							["Install", "sudo apt install [pkg]"],
+							["Remove", "sudo apt remove [pkg]"],
+							["Search", "apt search [term]"],
+							["Show package", "apt show [pkg]"],
+							["List files", "dpkg -L [pkg]" ]
+						]
+					},
+					"example": "sudo apt update\nsudo apt install curl"
+				},
+				{
+					"title": "RHEL/Fedora (dnf)",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Install", "sudo dnf install [pkg]"],
+							["Update", "sudo dnf upgrade"],
+							["Remove", "sudo dnf remove [pkg]"],
+							["Search", "dnf search [term]"],
+							["Info", "dnf info [pkg]"],
+							["List files", "rpm -ql [pkg]" ]
+						]
+					},
+					"example": "sudo dnf install nginx"
+				},
+				{
+					"title": "Arch (pacman)",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Sync+upgrade", "sudo pacman -Syu"],
+							["Install", "sudo pacman -S [pkg]"],
+							["Remove", "sudo pacman -Rns [pkg]"],
+							["Search", "pacman -Ss [term]"],
+							["Query info", "pacman -Qi [pkg]"],
+							["List files", "pacman -Ql [pkg]" ]
+						]
+					},
+					"example": "sudo pacman -Syu"
+				}
+			]
+		},
+		{
+			"title": "Networking (Userland Basics)",
+			"description": "Quick commands to inspect IP, DNS, and sockets. (See the dedicated networking cheatsheet for advanced topics.)",
+			"items": [
+				{
+					"title": "IP and routes",
+					"description": "iproute2 is the modern standard.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ip -br link", "Interfaces (brief)."],
+							["ip -br addr", "IP addresses (brief)."],
+							["ip route", "Routes."],
+							["ip neigh", "ARP/NDP neighbor table."],
+							["ss -tulpn", "Listening sockets."],
+							["ping -c 3 [host]", "Reachability."],
+							["traceroute -n [host]", "Path hops." ]
+						]
+					},
+					"example": "ip -br addr\nip route\nss -tulpn"
+				},
+				{
+					"title": "DNS tools",
+					"description": "Compare raw DNS with system resolver behavior.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["dig example.com", "Query DNS."],
+							["getent hosts example.com", "System resolver/NSS result."],
+							["resolvectl status", "systemd-resolved status (if used)."],
+							["resolvectl query example.com", "systemd-resolved query." ]
+						]
+					},
+					"example": "dig +short example.com\ngetent hosts example.com"
+				}
+			]
+		},
+		{
+			"title": "Storage and Filesystems",
+			"description": "Disks, partitions, filesystems, and troubleshooting.",
+			"items": [
+				{
+					"title": "Block devices",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["lsblk -f", "Show block devices, FS type, UUID, mount."],
+							["blkid", "List block device attributes."],
+							["fdisk -l", "Partition tables (legacy MBR/GPT)."],
+							["parted -l", "Partition tables (GPT-friendly)."],
+							["mount", "Show mounts."],
+							["umount /mnt/x", "Unmount." ]
+						]
+					},
+					"example": "lsblk -f\nsudo blkid"
+				},
+				{
+					"title": "Filesystem checks and repair",
+					"description": "Be careful: run on unmounted filesystems unless tool says otherwise.",
+					"table": {
+						"headers": ["Filesystem", "Tool"],
+						"rows": [
+							["ext4", "fsck.ext4 /dev/sdXN"],
+							["xfs", "xfs_repair /dev/sdXN"],
+							["btrfs", "btrfs check /dev/sdXN" ]
+						]
+					},
+					"example": "# Example only (device names vary)\n# sudo fsck.ext4 /dev/sda1"
+				}
+			]
+		},
+		{
+			"title": "Archives and Compression",
+			"description": "Create and inspect tarballs, gzip, xz, zip.",
+			"items": [
+				{
+					"title": "tar essentials",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create .tar.gz", "tar -czf out.tgz dir/"],
+							["Extract .tar.gz", "tar -xzf out.tgz"],
+							["Create .tar.xz", "tar -cJf out.txz dir/"],
+							["List contents", "tar -tf out.tgz"],
+							["Verbose", "tar -xvzf out.tgz" ]
+						]
+					},
+					"example": "tar -czf backup.tgz ./project\ntar -tf backup.tgz | head"
+				},
+				{
+					"title": "zip/unzip",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create zip", "zip -r out.zip dir/"],
+							["Extract zip", "unzip out.zip"],
+							["List zip", "unzip -l out.zip" ]
+						]
+					},
+					"example": "zip -r logs.zip /var/log"
+				}
+			]
+		},
+		{
+			"title": "Text Processing",
+			"description": "The classic Unix toolbox for filtering, transforming, and searching text.",
+			"items": [
+				{
+					"title": "Search and filter",
+					"description": null,
+					"table": {
+						"headers": ["Tool", "Example", "Notes"],
+						"rows": [
+							["grep", "grep -RIn 'pattern' .", "-R recursive, -I skip binary, -n line numbers"],
+							["ripgrep", "rg 'pattern'", "Usually faster and nicer than grep"],
+							["find", "find . -type f -name '*.log'", "File search"],
+							["xargs", "... | xargs -0 rm -f", "Build command lines" ],
+							["sed", "sed 's/old/new/g' file", "Stream editor"],
+							["awk", "awk '{print $1}' file", "Field processing"],
+							["cut", "cut -d, -f2 file", "Column extraction"],
+							["sort/uniq", "sort file | uniq -c", "Sorting and counting" ]
+						]
+					},
+					"example": "rg 'ERROR' /var/log\nfind . -type f -name '*.txt' -print0 | xargs -0 wc -l"
+				},
+				{
+					"title": "JSON and YAML",
+					"description": "jq is the go-to JSON CLI; yq is common for YAML.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Pretty print JSON", "jq . file.json"],
+							["Extract field", "jq -r '.items[] | .name' file.json"],
+							["Filter", "jq '.items[] | select(.enabled==true)' file.json"],
+							["YAML (yq)", "yq '.spec.template' file.yaml" ]
+						]
+					},
+					"example": "jq -r '.categories[].title' data/network.json"
+				}
+			]
+		},
+		{
+			"title": "Scripting (Shell)",
+			"description": "Write robust scripts: strict mode, variables, loops, functions, and safety patterns.",
+			"items": [
+				{
+					"title": "Shebang and strict mode",
+					"description": "A common baseline for safer bash scripts.",
+					"table": {
+						"headers": ["Pattern", "Meaning"],
+						"rows": [
+							["#!/usr/bin/env bash", "Portable bash shebang."],
+							["set -e", "Exit on error (use carefully)."],
+							["set -u", "Error on unset variables."],
+							["set -o pipefail", "Pipeline fails if any command fails."],
+							["IFS=$'\n\t'", "Safer word splitting in some scripts." ]
+						]
+					},
+					"example": "#!/usr/bin/env bash\nset -euo pipefail\n\nname=\"world\"\necho \"Hello $name\""
+				},
+				{
+					"title": "Variables and quoting",
+					"description": "Always quote variables unless you explicitly want splitting/globbing.",
+					"table": {
+						"headers": ["Pattern", "Why"],
+						"rows": [
+							["\"$var\"", "Preserves spaces and empty strings."],
+							["${var:-default}", "Default if unset/empty."],
+							["${var:?msg}", "Fail with message if unset/empty."],
+							["$(cmd)", "Command substitution."],
+							["$((expr))", "Arithmetic." ]
+						]
+					},
+					"example": "dir=${1:?usage: script DIR}\nfind \"$dir\" -type f -name '*.log'"
+				},
+				{
+					"title": "Loops and conditionals (bash)",
+					"description": null,
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["if", "if [[ -f file ]]; then echo ok; fi"],
+							["case", "case \"$x\" in a) ...;; *) ...;; esac"],
+							["for", "for f in *.txt; do echo \"$f\"; done"],
+							["while", "while read -r line; do ...; done < file"],
+							["until", "until curl -fsS http://x; do sleep 1; done" ]
+						]
+					},
+					"example": "for f in *.log; do\n  [[ -s \"$f\" ]] || continue\n  echo \"non-empty: $f\"\ndone"
+				},
+				{
+					"title": "Functions and traps",
+					"description": "Traps help ensure cleanup on exit/failure.",
+					"table": {
+						"headers": ["Pattern", "Use"],
+						"rows": [
+							["myfunc() { ...; }", "Define function."],
+							["trap cleanup EXIT", "Run cleanup on exit."],
+							["trap '...' ERR", "Run on error (bash)."],
+							["mktemp -d", "Secure temp dir." ]
+						]
+					},
+					"example": "tmpdir=$(mktemp -d)\ncleanup(){ rm -rf \"$tmpdir\"; }\ntrap cleanup EXIT\n\necho test > \"$tmpdir/file\""
+				}
+			]
+		},
+		{
+			"title": "Security and Hardening (Basics)",
+			"description": "Common security hygiene for Linux hosts.",
+			"items": [
+				{
+					"title": "SSH basics",
+					"description": "Keys over passwords; verify host keys; use ssh-agent.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Generate key", "ssh-keygen -t ed25519 -C 'me@host'"],
+							["Copy key", "ssh-copy-id user@host"],
+							["Agent", "eval $(ssh-agent); ssh-add"],
+							["Config", "~/.ssh/config" ]
+						]
+					},
+					"example": "ssh-keygen -t ed25519\nssh user@server"
+				},
+				{
+					"title": "Firewall quick pointer",
+					"description": "Firewall tooling differs by distro (nftables/iptables/ufw/firewalld).",
+					"table": {
+						"headers": ["Tool", "Example"],
+						"rows": [
+							["ufw (Ubuntu)", "sudo ufw status; sudo ufw allow 22/tcp"],
+							["firewalld", "sudo firewall-cmd --list-all; sudo firewall-cmd --add-service=ssh --permanent"],
+							["nftables", "sudo nft list ruleset" ]
+						]
+					},
+					"example": "sudo nft list ruleset"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting and Diagnostics",
+			"description": "High-signal commands for investigating issues quickly.",
+			"items": [
+				{
+					"title": "System overview",
+					"description": null,
+					"table": {
+						"headers": ["Need", "Command"],
+						"rows": [
+							["OS/release", "cat /etc/os-release"],
+							["Kernel", "uname -a"],
+							["CPU", "lscpu"],
+							["Memory", "free -h"],
+							["Disks", "lsblk; df -h"],
+							["Uptime/load", "uptime"],
+							["Recent boots", "journalctl --list-boots" ]
+						]
+					},
+					"example": "uname -a\nfree -h\nuptime"
+				},
+				{
+					"title": "Finding what changed",
+					"description": "Useful when debugging config changes and system behavior.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Recently modified files", "sudo find /etc -type f -mtime -2 -ls | head"],
+							["Open ports", "ss -tulpn"],
+							["Who logged in", "last -a | head"],
+							["Auth logs", "sudo journalctl -u ssh --since '1 day ago'" ]
+						]
+					},
+					"example": "ss -tulpn\nlast -a | head"
+				},
+				{
+					"title": "strace and ldd (advanced basics)",
+					"description": "Trace syscalls and inspect shared library dependencies.",
+					"table": {
+						"headers": ["Tool", "Example"],
+						"rows": [
+							["strace", "strace -f -o trace.txt [cmd]"],
+							["ltrace", "ltrace -o ltrace.txt [cmd]"],
+							["ldd", "ldd /path/to/bin" ]
+						]
+					},
+					"example": "strace -f -o trace.txt curl -I https://example.com\nldd $(command -v ls)"
+				}
+			]
+		}
+	]
+}

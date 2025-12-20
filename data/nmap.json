@@ -1,0 +1,408 @@
+{
+	"title": "Nmap",
+	"description": "Using and interpreting Nmap: host discovery, port scanning, service/version detection, OS fingerprinting, NSE scripting, performance/timing, output formats, and common troubleshooting patterns. Use only on networks you own or are authorized to test.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Basics and Safety",
+			"description": "Core concepts, terminology, and a few safe defaults.",
+			"items": [
+				{
+					"title": "Common scan phases (mental model)",
+					"description": "Most Nmap runs are some combination of: target selection -> host discovery -> port scan -> service detection -> OS detection -> NSE scripts -> reporting.",
+					"table": {
+						"headers": ["Phase", "Flags (examples)", "Notes"],
+						"rows": [
+							["Targeting", "[targets], -iL, --exclude, --excludefile", "Define what to scan"],
+							["Discovery", "-sn, -Pn, -PS/-PA/-PU, -PE/-PP/-PM", "Find alive hosts"],
+							["Port scan", "-sS, -sT, -sU, -p, --top-ports", "Find open/filtered ports"],
+							["Service detect", "-sV, --version-intensity", "Identify services and versions"],
+							["OS detect", "-O, --osscan-guess", "TCP/IP stack fingerprint"],
+							["Scripting", "-sC, --script, --script-args", "NSE: discovery, auth, vulns, etc"],
+							["Output", "-oN/-oG/-oX/-oA, -v/-d", "Save and debug results" ]
+						]
+					},
+					"example": "# Conservative baseline (TCP SYN scan + version detection)\n# Note: requires privileges for -sS on most OSes\nsudo nmap -sS -sV -T3 -oA scan 192.0.2.0/24"
+				},
+				{
+					"title": "Target notation and files",
+					"description": "Nmap accepts IPs, CIDRs, ranges, hostnames, and files.",
+					"table": {
+						"headers": ["Input", "Example"],
+						"rows": [
+							["Single host", "nmap 192.0.2.10"],
+							["CIDR", "nmap 192.0.2.0/24"],
+							["Range", "nmap 192.0.2.10-50"],
+							["List file", "nmap -iL targets.txt"],
+							["Exclude", "nmap 192.0.2.0/24 --exclude 192.0.2.5"],
+							["Exclude file", "nmap 192.0.2.0/24 --excludefile exclude.txt" ]
+						]
+					},
+					"example": "# List file supports comments (#) and blank lines\ncat > targets.txt <<'EOF'\n# Web servers\n192.0.2.10\n192.0.2.11\n# Subnet\n192.0.2.0/28\nEOF\n\nnmap -iL targets.txt"
+				},
+				{
+					"title": "Privileges and what changes",
+					"description": "Some scan types require raw sockets/privileges.",
+					"table": {
+						"headers": ["Capability", "Typically requires", "Why"],
+						"rows": [
+							["SYN scan (-sS)", "root/Administrator or CAP_NET_RAW", "Craft SYN packets"],
+							["ICMP discovery (-PE/-PP)", "Privileges (often)", "Send ICMP packets"],
+							["Connect scan (-sT)", "No special privileges", "Uses OS connect()"],
+							["UDP scan (-sU)", "Often privileges", "Raw UDP/ICMP handling" ]
+						]
+					},
+					"example": "# If you can't run privileged scans, use -sT\nnmap -sT -sV 192.0.2.10"
+				}
+			]
+		},
+		{
+			"title": "Host Discovery (Find Alive Hosts)",
+			"description": "Separate host discovery from port scanning; choose probes that match the environment.",
+			"items": [
+				{
+					"title": "Ping scan (-sn)",
+					"description": "Host discovery only (no port scan).",
+					"table": {
+						"headers": ["Command", "What it does"],
+						"rows": [
+							["nmap -sn 192.0.2.0/24", "Discover alive hosts using default probes"],
+							["nmap -sn -PR 192.0.2.0/24", "ARP discovery (local L2 only; fast/accurate)"],
+							["nmap -sn -PE -PP 192.0.2.0/24", "ICMP echo + timestamp (may be filtered)"],
+							["nmap -sn -PS80,443 192.0.2.0/24", "TCP SYN ping to chosen ports"],
+							["nmap -sn -PA80,443 192.0.2.0/24", "TCP ACK ping (helps through some filters)"],
+							["nmap -sn -PU53,123 192.0.2.0/24", "UDP ping to chosen ports" ]
+						]
+					},
+					"example": "# Local LAN: ARP is best\nsudo nmap -sn -PR 192.168.1.0/24"
+				},
+				{
+					"title": "Skip host discovery (-Pn)",
+					"description": "Treat targets as online (useful when ICMP/pings are blocked).",
+					"table": {
+						"headers": ["Command", "Notes"],
+						"rows": [
+							["nmap -Pn 192.0.2.10", "Scan even if host seems down"],
+							["nmap -Pn -p 443 --open 192.0.2.0/24", "Common when only a few ports matter" ]
+						]
+					},
+					"example": "# Typical when firewalls drop ICMP\nsudo nmap -Pn -sS -p 22,80,443 192.0.2.10"
+				},
+				{
+					"title": "Host discovery outputs to expect",
+					"description": "Discovery results differ by method and network conditions.",
+					"table": {
+						"headers": ["Output phrase", "Meaning"],
+						"rows": [
+							["Host is up", "A probe got a response"],
+							["0 hosts up", "Probes blocked or hosts truly down"],
+							["MAC Address:", "Seen on local L2 (ARP/ND)"],
+							["Nmap done: ...", "Run finished; check counts" ]
+						]
+					},
+					"example": "nmap -sn 192.0.2.0/24 --reason"
+				}
+			]
+		},
+		{
+			"title": "Port Scanning Fundamentals",
+			"description": "Pick scan types by privileges, accuracy needs, and what the environment allows.",
+			"items": [
+				{
+					"title": "Scan types (TCP/UDP)",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Flag", "When to use"],
+						"rows": [
+							["TCP SYN", "-sS", "Fast/stealthy-ish; needs privileges"],
+							["TCP connect()", "-sT", "No privileges; slightly noisier"],
+							["UDP", "-sU", "Find UDP services; slower; interpret carefully"],
+							["TCP FIN/NULL/Xmas", "-sF/-sN/-sX", "Firewall/stack behavior testing (situational)"],
+							["TCP ACK", "-sA", "Firewall rule/state mapping (not for open ports)" ],
+							["IP protocol", "-sO", "Discover L3 protocols (rare)" ]
+						]
+					},
+					"example": "# Common combos\nsudo nmap -sS -p 1-1000 192.0.2.10\nsudo nmap -sU --top-ports 50 192.0.2.10"
+				},
+				{
+					"title": "Port selection",
+					"description": "Scanning fewer ports is faster and easier to interpret; scan all ports when needed.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Top common ports", "nmap --top-ports 100 [target]"],
+							["Specific ports", "nmap -p 22,80,443 [target]"],
+							["Port ranges", "nmap -p 1-1024,8080-8090 [target]"],
+							["All TCP ports", "nmap -p- [target]"],
+							["All TCP + UDP subset", "nmap -sS -p- -sU --top-ports 200 [target]" ]
+						]
+					},
+					"example": "# Enumerate all TCP ports first, then do -sV on opens\nsudo nmap -sS -p- --open -oA tcp-all 192.0.2.10"
+				},
+				{
+					"title": "Interpreting port states",
+					"description": "A port can be open, closed, filtered, or variants like open|filtered. Use --reason to see why Nmap decided.",
+					"table": {
+						"headers": ["State", "Typical meaning", "Common cause"],
+						"rows": [
+							["open", "App is listening", "SYN/ACK or UDP response"],
+							["closed", "No listener", "RST from host (TCP)"],
+							["filtered", "Nmap can’t tell", "Firewall drops packets"],
+							["open|filtered", "Either open or filtered", "No response; common in UDP"],
+							["closed|filtered", "Either closed or filtered", "Some scan types" ]
+						]
+					},
+					"example": "nmap -sS -p 22,80,443 --reason 192.0.2.10"
+				}
+			]
+		},
+		{
+			"title": "Service and Version Detection",
+			"description": "Identify what’s behind an open port (banner/probing).",
+			"items": [
+				{
+					"title": "Version detection essentials",
+					"description": "-sV probes services; increase intensity if results are generic.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nmap -sV [target]", "Enable version detection"],
+							["nmap -sV --version-intensity 5 [target]", "Default-ish balance"],
+							["nmap -sV --version-intensity 9 [target]", "More probes; slower/noisier"],
+							["nmap -sV --version-light [target]", "Fewer probes; faster"],
+							["nmap -sV --version-all [target]", "Try all probes" ]
+						]
+					},
+					"example": "sudo nmap -sS -sV -p 22,80,443 192.0.2.10"
+				},
+				{
+					"title": "Service detection troubleshooting",
+					"description": "If Nmap can’t identify a service reliably, collect more context and cross-check with other tools.",
+					"table": {
+						"headers": ["Technique", "Command"],
+						"rows": [
+							["Show reasons", "nmap --reason ..."],
+							["Increase verbosity", "nmap -v -vv ..."],
+							["Debug probes", "nmap -d --packet-trace ..."],
+							["Grab banners", "nc -nv [host] [port]"],
+							["HTTP fingerprint", "curl -vk https://[host]:[port]/" ]
+						]
+					},
+					"example": "sudo nmap -sS -sV -p 443 --script ssl-cert,ssl-enum-ciphers 192.0.2.10"
+				}
+			]
+		},
+		{
+			"title": "OS Detection and Fingerprinting",
+			"description": "OS fingerprinting works best with at least one open and one closed TCP port.",
+			"items": [
+				{
+					"title": "OS detection flags",
+					"description": "-O enables OS detection; it may be inaccurate across NAT, load balancers, or filtered paths.",
+					"table": {
+						"headers": ["Flag", "Effect"],
+						"rows": [
+							["-O", "Enable OS detection"],
+							["--osscan-guess", "Aggressive guessing when uncertain"],
+							["--fuzzy", "Alias of --osscan-guess"],
+							["--max-os-tries [n]", "Limit attempts per target" ]
+						]
+					},
+					"example": "sudo nmap -sS -O --osscan-guess -p 22,80,443 192.0.2.10"
+				},
+				{
+					"title": "Traceroute and network distance",
+					"description": "Nmap can run traceroute; useful context for interpreting filtered results.",
+					"table": {
+						"headers": ["Command", "Notes"],
+						"rows": [
+							["nmap --traceroute [target]", "Adds hop info"],
+							["nmap -sn --traceroute [cidr]", "Discovery + path hints" ]
+						]
+					},
+					"example": "sudo nmap -sS -p 443 --traceroute 192.0.2.10"
+				}
+			]
+		},
+		{
+			"title": "NSE (Nmap Scripting Engine)",
+			"description": "Scripts for discovery, versioning, auth checks, misconfig checks, and reporting. Keep output; scripts can be chatty.",
+			"items": [
+				{
+					"title": "Script categories and basics",
+					"description": "NSE scripts are grouped by category (safe, default, discovery, auth, vuln, intrusive, etc.).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nmap -sC [target]", "Run default scripts (same as --script=default)"],
+							["nmap --script-help [script]", "Show documentation and arguments"],
+							["nmap --script [expr]", "Run scripts by name/category expression"],
+							["nmap --script-updatedb", "Rebuild NSE script database" ]
+						]
+					},
+					"example": "# Default scripts + version detection\nsudo nmap -sS -sV -sC -p 80,443 192.0.2.10"
+				},
+				{
+					"title": "Common NSE patterns",
+					"description": "Use script expressions to focus on safe/discovery info first.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Discovery scripts", "nmap --script discovery -sn [cidr]"],
+							["Safe scripts only", "nmap --script safe -sV [target]"],
+							["HTTP enumeration", "nmap -p 80,443 --script 'http-*' [target]"],
+							["SSL/TLS info", "nmap -p 443 --script ssl-cert,ssl-enum-ciphers [target]"],
+							["SMB basics", "nmap -p 445 --script smb-os-discovery,smb-enum-shares [target]" ]
+						]
+					},
+					"example": "sudo nmap -sS -sV -p 80,443 --script 'http-title,http-headers,http-server-header' 192.0.2.10"
+				},
+				{
+					"title": "Script arguments",
+					"description": "Many scripts accept credentials, paths, ports, or app-specific parameters.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["--script-args key=value", "--script-args http.useragent='Mozilla/5.0'"],
+							["Multiple args", "--script-args 'user=alice,pass=secret'"],
+							["Args file", "--script-args-file args.txt" ]
+						]
+					},
+					"example": "# Example only: check script docs for valid args\nnmap --script-help http-enum"
+				}
+			]
+		},
+		{
+			"title": "Performance, Timing, and Reliability",
+			"description": "Balance speed vs accuracy; avoid melting networks or triggering rate limits.",
+			"items": [
+				{
+					"title": "Timing templates (-T0..-T5)",
+					"description": "Higher is faster/noisier; lower is slower/stealthier and more reliable on fragile networks.",
+					"table": {
+						"headers": ["Template", "Meaning"],
+						"rows": [
+							["-T0", "Paranoid"],
+							["-T1", "Sneaky"],
+							["-T2", "Polite"],
+							["-T3", "Normal (good default)"],
+							["-T4", "Aggressive"],
+							["-T5", "Insane" ]
+						]
+					},
+					"example": "# Good starting point\nsudo nmap -sS -sV -T3 192.0.2.0/24"
+				},
+				{
+					"title": "Rate/parallelism controls",
+					"description": "Useful when scanning large ranges or fragile links.",
+					"table": {
+						"headers": ["Option", "Effect"],
+						"rows": [
+							["--min-rate / --max-rate", "Limit probe rate (packets/sec)"],
+							["--min-parallelism / --max-parallelism", "Control probe parallelism"],
+							["--host-timeout", "Give up on slow hosts"],
+							["--scan-delay", "Delay between probes"],
+							["--max-retries", "Retries before giving up" ]
+						]
+					},
+					"example": "# Keep a scan gentle\nsudo nmap -sS -p 1-1024 -T2 --max-rate 200 --max-retries 2 192.0.2.0/24"
+				},
+				{
+					"title": "Fragmentation, decoys, and spoofing (why to be careful)",
+					"description": "These options exist, but can be unreliable and are often inappropriate outside controlled testing; they may violate policy/law. Prefer correctness and authorization.",
+					"table": {
+						"headers": ["Option", "What it attempts"],
+						"rows": [
+							["-f / --mtu", "Fragment packets (evasion/legacy testing)"],
+							["-D", "Decoy addresses"],
+							["-S", "Spoof source address (routing-dependent)"],
+							["--data-length", "Append random data" ]
+						]
+					},
+					"example": "# Prefer documenting results instead of evasion tricks\nsudo nmap -sS -sV --reason -oA scan 192.0.2.10"
+				}
+			]
+		},
+		{
+			"title": "Output, Reporting, and Parsing",
+			"description": "Save results in more than one format; automation is easier with XML/grepable output.",
+			"items": [
+				{
+					"title": "Output formats",
+					"description": "Use -oA for all common formats at once.",
+					"table": {
+						"headers": ["Option", "Output"],
+						"rows": [
+							["-oN file", "Normal output"],
+							["-oG file", "Grepable output (legacy but handy)"],
+							["-oX file", "XML output"],
+							["-oA base", "All: base.nmap, base.gnmap, base.xml"],
+							["--append-output", "Append instead of overwrite" ]
+						]
+					},
+					"example": "sudo nmap -sS -sV -oA corp-scan 192.0.2.0/24"
+				},
+				{
+					"title": "Verbosity and debugging",
+					"description": "Increase verbosity before you jump to packet traces.",
+					"table": {
+						"headers": ["Flag", "Effect"],
+						"rows": [
+							["-v / -vv", "More detail"],
+							["-d / -dd", "Debug output"],
+							["--reason", "Show reasons for states"],
+							["--packet-trace", "Print sent/received packets"],
+							["--stats-every 10s", "Progress stats periodically" ]
+						]
+					},
+					"example": "sudo nmap -sS -p 443 --reason -vv --stats-every 10s 192.0.2.10"
+				},
+				{
+					"title": "Grepping quick wins",
+					"description": "Useful when you have lots of outputs.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Show open ports from .gnmap", "grep -E 'Ports:.*open' scan.gnmap"],
+							["List discovered hosts", "grep -E '^Host: ' scan.gnmap | awk '{print $2}'"],
+							["Show services", "grep -E 'open' scan.nmap" ]
+						]
+					},
+					"example": "grep -E 'Ports:.*open' corp-scan.gnmap | head"
+				}
+			]
+		},
+		{
+			"title": "Common Workflows (Examples)",
+			"description": "Practical sequences that produce useful results with reasonable effort.",
+			"items": [
+				{
+					"title": "Discover -> scan open ports -> detect services",
+					"description": "A high-signal workflow for a subnet.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["1) Discovery", "sudo nmap -sn -PR -oA discover 192.0.2.0/24"],
+							["2) TCP ports", "sudo nmap -sS -p- --open -iL <(grep -E '^Host: ' discover.gnmap | awk '{print $2}') -oA tcp"],
+							["3) Services", "sudo nmap -sS -sV -p $(awk -F'[ /]' '/open/{print $1}' tcp.gnmap | cut -d: -f2 | sort -n | uniq | paste -sd,) -iL <(grep -E '^Host: ' discover.gnmap | awk '{print $2}') -oA svc" ]
+						]
+					},
+					"example": "# Note: process substitution requires bash; otherwise write host list to a file." 
+				},
+				{
+					"title": "Quick single-host triage",
+					"description": "Fast, high-signal scan for a single host.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Top ports + versions", "sudo nmap -sS -sV --top-ports 200 -T3 192.0.2.10"],
+							["Default scripts", "sudo nmap -sS -sV -sC -p 22,80,443 192.0.2.10"],
+							["OS detect", "sudo nmap -sS -O -p 22,80,443 192.0.2.10" ]
+						]
+					},
+					"example": "sudo nmap -sS -sV --top-ports 200 -oA quick 192.0.2.10"
+				}
+			]
+		}
+	]
+}

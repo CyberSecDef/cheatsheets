@@ -1,0 +1,526 @@
+{
+	"title": "Windows",
+	"description": "A practical Windows quick reference covering fundamentals, filesystem and paths, CMD vs PowerShell, scripting, administration, services, event logs, networking, processes, users/groups, registry basics, package management, and troubleshooting. Use only on systems you own or are authorized to administer.",
+	"language": "powershell",
+	"categories": [
+		{
+			"title": "Fundamentals and Help",
+			"description": "Core concepts and how to discover commands quickly.",
+			"items": [
+				{
+					"title": "PowerShell help system",
+					"description": "PowerShell’s help is structured and discoverable; update it on older systems.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["Get-Help [Cmdlet]", "Show help (use -Full/-Examples)."],
+							["Get-Help [Cmdlet] -Examples", "Quick examples."],
+							["Get-Command [name]", "Find cmdlets, functions, aliases, executables."],
+							["Get-Command -Noun Service", "Discover cmdlets by noun."],
+							["Get-Member", "Inspect object properties/methods in the pipeline."],
+							["Update-Help", "Download newest help (admin often required)." ]
+						]
+					},
+					"example": "Get-Help Get-Service -Examples\nGet-Command *process*\nGet-Service | Get-Member"
+				},
+				{
+					"title": "CMD vs PowerShell (quick mental model)",
+					"description": "CMD pipelines are mostly text; PowerShell pipelines pass objects.",
+					"table": {
+						"headers": ["Topic", "CMD", "PowerShell"],
+						"rows": [
+							["Pipeline", "Text", "Objects"],
+							["Help", "command /?", "Get-Help"],
+							["Common list", "dir", "Get-ChildItem (alias: dir/ls)"],
+							["Admin shell", "Run as Administrator", "Run as Administrator"],
+							["Scripting", ".bat/.cmd", ".ps1 (+ modules)" ]
+						]
+					},
+					"example": "# In PowerShell, this is object-based:\nGet-Process | Sort-Object CPU -Descending | Select-Object -First 5"
+				},
+				{
+					"title": "System identity",
+					"description": null,
+					"table": {
+						"headers": ["Need", "Command"],
+						"rows": [
+							["OS version", "Get-ComputerInfo | Select-Object WindowsProductName,WindowsVersion,OsHardwareAbstractionLayer"],
+							["Hostname", "$env:COMPUTERNAME"],
+							["Who am I?", "whoami"],
+							["PowerShell version", "$PSVersionTable" ]
+						]
+					},
+					"example": "$PSVersionTable\nwhoami"
+				}
+			]
+		},
+		{
+			"title": "Filesystem, Paths, and Environment",
+			"description": "Drives, paths, file operations, and common environment variables.",
+			"items": [
+				{
+					"title": "Common Windows paths",
+					"description": "Useful locations to know when troubleshooting.",
+					"table": {
+						"headers": ["Path", "Purpose"],
+						"rows": [
+							["C:\\Windows", "Windows OS files."],
+							["C:\\Windows\\System32", "System binaries and DLLs."],
+							["C:\\Program Files", "64-bit apps."],
+							["C:\\Program Files (x86)", "32-bit apps."],
+							["C:\\Users\\[user]", "User profile (home)."],
+							["%APPDATA%", "Roaming user app data."],
+							["%LOCALAPPDATA%", "Local user app data."],
+							["%TEMP%", "Temporary directory." ]
+						]
+					},
+					"example": "$env:USERPROFILE\n$env:APPDATA\n$env:TEMP"
+				},
+				{
+					"title": "File operations (PowerShell)",
+					"description": "Prefer cmdlets for scripting; they are consistent and object-friendly.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List", "Get-ChildItem -Force"],
+							["Current dir", "Get-Location"],
+							["Change dir", "Set-Location C:\\"],
+							["Create dir", "New-Item -ItemType Directory -Path .\\logs"],
+							["Create file", "New-Item -ItemType File -Path .\\a.txt"],
+							["Copy", "Copy-Item src dst -Recurse"],
+							["Move", "Move-Item src dst"],
+							["Delete", "Remove-Item path -Recurse -Force" ]
+						]
+					},
+					"example": "Get-ChildItem -Force\nNew-Item -ItemType Directory -Path .\\demo\nRemove-Item .\\demo -Recurse -Force"
+				},
+				{
+					"title": "Search for files and content",
+					"description": "Use Get-ChildItem for filesystem, Select-String for content.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Find files by name", "Get-ChildItem -Recurse -Filter '*.log' -ErrorAction SilentlyContinue"],
+							["Search inside files", "Select-String -Path .\\*.log -Pattern 'ERROR'"],
+							["Search with regex", "Select-String -Path .\\*.txt -Pattern '^WARN'" ]
+						]
+					},
+					"example": "Select-String -Path C:\\Windows\\Logs\\*.log -Pattern 'fail' -ErrorAction SilentlyContinue"
+				}
+			]
+		},
+		{
+			"title": "Processes, Services, and Scheduled Tasks",
+			"description": "Inspect what’s running and control service state.",
+			"items": [
+				{
+					"title": "Process management",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List processes", "Get-Process"],
+							["Top CPU", "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10"],
+							["Find by name", "Get-Process -Name notepad -ErrorAction SilentlyContinue"],
+							["Kill process", "Stop-Process -Id 1234 -Force"],
+							["Show process owner", "Get-CimInstance Win32_Process | Select Name,ProcessId" ]
+						]
+					},
+					"example": "Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 5 Name,Id,@{n='MB';e={[math]::Round($_.WorkingSet64/1MB,1)}}"
+				},
+				{
+					"title": "Service management",
+					"description": "Requires admin for many services.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List services", "Get-Service"],
+							["Find service", "Get-Service | Where-Object Name -like '*ssh*'"],
+							["Start/stop/restart", "Start-Service; Stop-Service; Restart-Service"],
+							["Startup type", "Get-Service | Select Name,Status,StartType"],
+							["Legacy", "sc.exe query; sc.exe qc [service]" ]
+						]
+					},
+					"example": "Get-Service | Where-Object Status -eq 'Running' | Select-Object -First 10"
+				},
+				{
+					"title": "Scheduled tasks",
+					"description": "Windows Task Scheduler is the native job runner.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List tasks", "Get-ScheduledTask"],
+							["Get task info", "Get-ScheduledTask -TaskName '...'; Get-ScheduledTaskInfo -TaskName '...'"],
+							["Run a task", "Start-ScheduledTask -TaskName '...'"],
+							["Legacy CLI", "schtasks /Query /FO LIST /V" ]
+						]
+					},
+					"example": "schtasks /Query /FO LIST /V | more"
+				}
+			]
+		},
+		{
+			"title": "Users, Groups, and Identity",
+			"description": "Local accounts, group membership, and common identity commands.",
+			"items": [
+				{
+					"title": "Who and what am I?",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Current user", "whoami"],
+							["Groups", "whoami /groups"],
+							["Privileges", "whoami /priv"],
+							["Local users (legacy)", "net user"],
+							["Local groups (legacy)", "net localgroup" ]
+						]
+					},
+					"example": "whoami /groups\nwhoami /priv"
+				},
+				{
+					"title": "Local user and group management (PowerShell)",
+					"description": "Requires admin. Not available on all SKUs.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List local users", "Get-LocalUser"],
+							["Create local user", "New-LocalUser -Name 'alice' -NoPassword"],
+							["List local groups", "Get-LocalGroup"],
+							["Add group member", "Add-LocalGroupMember -Group 'Administrators' -Member 'alice'"],
+							["Disable user", "Disable-LocalUser -Name 'alice'" ]
+						]
+					},
+					"example": "Get-LocalUser | Select Name,Enabled,LastLogon"
+				}
+			]
+		},
+		{
+			"title": "Networking",
+			"description": "IP configuration, DNS, routes, sockets, and diagnostics.",
+			"items": [
+				{
+					"title": "IP config and adapters",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ipconfig /all", "Detailed interface configuration."],
+							["Get-NetIPConfiguration", "PowerShell view of IP config."],
+							["Get-NetAdapter", "List adapters and status."],
+							["Get-NetIPAddress", "List IP addresses."],
+							["Get-NetRoute", "Routes." ]
+						]
+					},
+					"example": "Get-NetIPConfiguration\nGet-NetAdapter | Format-Table -AutoSize"
+				},
+				{
+					"title": "DNS troubleshooting",
+					"description": "Confirm resolution from the system and directly against servers.",
+					"table": {
+						"headers": ["Tool", "Command"],
+						"rows": [
+							["nslookup", "nslookup example.com"],
+							["Resolve-DnsName", "Resolve-DnsName example.com"],
+							["Flush cache", "ipconfig /flushdns"],
+							["View cache", "Get-DnsClientCache" ]
+						]
+					},
+					"example": "Resolve-DnsName example.com\nipconfig /flushdns"
+				},
+				{
+					"title": "Connectivity",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Ping", "ping -n 4 1.1.1.1"],
+							["Trace route", "tracert 1.1.1.1"],
+							["Path trace", "pathping 1.1.1.1"],
+							["Test TCP port", "Test-NetConnection example.com -Port 443"],
+							["ARP table", "arp -a"],
+							["Neighbor cache", "Get-NetNeighbor" ]
+						]
+					},
+					"example": "Test-NetConnection example.com -Port 443\ntracert 1.1.1.1"
+				},
+				{
+					"title": "Sockets and listeners",
+					"description": "Find which process owns a port.",
+					"table": {
+						"headers": ["Tool", "Command"],
+						"rows": [
+							["netstat", "netstat -ano"],
+							["PowerShell", "Get-NetTCPConnection | Select LocalAddress,LocalPort,State,OwningProcess"],
+							["Map PID to process", "Get-Process -Id [pid]" ]
+						]
+					},
+					"example": "netstat -ano | findstr LISTENING\nGet-Process -Id 1234"
+				}
+			]
+		},
+		{
+			"title": "Event Logs and Diagnostics",
+			"description": "Windows eventing is central to troubleshooting.",
+			"items": [
+				{
+					"title": "Query event logs (PowerShell)",
+					"description": "Use Get-WinEvent for performance and filtering.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List logs", "Get-WinEvent -ListLog * | Select-Object -First 20 LogName,RecordCount"],
+							["Last 50 System events", "Get-WinEvent -LogName System -MaxEvents 50"],
+							["Filter by level", "Get-WinEvent -FilterHashtable @{LogName='System'; Level=2} -MaxEvents 50"],
+							["Filter by provider", "Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Service Control Manager'} -MaxEvents 50" ]
+						]
+					},
+					"example": "Get-WinEvent -LogName System -MaxEvents 20 | Format-Table -AutoSize"
+				},
+				{
+					"title": "Common diagnostic tools",
+					"description": null,
+					"table": {
+						"headers": ["Tool", "Use"],
+						"rows": [
+							["Task Manager", "Quick process/resource view"],
+							["Resource Monitor", "CPU/disk/network details"],
+							["Event Viewer", "GUI for event logs"],
+							["perfmon", "Performance counters"],
+							["msinfo32", "System information"],
+							["dxdiag", "Graphics/system diagnostics" ]
+						]
+					},
+					"example": "# Run from Win+R\n# perfmon\n# eventvwr.msc\n# msinfo32"
+				}
+			]
+		},
+		{
+			"title": "Registry (Basics)",
+			"description": "The registry is a hierarchical configuration store. Back up before changing.",
+			"items": [
+				{
+					"title": "Common hives",
+					"description": null,
+					"table": {
+						"headers": ["Hive", "Meaning"],
+						"rows": [
+							["HKLM", "Machine-wide settings"],
+							["HKCU", "Current user settings"],
+							["HKCR", "Classes/associations"],
+							["HKU", "All loaded user hives"],
+							["HKCC", "Current hardware profile" ]
+						]
+					},
+					"example": "# PowerShell registry provider\nGet-ChildItem HKLM:\\SOFTWARE | Select-Object -First 10"
+				},
+				{
+					"title": "Read/write registry from PowerShell",
+					"description": "Use with care; prefer configuration management when possible.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Read value", "Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\...'"],
+							["Set value", "Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\...' -Name 'X' -Value 1"],
+							["Create key", "New-Item -Path 'HKCU:\\SOFTWARE\\MyApp' -Force"],
+							["Export", "reg.exe export HKCU\\SOFTWARE\\MyApp myapp.reg" ]
+						]
+					},
+					"example": "New-Item -Path 'HKCU:\\SOFTWARE\\Demo' -Force\nSet-ItemProperty -Path 'HKCU:\\SOFTWARE\\Demo' -Name 'Enabled' -Value 1"
+				}
+			]
+		},
+		{
+			"title": "Package Management",
+			"description": "Modern Windows supports winget; Chocolatey is common in enterprise/dev setups.",
+			"items": [
+				{
+					"title": "winget",
+					"description": "Windows Package Manager CLI.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Search", "winget search [name]"],
+							["Install", "winget install [id]"],
+							["List installed", "winget list"],
+							["Upgrade", "winget upgrade --all"],
+							["Show package", "winget show [id]" ]
+						]
+					},
+					"example": "winget search git\nwinget install Git.Git"
+				},
+				{
+					"title": "Chocolatey",
+					"description": "Third-party package manager (often used for dev tools).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Search", "choco search [name]"],
+							["Install", "choco install [pkg] -y"],
+							["Upgrade all", "choco upgrade all -y"],
+							["List", "choco list -l" ]
+						]
+					},
+					"example": "choco install 7zip -y"
+				}
+			]
+		},
+		{
+			"title": "PowerShell Scripting",
+			"description": "Write repeatable automation: objects, functions, modules, and remoting basics.",
+			"items": [
+				{
+					"title": "Pipeline essentials",
+					"description": "PowerShell passes objects; use Select-Object, Where-Object, Sort-Object.",
+					"table": {
+						"headers": ["Cmdlet", "Purpose"],
+						"rows": [
+							["Where-Object", "Filter objects"],
+							["Select-Object", "Pick properties / first/last"],
+							["Sort-Object", "Sort by property"],
+							["ForEach-Object", "Transform each item"],
+							["Measure-Object", "Count/sum/min/max" ]
+						]
+					},
+					"example": "Get-Service | Where-Object Status -eq 'Running' | Select-Object -First 10 Name,Status"
+				},
+				{
+					"title": "Functions and parameters",
+					"description": "Use advanced functions with CmdletBinding for richer behavior.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Simple function", "function Hello { param([string]$Name) \"Hello $Name\" }"],
+							["Advanced function", "[CmdletBinding()] param(...)"],
+							["Mandatory param", "[Parameter(Mandatory)]"],
+							["Validation", "[ValidateSet('A','B')]"],
+							["Error handling", "try { } catch { }" ]
+						]
+					},
+					"example": "function Get-TopProcess {\n  [CmdletBinding()]\n  param([int]$Top = 5)\n\n  Get-Process | Sort-Object CPU -Descending | Select-Object -First $Top\n}\n\nGet-TopProcess -Top 3"
+				},
+				{
+					"title": "Execution policy (common confusion)",
+					"description": "Execution policy is a safety feature, not a security boundary.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["Get-ExecutionPolicy -List", "Show policies by scope."],
+							["Set-ExecutionPolicy RemoteSigned -Scope CurrentUser", "Common dev-friendly policy."],
+							["Unblock-File script.ps1", "Remove 'downloaded from internet' flag." ]
+						]
+					},
+					"example": "Get-ExecutionPolicy -List\nUnblock-File .\\script.ps1"
+				},
+				{
+					"title": "Remoting (WinRM) basics",
+					"description": "Remote command execution and sessions (requires configuration and authorization).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Run remote command", "Invoke-Command -ComputerName HOST -ScriptBlock { hostname }"],
+							["Interactive session", "Enter-PSSession -ComputerName HOST"],
+							["Persistent session", "$s = New-PSSession -ComputerName HOST; Invoke-Command -Session $s -ScriptBlock {...}" ]
+						]
+					},
+					"example": "# Requires WinRM and permissions\nInvoke-Command -ComputerName server01 -ScriptBlock { Get-Date }"
+				}
+			]
+		},
+		{
+			"title": "System Administration Essentials",
+			"description": "Updates, time, disks, and common maintenance.",
+			"items": [
+				{
+					"title": "Windows Update (common approaches)",
+					"description": "GUI is most common; PowerShell support depends on modules/enterprise tooling.",
+					"table": {
+						"headers": ["Approach", "Notes"],
+						"rows": [
+							["Settings GUI", "Settings -> Windows Update"],
+							["Enterprise", "WSUS/Intune/SCCM or equivalent"],
+							["PowerShell modules", "PSWindowsUpdate module is common (third-party)" ]
+						]
+					},
+					"example": "# Check update UI quickly\nstart ms-settings:windowsupdate"
+				},
+				{
+					"title": "Time and timezone",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show time", "Get-Date"],
+							["Timezone", "Get-TimeZone; Set-TimeZone -Name 'Pacific Standard Time'"],
+							["Time service", "w32tm /query /status"],
+							["Resync", "w32tm /resync" ]
+						]
+					},
+					"example": "Get-TimeZone\nw32tm /query /status"
+				},
+				{
+					"title": "Disk management quick view",
+					"description": "PowerShell cmdlets for disks/volumes.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List disks", "Get-Disk"],
+							["List partitions", "Get-Partition"],
+							["List volumes", "Get-Volume"],
+							["Filesystem usage", "Get-PSDrive -PSProvider FileSystem" ]
+						]
+					},
+					"example": "Get-Volume | Format-Table -AutoSize"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting Toolkit",
+			"description": "High-signal commands and built-in tools for first-response debugging.",
+			"items": [
+				{
+					"title": "System overview",
+					"description": null,
+					"table": {
+						"headers": ["Need", "Command"],
+						"rows": [
+							["System info", "systeminfo"],
+							["Installed hotfixes", "wmic qfe list brief (legacy)"],
+							["Disk space", "Get-PSDrive -PSProvider FileSystem"],
+							["Recent reboots", "Get-WinEvent -FilterHashtable @{LogName='System'; Id=6005,6006,6008} -MaxEvents 20"],
+							["Driver list", "driverquery" ]
+						]
+					},
+					"example": "systeminfo | more\ndriverquery | more"
+				},
+				{
+					"title": "File integrity and repairs",
+					"description": "Built-in system file repair tools.",
+					"table": {
+						"headers": ["Tool", "Command", "Notes"],
+						"rows": [
+							["SFC", "sfc /scannow", "Repairs protected system files."],
+							["DISM", "DISM /Online /Cleanup-Image /RestoreHealth", "Repairs component store." ]
+						]
+					},
+					"example": "# Run in an elevated terminal\nsfc /scannow\nDISM /Online /Cleanup-Image /RestoreHealth"
+				},
+				{
+					"title": "Networking reset (common)",
+					"description": "Useful when troubleshooting name resolution or stack issues (reboot may be needed).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ipconfig /release", "Release DHCP lease."],
+							["ipconfig /renew", "Renew DHCP lease."],
+							["ipconfig /flushdns", "Flush DNS resolver cache."],
+							["netsh winsock reset", "Reset Winsock catalog."],
+							["netsh int ip reset", "Reset TCP/IP stack." ]
+						]
+					},
+					"example": "ipconfig /flushdns\nnetsh winsock reset"
+				}
+			]
+		}
+	]
+}

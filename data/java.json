@@ -1,0 +1,569 @@
+{
+	"title": "Java",
+	"description": "A general-purpose Java quick reference covering syntax, methods/functions, packages/modules, operators, collections/arrays, control flow, regex, date/time, database access (JDBC), common errors, and day-to-day patterns.",
+	"language": "java",
+	"categories": [
+		{
+			"title": "Basic Functionality",
+			"description": "Core language basics: compilation/runtime, classes, types, strings, and I/O.",
+			"items": [
+				{
+					"title": "Compile and run",
+					"description": "Common ways to compile and run Java programs.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Check versions", "java -version; javac -version"],
+							["Compile", "javac Main.java"],
+							["Run", "java Main"],
+							["Run with classpath", "java -cp out:lib/* com.example.Main"],
+							["Single-file source (Java 11+)", "java Hello.java"],
+							["Show system properties", "java -XshowSettings:properties -version"],
+							["List JVM flags", "java -XX:+PrintFlagsFinal -version" ]
+						]
+					},
+					"example": "// Hello.java (Java 11+)\npublic class Hello {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, Java\");\n    }\n}\n\n// Run:\n// java Hello.java"
+				},
+				{
+					"title": "Types, boxing, and null",
+					"description": "Primitives are not objects; wrappers can be null and can incur boxing/unboxing costs.",
+					"table": {
+						"headers": ["Concept", "Notes / Examples"],
+						"rows": [
+							["Primitives", "int, long, double, boolean, char, byte, short, float"],
+							["Wrappers", "Integer, Long, Double, Boolean, Character, Byte, Short, Float"],
+							["Default values", "fields default (0/false/null); locals must be assigned before use"],
+							["Boxing", "Integer x = 1; // boxes int"],
+							["Unboxing", "int y = x; // can throw NullPointerException if x is null"],
+							["Equality", "Use equals() for objects; '==' compares references" ]
+						]
+					},
+					"example": "Integer x = null;\n// int y = x; // NullPointerException (unboxing null)\n\nInteger a = 128, b = 128;\nSystem.out.println(a == b);      // often false (different objects)\nSystem.out.println(a.equals(b)); // true"
+				},
+				{
+					"title": "Strings",
+					"description": "Strings are immutable; prefer StringBuilder for repeated concatenation in loops.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Length", "s.length()"],
+							["Substring", "s.substring(0, 5)"],
+							["Contains", "s.contains(\"foo\")"],
+							["Replace", "s.replace(\"a\", \"b\")"],
+							["Split", "s.split(\",\")"],
+							["Join", "String.join(\",\", list)"],
+							["Format", "String.format(\"%s %d\", name, n)"],
+							["StringBuilder", "new StringBuilder().append(...)" ]
+						]
+					},
+					"example": "StringBuilder sb = new StringBuilder();\nfor (int i = 0; i < 3; i++) {\n    sb.append(i).append(\",\");\n}\nSystem.out.println(sb.toString());"
+				}
+			]
+		},
+		{
+			"title": "Functions (Methods)",
+			"description": "Parameters, returns, scope, anonymous functions (lambdas), and common built-ins.",
+			"items": [
+				{
+					"title": "Parameters and returns",
+					"description": "Java is pass-by-value; object references are passed by value.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["Method signature", "int add(int a, int b) { return a + b; }"],
+							["Varargs", "int sum(int... xs) { ... }"],
+							["Overloading", "void f(int x) and void f(String x)"],
+							["Return multiple", "Use record/class or Map/Pair-like structure"],
+							["Checked exceptions", "void read() throws IOException"],
+							["Generics", "static <T> T first(List<T> xs)" ]
+						]
+					},
+					"example": "static int add(int a, int b) {\n    return a + b;\n}\n\nstatic int sum(int... xs) {\n    int s = 0;\n    for (int x : xs) s += x;\n    return s;\n}"
+				},
+				{
+					"title": "Scope: instance vs static",
+					"description": "Instance members belong to an object; static members belong to the class.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Instance method", "Uses instance fields; called via obj.method()"],
+							["Static method", "No implicit 'this'; called via Class.method()"],
+							["Local variables", "Exist only within method/block"],
+							["Fields", "Have default values; consider immutability (final)"],
+							["Visibility", "private/protected/package-private/public" ]
+						]
+					},
+					"example": "class Counter {\n    private int value;\n    static int instances;\n\n    Counter() { instances++; }\n    void inc() { value++; }\n    static int countInstances() { return instances; }\n}"
+				},
+				{
+					"title": "Anonymous functions: lambdas and method references",
+					"description": "Lambdas implement functional interfaces (e.g., Predicate, Function, Consumer).",
+					"table": {
+						"headers": ["Use", "Example"],
+						"rows": [
+							["Lambda", "x -> x * 2"],
+							["Block lambda", "x -> { return x * 2; }"],
+							["Method ref (static)", "Integer::parseInt"],
+							["Method ref (instance)", "System.out::println"],
+							["Constructor ref", "ArrayList::new" ]
+						]
+					},
+					"example": "import java.util.*;\nimport java.util.stream.*;\n\nList<String> xs = List.of(\"1\", \"2\", \"3\");\nList<Integer> ys = xs.stream().map(Integer::parseInt).toList();\nys.forEach(System.out::println);"
+				},
+				{
+					"title": "Common built-in functionality",
+					"description": "A few high-value standard library classes/methods.",
+					"table": {
+						"headers": ["Need", "Use"],
+						"rows": [
+							["Null checks", "Objects.requireNonNull(x)"],
+							["Optional", "Optional.ofNullable(x).map(...).orElse(...)"],
+							["Hashing", "Objects.hash(a, b, c)"],
+							["Compare", "Integer.compare(a, b)"],
+							["Sorting", "Collections.sort(list); list.sort(comparator)"],
+							["Logging (common)", "java.util.logging or SLF4J (external)" ]
+						]
+					},
+					"example": "import java.util.*;\n\nString s = null;\nString safe = Optional.ofNullable(s).orElse(\"(missing)\");\nSystem.out.println(safe);"
+				}
+			]
+		},
+		{
+			"title": "Filters",
+			"description": "Filtering data with streams/predicates and (optionally) web filters.",
+			"items": [
+				{
+					"title": "Stream filter() fundamentals",
+					"description": "filter() takes a Predicate<T> and returns a stream of matching elements.",
+					"table": {
+						"headers": ["Operation", "Example"],
+						"rows": [
+							["Filter", "xs.stream().filter(x -> x > 10)"],
+							["Map", "xs.stream().map(x -> x * 2)"],
+							["Collect", "...collect(Collectors.toList())"],
+							["toList() (Java 16+)", "...toList()"],
+							["Distinct", "...distinct()"],
+							["Limit/skip", "...limit(10).skip(5)" ]
+						]
+					},
+					"example": "import java.util.*;\n\nList<Integer> xs = List.of(1, 2, 3, 4, 5, 6);\nList<Integer> evens = xs.stream()\n    .filter(x -> x % 2 == 0)\n    .toList();\nSystem.out.println(evens);"
+				},
+				{
+					"title": "Predicate composition",
+					"description": "Combine predicates with and()/or()/negate().",
+					"table": {
+						"headers": ["Method", "Meaning"],
+						"rows": [
+							["p.and(q)", "Both true"],
+							["p.or(q)", "Either true"],
+							["p.negate()", "Not p" ]
+						]
+					},
+					"example": "import java.util.function.*;\n\nPredicate<String> nonEmpty = s -> s != null && !s.isBlank();\nPredicate<String> shortEnough = s -> s.length() <= 10;\nPredicate<String> ok = nonEmpty.and(shortEnough);"
+				},
+				{
+					"title": "Servlet filters (web apps)",
+					"description": "In Jakarta Servlet environments, a Filter can intercept requests/responses (logging, auth, etc.).",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Filter", "Runs before/after servlet/controller"],
+							["Use cases", "Auth, CORS, logging, headers"],
+							["Order", "Filter chains run in configured order" ]
+						]
+					},
+					"example": "// Pseudocode sketch\n// public class MyFilter implements Filter {\n//   public void doFilter(req,res,chain){ ...; chain.doFilter(req,res); }\n// }"
+				}
+			]
+		},
+		{
+			"title": "Globals",
+			"description": "Java has no true 'global variables' like some languages; use static fields/constants and global process state carefully.",
+			"items": [
+				{
+					"title": "Static fields and constants",
+					"description": "Use static final constants for shared values. Avoid mutable global state unless you control lifecycle and concurrency.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Constant", "public static final int PORT = 8080;"],
+							["Singleton (simple)", "enum Singleton { INSTANCE; }"],
+							["Thread safety", "Prefer immutable objects; synchronize mutable shared state" ]
+						]
+					},
+					"example": "public final class Config {\n    public static final String APP_NAME = \"MyApp\";\n    private Config() {}\n}"
+				},
+				{
+					"title": "Environment variables and system properties",
+					"description": "Prefer configuration via env vars or -D properties over hard-coded globals.",
+					"table": {
+						"headers": ["Source", "Read", "Set"],
+						"rows": [
+							["Environment", "System.getenv(\"NAME\")", "Set in shell/process manager"],
+							["System property", "System.getProperty(\"name\")", "java -Dname=value ..." ]
+						]
+					},
+					"example": "String env = System.getenv(\"JAVA_HOME\");\nString prop = System.getProperty(\"user.timezone\");"
+				}
+			]
+		},
+		{
+			"title": "Packages/Modules",
+			"description": "Imports, packages, build tooling, and the Java Platform Module System (JPMS).",
+			"items": [
+				{
+					"title": "Packages and imports",
+					"description": "A source file can declare one package; imports bring types into scope.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Package", "package com.example.app;"],
+							["Import", "import java.util.List;"],
+							["Static import", "import static java.util.Objects.requireNonNull;"],
+							["Fully qualified", "java.util.Map<String,String> m;" ]
+						]
+					},
+					"example": "package com.example.app;\n\nimport java.util.List;\n\npublic class Main {\n    public static void main(String[] args) {\n        List<String> xs = List.of(\"a\", \"b\");\n        System.out.println(xs);\n    }\n}"
+				},
+				{
+					"title": "Maven and Gradle quick pointers",
+					"description": "Most Java projects use Maven or Gradle for dependencies and builds.",
+					"table": {
+						"headers": ["Tool", "Common commands"],
+						"rows": [
+							["Maven", "mvn -v; mvn test; mvn package; mvn dependency:tree"],
+							["Gradle", "gradle -v; ./gradlew test; ./gradlew build; ./gradlew dependencies" ]
+						]
+					},
+					"example": "# Maven build\nmvn test\nmvn package\n\n# Gradle build\n./gradlew test\n./gradlew build"
+				},
+				{
+					"title": "Modules (JPMS) basics",
+					"description": "JPMS uses module-info.java to declare exports and requires.",
+					"table": {
+						"headers": ["Keyword", "Meaning"],
+						"rows": [
+							["module", "Declares a module"],
+							["requires", "Depends on another module"],
+							["exports", "Makes a package available to other modules"],
+							["opens", "Allows deep reflection (frameworks)" ]
+						]
+					},
+					"example": "module com.example.app {\n    requires java.sql;\n    exports com.example.app.api;\n}"
+				}
+			]
+		},
+		{
+			"title": "Operators",
+			"description": "Arithmetic, logical, bitwise, comparison, and special operators.",
+			"items": [
+				{
+					"title": "Common operators",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Operators", "Notes"],
+						"rows": [
+							["Arithmetic", "+ - * / %", "Integer division truncates"],
+							["Comparison", "== != < <= > >=", "Use equals() for object value equality"],
+							["Logical", "&& || !", "Short-circuit"],
+							["Bitwise", "& | ^ ~", "Works on integral types"],
+							["Shift", "<< >> >>>", ">>> is unsigned right shift"],
+							["Ternary", "cond ? a : b", "Expression form"],
+							["Type test", "instanceof", "Pattern matching improves ergonomics (newer Java)" ]
+						]
+					},
+					"example": "Object o = \"x\";\nif (o instanceof String s) {\n    System.out.println(s.toUpperCase());\n}"
+				}
+			]
+		},
+		{
+			"title": "Common Errors",
+			"description": "Frequent exceptions/errors and how to think about them.",
+			"items": [
+				{
+					"title": "Frequently encountered exceptions",
+					"description": "Many are runtime exceptions; some are checked exceptions.",
+					"table": {
+						"headers": ["Exception/Error", "Typical cause", "Hint"],
+						"rows": [
+							["NullPointerException", "Dereferencing null", "Use Optional/requireNonNull; check assumptions"],
+							["IndexOutOfBoundsException", "Bad index", "Validate indices; check list/array size"],
+							["NumberFormatException", "Parsing invalid number", "Validate input; use try/catch"],
+							["ClassCastException", "Invalid cast", "Prefer generics; use instanceof"],
+							["ConcurrentModificationException", "Mutating collection during iteration", "Use iterator.remove() or copy"],
+							["IOException", "I/O failed", "Check paths/permissions/network"],
+							["OutOfMemoryError", "Heap exhausted", "Heap dump, fix retention; adjust -Xmx"],
+							["StackOverflowError", "Deep recursion", "Fix recursion; increase stack only if needed" ]
+						]
+					},
+					"example": "try {\n    int n = Integer.parseInt(input);\n} catch (NumberFormatException e) {\n    // handle invalid input\n}"
+				},
+				{
+					"title": "Checked vs unchecked",
+					"description": "Checked exceptions must be declared/handled; unchecked (RuntimeException) do not.",
+					"table": {
+						"headers": ["Kind", "Examples", "Handling"],
+						"rows": [
+							["Checked", "IOException, SQLException", "must catch or 'throws'"],
+							["Unchecked", "NullPointerException, IllegalArgumentException", "optional to catch" ]
+						]
+					},
+					"example": "void read() throws java.io.IOException {\n    // ...\n}"
+				}
+			]
+		},
+		{
+			"title": "Arrays",
+			"description": "Fixed-size sequences; for resizable collections, prefer List/ArrayList.",
+			"items": [
+				{
+					"title": "Array basics",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Declare", "int[] a;"],
+							["Create", "int[] a = new int[10];"],
+							["Initialize", "int[] a = {1,2,3};"],
+							["Length", "a.length"],
+							["Sort", "Arrays.sort(a)"],
+							["Copy", "Arrays.copyOf(a, n)"],
+							["Fill", "Arrays.fill(a, 0)" ]
+						]
+					},
+					"example": "import java.util.*;\n\nint[] a = {3, 1, 2};\nArrays.sort(a);\nSystem.out.println(Arrays.toString(a));"
+				},
+				{
+					"title": "Multidimensional arrays",
+					"description": "Java uses arrays-of-arrays; rows can be jagged.",
+					"table": {
+						"headers": ["Example", "Notes"],
+						"rows": [
+							["int[][] m = new int[3][4];", "3 rows, 4 cols"],
+							["int[][] j = new int[3][];", "jagged; allocate each row" ]
+						]
+					},
+					"example": "int[][] j = new int[2][];\nj[0] = new int[] {1, 2};\nj[1] = new int[] {3};"
+				}
+			]
+		},
+		{
+			"title": "Loops",
+			"description": "for/while/do-while, enhanced for, streams, and iterators.",
+			"items": [
+				{
+					"title": "Loop forms",
+					"description": null,
+					"table": {
+						"headers": ["Loop", "Example"],
+						"rows": [
+							["for", "for (int i=0; i<n; i++) { ... }"],
+							["while", "while (cond) { ... }"],
+							["do-while", "do { ... } while (cond);"],
+							["enhanced for", "for (String s : xs) { ... }"],
+							["break/continue", "break; continue;" ]
+						]
+					},
+					"example": "for (int i = 0; i < 3; i++) {\n    System.out.println(i);\n}\n\nfor (String s : java.util.List.of(\"a\", \"b\")) {\n    System.out.println(s);\n}"
+				},
+				{
+					"title": "Iterating and removing safely",
+					"description": "Use an Iterator to remove while iterating; avoid ConcurrentModificationException.",
+					"table": {
+						"headers": ["Approach", "Example"],
+						"rows": [
+							["Iterator remove", "Iterator<T> it = xs.iterator(); while(it.hasNext()){... it.remove();}"],
+							["removeIf", "xs.removeIf(x -> predicate)" ]
+						]
+					},
+					"example": "import java.util.*;\n\nList<Integer> xs = new ArrayList<>(List.of(1,2,3,4));\nxs.removeIf(x -> x % 2 == 0);\nSystem.out.println(xs);"
+				}
+			]
+		},
+		{
+			"title": "Database Interactions",
+			"description": "JDBC fundamentals: drivers, connections, prepared statements, transactions, and safe patterns.",
+			"items": [
+				{
+					"title": "JDBC connection + query (try-with-resources)",
+					"description": "Use PreparedStatement to avoid SQL injection and handle parameters.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Driver", "Provided by DB vendor (e.g., PostgreSQL)"],
+							["Connection", "DriverManager.getConnection(url, user, pass)"],
+							["PreparedStatement", "conn.prepareStatement(\"SELECT ... WHERE id=?\")"],
+							["ResultSet", "Iterate rows with rs.next()"],
+							["Auto-close", "try-with-resources closes in reverse order" ]
+						]
+					},
+					"example": "import java.sql.*;\n\nString url = \"jdbc:postgresql://localhost:5432/app\";\ntry (Connection conn = DriverManager.getConnection(url, \"user\", \"pass\");\n     PreparedStatement ps = conn.prepareStatement(\"SELECT name FROM users WHERE id = ?\")) {\n\n    ps.setInt(1, 42);\n    try (ResultSet rs = ps.executeQuery()) {\n        while (rs.next()) {\n            System.out.println(rs.getString(\"name\"));\n        }\n    }\n}"
+				},
+				{
+					"title": "Transactions",
+					"description": "Disable autocommit and commit/rollback explicitly.",
+					"table": {
+						"headers": ["Action", "Example"],
+						"rows": [
+							["Disable autocommit", "conn.setAutoCommit(false)"],
+							["Commit", "conn.commit()"],
+							["Rollback", "conn.rollback()" ]
+						]
+					},
+					"example": "try (Connection conn = ds.getConnection()) {\n    conn.setAutoCommit(false);\n    try {\n        // ... execute statements\n        conn.commit();\n    } catch (Exception e) {\n        conn.rollback();\n        throw e;\n    }\n}"
+				},
+				{
+					"title": "Common JDBC pitfalls",
+					"description": null,
+					"table": {
+						"headers": ["Pitfall", "Fix"],
+						"rows": [
+							["String concatenation in SQL", "Use PreparedStatement parameters"],
+							["Leaking connections", "Use try-with-resources; use a connection pool"],
+							["Timezone surprises", "Use java.time types and consistent DB timezone"],
+							["N+1 queries", "Batch/joins; redesign fetching strategy" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Conditions",
+			"description": "if/else, switch, and pattern matching (newer Java versions).",
+			"items": [
+				{
+					"title": "if/else and ternary",
+					"description": null,
+					"table": {
+						"headers": ["Form", "Example"],
+						"rows": [
+							["if", "if (x > 0) { ... }"],
+							["if/else", "if (x > 0) { ... } else { ... }"],
+							["else if", "if (...) { ... } else if (...) { ... }"],
+							["ternary", "String s = ok ? \"yes\" : \"no\";" ]
+						]
+					},
+					"example": "int x = -1;\nString sign = x > 0 ? \"pos\" : (x < 0 ? \"neg\" : \"zero\");"
+				},
+				{
+					"title": "switch statement and switch expressions",
+					"description": "Modern Java supports switch expressions with arrow labels.",
+					"table": {
+						"headers": ["Approach", "Example"],
+						"rows": [
+							["Classic switch", "switch (n) { case 1: ...; break; default: ... }"],
+							["Switch expression", "var s = switch (n) { case 1 -> \"one\"; default -> \"other\"; };" ]
+						]
+					},
+					"example": "int n = 2;\nString label = switch (n) {\n    case 1 -> \"one\";\n    case 2 -> \"two\";\n    default -> \"other\";\n};"
+				}
+			]
+		},
+		{
+			"title": "Regular Expressions",
+			"description": "java.util.regex Pattern/Matcher and common regex pitfalls.",
+			"items": [
+				{
+					"title": "Pattern and Matcher basics",
+					"description": "Use Pattern.compile and Matcher for repeated matches; String.matches matches the whole string.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Whole-string match", "s.matches(\"\\\\d+\")"],
+							["Find substring", "Pattern.compile(re).matcher(s).find()"],
+							["Capture groups", "m.group(1)"],
+							["Replace", "s.replaceAll(re, repl)"],
+							["Flags", "Pattern.CASE_INSENSITIVE | Pattern.MULTILINE" ]
+						]
+					},
+					"example": "import java.util.regex.*;\n\nPattern p = Pattern.compile(\"(\\\\w+)=(\\\\d+)\");\nMatcher m = p.matcher(\"a=1 b=2\");\nwhile (m.find()) {\n    System.out.println(m.group(1) + \" -> \" + m.group(2));\n}"
+				},
+				{
+					"title": "Escaping rules",
+					"description": "Java string escaping happens before regex parsing. You often need double escaping.",
+					"table": {
+						"headers": ["Want", "Regex", "Java string literal"],
+						"rows": [
+							["Digit", "\\\\d", "\\\\\\\\d"],
+							["Word boundary", "\\\\b", "\\\\\\\\b"],
+							["Literal dot", "\\\\.", "\\\\\\\\." ]
+						]
+					},
+					"example": "String re = \"\\\\\\\\d+\\\\\\\\.\\\\\\\\d+\"; // matches 1.23"
+				}
+			]
+		},
+		{
+			"title": "Date and Time",
+			"description": "Prefer java.time (JSR-310) types over legacy java.util.Date/Calendar.",
+			"items": [
+				{
+					"title": "Common java.time types",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Use"],
+						"rows": [
+							["Instant", "Timestamp in UTC"],
+							["LocalDate", "Date without timezone"],
+							["LocalDateTime", "Date-time without timezone"],
+							["ZonedDateTime", "Date-time with timezone"],
+							["Duration", "Time-based amount"],
+							["Period", "Date-based amount" ]
+						]
+					},
+					"example": "import java.time.*;\n\nInstant now = Instant.now();\nLocalDate today = LocalDate.now();\nZonedDateTime z = ZonedDateTime.now(ZoneId.of(\"UTC\"));"
+				},
+				{
+					"title": "Formatting and parsing",
+					"description": "Use DateTimeFormatter for consistent formatting/parsing.",
+					"table": {
+						"headers": ["Task", "Example"],
+						"rows": [
+							["Format", "fmt.format(zdt)"],
+							["Parse", "LocalDate.parse(\"2025-12-20\")"],
+							["Custom pattern", "DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm\")"],
+							["ISO constants", "DateTimeFormatter.ISO_INSTANT" ]
+						]
+					},
+					"example": "import java.time.*;\nimport java.time.format.*;\n\nDateTimeFormatter fmt = DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm\");\nString s = LocalDateTime.now().format(fmt);\nSystem.out.println(s);"
+				}
+			]
+		},
+		{
+			"title": "Collections and Generics (Extra)",
+			"description": "Everyday Java: List/Map/Set, immutability, and common patterns.",
+			"items": [
+				{
+					"title": "Collection types",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Implementation", "Notes"],
+						"rows": [
+							["List", "ArrayList", "Ordered, duplicates allowed"],
+							["Set", "HashSet", "Unique elements"],
+							["Map", "HashMap", "Key/value"],
+							["Sorted map", "TreeMap", "Ordered by key/comparator"],
+							["Concurrent map", "ConcurrentHashMap", "Thread-safe" ]
+						]
+					},
+					"example": "import java.util.*;\n\nMap<String, Integer> counts = new HashMap<>();\ncounts.merge(\"a\", 1, Integer::sum);"
+				},
+				{
+					"title": "Immutability helpers",
+					"description": "Use factory methods for small immutable collections.",
+					"table": {
+						"headers": ["Factory", "Example"],
+						"rows": [
+							["List.of", "List.of(\"a\", \"b\")"],
+							["Set.of", "Set.of(1, 2, 3)"],
+							["Map.of", "Map.of(\"k\", \"v\")"],
+							["Copy (unmodifiable)", "List.copyOf(xs)" ]
+						]
+					},
+					"example": "List<String> xs = List.of(\"a\", \"b\");\n// xs.add(\"c\"); // UnsupportedOperationException"
+				}
+			]
+		}
+	]
+}
