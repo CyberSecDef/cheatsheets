@@ -1,0 +1,788 @@
+{
+	"title": "Linux Networking",
+	"description": "General-to-advanced Linux networking configuration and troubleshooting: interfaces, IP addressing, routing, DNS, firewalls, namespaces, tunnels, VPNs, and performance tooling.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Basics and Concepts",
+			"description": "Core concepts and what tools to prefer on modern Linux.",
+			"items": [
+				{
+					"title": "Preferred toolsets",
+					"description": "Prefer iproute2 (ip/ss) over legacy net-tools (ifconfig/route/netstat).",
+					"table": {
+						"headers": ["Task", "Modern", "Legacy (avoid)"],
+						"rows": [
+							["Interfaces", "ip link / ip addr", "ifconfig"],
+							["Routes", "ip route", "route"],
+							["Sockets", "ss", "netstat"],
+							["ARP/Neighbors", "ip neigh", "arp"],
+							["Bridges", "ip link (bridge)", "brctl" ]
+						]
+					},
+					"example": "ip -br link\nip -br addr\nss -tulpn"
+				},
+				{
+					"title": "Helpful one-liners",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ip -br a", "Brief addresses"],
+							["ip -br l", "Brief links"],
+							["ip r", "Routes"],
+							["ip n", "Neighbors (ARP/NDP)"],
+							["ss -tulpn", "Listening TCP/UDP sockets"],
+							["resolvectl status", "systemd-resolved status (if used)" ]
+						]
+					},
+					"example": "ip -br a\nip r\nss -tulpn"
+				}
+			]
+		},
+		{
+			"title": "Interfaces and Link Layer",
+			"description": "Bring links up/down, inspect MAC, MTU, and link state.",
+			"items": [
+				{
+					"title": "ip link essentials",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ip link show", "List interfaces"],
+							["ip link set dev [iface] up|down", "Bring interface up/down"],
+							["ip link set dev [iface] mtu [mtu]", "Set MTU"],
+							["ip link set dev [iface] promisc on|off", "Promiscuous mode"],
+							["ip -d link show dev [iface]", "Show detailed link info" ]
+						]
+					},
+					"example": "ip link show\nip link set dev eth0 up\nip -d link show dev eth0"
+				},
+				{
+					"title": "Link speed, duplex, driver (ethtool)",
+					"description": "Inspect NIC capabilities and link negotiation.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["ethtool [iface]", "Speed/duplex/link detected"],
+							["ethtool -i [iface]", "Driver + firmware"],
+							["ethtool -k [iface]", "Offload features (TSO/GSO/GRO, etc.)"],
+							["ethtool -S [iface]", "Driver statistics"],
+							["ethtool -p [iface]", "Blink LED (where supported)" ]
+						]
+					},
+					"example": "sudo ethtool eth0\nsudo ethtool -i eth0\nsudo ethtool -k eth0"
+				},
+				{
+					"title": "Wi-Fi quick checks",
+					"description": "Common CLI tools (varies by distro).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["iw dev", "List wireless interfaces"],
+							["iw dev [wlan] link", "Current association"],
+							["iwlist [wlan] scan", "Scan (older)"],
+							["nmcli dev wifi", "Scan via NetworkManager" ]
+						]
+					},
+					"example": "iw dev\niw dev wlan0 link\nnmcli dev wifi"
+				}
+			]
+		},
+		{
+			"title": "IP Addressing (IPv4/IPv6)",
+			"description": "Assign/remove addresses and inspect address state.",
+			"items": [
+				{
+					"title": "ip addr operations",
+					"description": "Use CIDR prefixes (e.g., 192.0.2.10/24).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ip addr show dev [iface]", "Show addresses"],
+							["ip addr add [addr/prefix] dev [iface]", "Add address"],
+							["ip addr del [addr/prefix] dev [iface]", "Remove address"],
+							["ip addr flush dev [iface]", "Remove all addresses"],
+							["ip -6 addr show dev [iface]", "Show IPv6 addresses" ]
+						]
+					},
+					"example": "sudo ip addr add 192.0.2.10/24 dev eth0\nsudo ip -6 addr add 2001:db8::10/64 dev eth0\nip addr show dev eth0"
+				},
+				{
+					"title": "DHCP client (common)",
+					"description": "Depending on distro/stack you may use dhclient, dhcpcd, NetworkManager, or systemd-networkd.",
+					"table": {
+						"headers": ["Tool", "Example"],
+						"rows": [
+							["dhclient", "sudo dhclient -v [iface]"],
+							["dhcpcd", "sudo dhcpcd -d [iface]"],
+							["NetworkManager", "nmcli dev connect [iface]"],
+							["systemd-networkd", "networkctl renew [iface]" ]
+						]
+					},
+					"example": "sudo dhclient -v eth0\n# release/renew\nsudo dhclient -r eth0\nsudo dhclient eth0"
+				},
+				{
+					"title": "Neighbors (ARP/NDP)",
+					"description": "Inspect and manage neighbor cache entries.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ip neigh show", "Show neighbor table"],
+							["ip neigh flush all", "Flush neighbor cache"],
+							["arping -I [iface] [ip]", "ARP probe (IPv4)"],
+							["ndisc6 [ip] [iface]", "NDP probe (IPv6; tool may vary)" ]
+						]
+					},
+					"example": "ip neigh show\narping -I eth0 192.0.2.1"
+				}
+			]
+		},
+		{
+			"title": "Routing",
+			"description": "Default gateways, static routes, and route inspection.",
+			"items": [
+				{
+					"title": "ip route essentials",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ip route show", "Show IPv4 routes"],
+							["ip -6 route show", "Show IPv6 routes"],
+							["ip route get [ip]", "Show route decision for a destination"],
+							["ip route add [prefix] via [gw] dev [iface]", "Add route"],
+							["ip route del [prefix]", "Delete route"],
+							["ip route replace default via [gw]", "Set/replace default route" ]
+						]
+					},
+					"example": "ip route show\nip route get 8.8.8.8\nsudo ip route replace default via 192.0.2.1 dev eth0"
+				},
+				{
+					"title": "Policy routing (advanced)",
+					"description": "Use multiple routing tables with ip rule for source-based routing or VRF-like behavior.",
+					"table": {
+						"headers": ["Concept", "Commands"],
+						"rows": [
+							["List rules", "ip rule show"],
+							["Add rule", "ip rule add from [src/prefix] table [tableIdOrName]"],
+							["Routes in table", "ip route show table [tableIdOrName]"],
+							["Add route in table", "ip route add default via [gw] table [tableIdOrName]"],
+							["Routing tables", "cat /etc/iproute2/rt_tables" ]
+						]
+					},
+					"example": "# Example: traffic from 192.0.2.10 uses table 100\nsudo ip rule add from 192.0.2.10/32 table 100\nsudo ip route add default via 192.0.2.254 dev eth0 table 100\nip rule show\nip route show table 100"
+				},
+				{
+					"title": "Route metrics and multiple defaults",
+					"description": "Lower metric generally preferred. Network stacks/managers may maintain multiple default routes.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Add default with metric", "ip route add default via [gw] dev [iface] metric [n]"],
+							["Show metrics", "ip route show | grep default" ]
+						]
+					},
+					"example": "sudo ip route add default via 192.0.2.1 dev eth0 metric 100\nsudo ip route add default via 198.51.100.1 dev wlan0 metric 200\nip route show | grep default"
+				}
+			]
+		},
+		{
+			"title": "DNS and Name Resolution",
+			"description": "Inspect resolver configuration and query DNS.",
+			"items": [
+				{
+					"title": "Resolver state (systemd-resolved)",
+					"description": "If systemd-resolved is enabled, use resolvectl to inspect per-link DNS and search domains.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["resolvectl status", "Overall resolver status"],
+							["resolvectl dns", "Per-link DNS servers"],
+							["resolvectl domain", "Per-link search domains"],
+							["resolvectl query [name]", "Resolve a name"],
+							["ls -l /etc/resolv.conf", "See if it is managed/symlinked" ]
+						]
+					},
+					"example": "resolvectl status\nresolvectl query example.com"
+				},
+				{
+					"title": "DNS query tools",
+					"description": null,
+					"table": {
+						"headers": ["Tool", "Examples"],
+						"rows": [
+							["dig", "dig example.com A; dig +short example.com; dig @1.1.1.1 example.com"],
+							["nslookup", "nslookup example.com"],
+							["host", "host -t MX example.com"],
+							["getent", "getent hosts example.com (uses NSS; closer to app behavior)" ]
+						]
+					},
+					"example": "dig +short example.com\ndig @9.9.9.9 example.com A\ngetent hosts example.com"
+				}
+			]
+		},
+		{
+			"title": "NetworkManager (nmcli)",
+			"description": "Configure connections on many desktop/server distros via NetworkManager.",
+			"items": [
+				{
+					"title": "Status and device management",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nmcli general status", "Overall state"],
+							["nmcli dev status", "Device state table"],
+							["nmcli connection show", "Connections"],
+							["nmcli dev connect [iface]", "Bring device up"],
+							["nmcli dev disconnect [iface]", "Bring device down" ]
+						]
+					},
+					"example": "nmcli dev status\nnmcli connection show"
+				},
+				{
+					"title": "Configure a static IPv4 address",
+					"description": "Modify a connection profile and re-apply it.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["Find connection name", "nmcli connection show"],
+							["Set static IPv4", "nmcli con mod '[conn]' ipv4.method manual ipv4.addresses 192.0.2.10/24 ipv4.gateway 192.0.2.1 ipv4.dns '1.1.1.1 9.9.9.9'"],
+							["Bring up", "nmcli con up '[conn]'" ]
+						]
+					},
+					"example": "nmcli con mod 'Wired connection 1' ipv4.method manual ipv4.addresses 192.0.2.10/24 ipv4.gateway 192.0.2.1 ipv4.dns '1.1.1.1 9.9.9.9'\nnmcli con up 'Wired connection 1'"
+				},
+				{
+					"title": "Wi-Fi connect",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nmcli dev wifi list", "Scan"],
+							["nmcli dev wifi connect '[ssid]' password '[pass]'", "Connect"],
+							["nmcli con show --active", "Show active connection" ]
+						]
+					},
+					"example": "nmcli dev wifi list\nnmcli dev wifi connect 'MySSID' password 'MyPassword'"
+				}
+			]
+		},
+		{
+			"title": "systemd-networkd and Netplan",
+			"description": "Common server stacks on systemd-based distributions (especially Ubuntu).",
+			"items": [
+				{
+					"title": "systemd-networkd inspection",
+					"description": "Use networkctl for link/lease diagnostics.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["networkctl status", "Overall status"],
+							["networkctl status [iface]", "Per-interface details"],
+							["networkctl list", "Links managed by networkd"],
+							["journalctl -u systemd-networkd", "Logs" ]
+						]
+					},
+					"example": "networkctl status\njournalctl -u systemd-networkd --no-pager -n 200"
+				},
+				{
+					"title": "Netplan apply and debug",
+					"description": "Ubuntu uses netplan to generate config for NetworkManager or networkd.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sudo netplan generate", "Render config (no apply)"],
+							["sudo netplan apply", "Apply config"],
+							["sudo netplan try", "Apply with rollback timer"],
+							["sudo netplan --debug apply", "Verbose debug output" ]
+						]
+					},
+					"example": "sudo netplan --debug apply"
+				}
+			]
+		},
+		{
+			"title": "Firewalls (nftables)",
+			"description": "Modern Linux firewalling uses nftables (nft). Many distros provide wrappers (ufw/firewalld).",
+			"items": [
+				{
+					"title": "Inspect ruleset",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sudo nft list ruleset", "Dump full ruleset"],
+							["sudo nft list tables", "List tables"],
+							["sudo nft list chains", "List chains"],
+							["sudo nft -a list ruleset", "Include rule handles" ]
+						]
+					},
+					"example": "sudo nft list ruleset"
+				},
+				{
+					"title": "Basic filter rules (example)",
+					"description": "Example only. Persistency differs by distro (nftables.service, /etc/nftables.conf, etc.).",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Create inet table", "sudo nft add table inet filter"],
+							["Create input chain", "sudo nft 'add chain inet filter input { type filter hook input priority 0; policy drop; }'"],
+							["Allow loopback", "sudo nft add rule inet filter input iif lo accept"],
+							["Allow established", "sudo nft add rule inet filter input ct state established,related accept"],
+							["Allow SSH", "sudo nft add rule inet filter input tcp dport 22 accept" ]
+						]
+					},
+					"example": "sudo nft add table inet filter\nsudo nft 'add chain inet filter input { type filter hook input priority 0; policy drop; }'\nsudo nft add rule inet filter input iif lo accept\nsudo nft add rule inet filter input ct state established,related accept\nsudo nft add rule inet filter input tcp dport 22 accept\nsudo nft list ruleset"
+				},
+				{
+					"title": "NAT (example)",
+					"description": "Masquerade for an internal subnet going out via a WAN interface.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Enable forwarding (runtime)", "sudo sysctl -w net.ipv4.ip_forward=1"],
+							["Create nat table", "sudo nft add table ip nat"],
+							["Postrouting chain", "sudo nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; policy accept; }'"],
+							["Masquerade", "sudo nft add rule ip nat postrouting oifname '[wan]' ip saddr [lan/prefix] masquerade" ]
+						]
+					},
+					"example": "sudo sysctl -w net.ipv4.ip_forward=1\nsudo nft add table ip nat\nsudo nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; policy accept; }'\nsudo nft add rule ip nat postrouting oifname 'eth0' ip saddr 192.168.50.0/24 masquerade"
+				}
+			]
+		},
+		{
+			"title": "Firewalls (iptables - legacy)",
+			"description": "Many systems still expose iptables. On some distros iptables is a frontend to nft (iptables-nft).",
+			"items": [
+				{
+					"title": "Inspect rules",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sudo iptables -S", "List rules in a script-friendly form"],
+							["sudo iptables -L -n -v", "List rules with counters"],
+							["sudo iptables -t nat -S", "Show NAT rules"],
+							["sudo ip6tables -S", "IPv6 rules" ]
+						]
+					},
+					"example": "sudo iptables -L -n -v"
+				},
+				{
+					"title": "Common rules (example)",
+					"description": "Example policy: drop inbound by default, allow established + SSH.",
+					"table": {
+						"headers": ["Rule", "Command"],
+						"rows": [
+							["Default policy", "sudo iptables -P INPUT DROP"],
+							["Allow loopback", "sudo iptables -A INPUT -i lo -j ACCEPT"],
+							["Allow established", "sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT"],
+							["Allow SSH", "sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT" ]
+						]
+					},
+					"example": "sudo iptables -P INPUT DROP\nsudo iptables -A INPUT -i lo -j ACCEPT\nsudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT\nsudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT\nsudo iptables -S"
+				}
+			]
+		},
+		{
+			"title": "Firewall Wrappers (ufw / firewalld)",
+			"description": "Higher-level firewalls that manage nftables/iptables for you.",
+			"items": [
+				{
+					"title": "UFW basics",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sudo ufw status verbose", "Status + rules"],
+							["sudo ufw enable", "Enable firewall"],
+							["sudo ufw allow 22/tcp", "Allow a port"],
+							["sudo ufw allow from [ip] to any port 22", "Allow from source"],
+							["sudo ufw deny 23/tcp", "Deny a port"],
+							["sudo ufw delete allow 22/tcp", "Delete a rule" ]
+						]
+					},
+					"example": "sudo ufw status verbose\nsudo ufw allow 22/tcp\nsudo ufw deny 23/tcp"
+				},
+				{
+					"title": "firewalld basics (firewall-cmd)",
+					"description": "Zones, services, and permanent vs runtime config.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sudo firewall-cmd --state", "Running?"],
+							["sudo firewall-cmd --get-active-zones", "Active zones"],
+							["sudo firewall-cmd --list-all", "Show rules in current zone"],
+							["sudo firewall-cmd --add-service=ssh", "Allow service (runtime)"],
+							["sudo firewall-cmd --add-service=ssh --permanent", "Allow service (permanent)"],
+							["sudo firewall-cmd --reload", "Reload permanent config" ]
+						]
+					},
+					"example": "sudo firewall-cmd --get-active-zones\nsudo firewall-cmd --add-service=ssh --permanent\nsudo firewall-cmd --reload"
+				}
+			]
+		},
+		{
+			"title": "Diagnostics and Troubleshooting",
+			"description": "Verify connectivity, inspect sockets, and capture packets.",
+			"items": [
+				{
+					"title": "Connectivity tools",
+					"description": null,
+					"table": {
+						"headers": ["Tool", "Examples"],
+						"rows": [
+							["ping", "ping -c 3 8.8.8.8"],
+							["ping6", "ping6 -c 3 2001:4860:4860::8888"],
+							["traceroute", "traceroute -n 8.8.8.8"],
+							["mtr", "mtr -rwzbc 100 8.8.8.8"],
+							["curl", "curl -v https://example.com"],
+							["nc (netcat)", "nc -vz example.com 443" ]
+						]
+					},
+					"example": "ping -c 3 1.1.1.1\ntraceroute -n 1.1.1.1\nnc -vz example.com 443"
+				},
+				{
+					"title": "Sockets and ports (ss)",
+					"description": "Use ss to see listening ports, established connections, and owning processes.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ss -tulpn", "Listening TCP/UDP + PIDs"],
+							["ss -tan", "All TCP sockets (numeric)"],
+							["ss -t state established", "Established TCP"],
+							["ss -uapn", "UDP sockets with PIDs"],
+							["ss -K dst [ip] dport = :[port]", "Kill matching TCP sockets (root)" ]
+						]
+					},
+					"example": "ss -tulpn\nss -tan | head\nss -t state established"
+				},
+				{
+					"title": "Packet capture (tcpdump)",
+					"description": "Capture traffic to diagnose DNS, HTTP, handshakes, MTU, etc.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Capture on interface", "sudo tcpdump -i [iface]"],
+							["DNS queries", "sudo tcpdump -i [iface] udp port 53"],
+							["HTTP traffic", "sudo tcpdump -i [iface] tcp port 80"],
+							["Host filter", "sudo tcpdump -i [iface] host 192.0.2.10"],
+							["Write pcap", "sudo tcpdump -i [iface] -w capture.pcap"],
+							["Read pcap", "tcpdump -nn -r capture.pcap" ]
+						]
+					},
+					"example": "sudo tcpdump -i eth0 -nn 'tcp port 443 and host 93.184.216.34'\nsudo tcpdump -i eth0 -w /tmp/capture.pcap"
+				}
+			]
+		},
+		{
+			"title": "HTTP/Proxy Diagnostics",
+			"description": "Common checks for HTTPS, proxies, and TLS behavior.",
+			"items": [
+				{
+					"title": "curl and openssl",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show request/response headers", "curl -v https://example.com"],
+							["Force resolve (test DNS vs routing)", "curl --resolve example.com:443:93.184.216.34 https://example.com"],
+							["Use proxy", "HTTPS_PROXY=http://proxy:3128 curl -v https://example.com"],
+							["TLS handshake details", "openssl s_client -connect example.com:443 -servername example.com" ]
+						]
+					},
+					"example": "curl -v https://example.com\nopenssl s_client -connect example.com:443 -servername example.com"
+				}
+			]
+		},
+		{
+			"title": "Bridges, VLANs, Bonding",
+			"description": "Common L2 constructs used for virtualization, servers, and advanced setups.",
+			"items": [
+				{
+					"title": "Linux bridge (ip/bridge)",
+					"description": "Bridge interfaces for L2 switching (often used with VMs/containers).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create bridge", "sudo ip link add name br0 type bridge"],
+							["Bring up bridge", "sudo ip link set br0 up"],
+							["Add port", "sudo ip link set dev eth0 master br0"],
+							["Show bridge", "bridge link"],
+							["Show forwarding DB", "bridge fdb show" ]
+						]
+					},
+					"example": "sudo ip link add name br0 type bridge\nsudo ip link set br0 up\nsudo ip link set dev eth0 master br0\nbridge link"
+				},
+				{
+					"title": "VLAN subinterfaces",
+					"description": "802.1Q VLAN tagging using ip link.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create VLAN iface", "sudo ip link add link eth0 name eth0.10 type vlan id 10"],
+							["Assign address", "sudo ip addr add 192.0.2.10/24 dev eth0.10"],
+							["Bring up", "sudo ip link set eth0.10 up"],
+							["Show VLAN details", "ip -d link show eth0.10" ]
+						]
+					},
+					"example": "sudo ip link add link eth0 name eth0.10 type vlan id 10\nsudo ip addr add 192.0.2.10/24 dev eth0.10\nsudo ip link set eth0.10 up"
+				},
+				{
+					"title": "Bonding (LACP and others)",
+					"description": "Bonding is typically configured via your network manager (NetworkManager/networkd). Commands below are inspection-oriented.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Check bonding status", "cat /proc/net/bonding/bond0"],
+							["List bonds", "ip -d link show type bond"],
+							["Show LACP state", "cat /proc/net/bonding/bond0 | sed -n '1,120p'" ]
+						]
+					},
+					"example": "ip -d link show type bond\ncat /proc/net/bonding/bond0"
+				}
+			]
+		},
+		{
+			"title": "Network Namespaces and Virtual Ethernet",
+			"description": "Isolate networking stacks per namespace; foundational for containers.",
+			"items": [
+				{
+					"title": "ip netns basics",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List namespaces", "ip netns list"],
+							["Create namespace", "sudo ip netns add ns1"],
+							["Run command in ns", "sudo ip netns exec ns1 bash"],
+							["Delete namespace", "sudo ip netns del ns1" ]
+						]
+					},
+					"example": "sudo ip netns add ns1\nsudo ip netns exec ns1 ip link"
+				},
+				{
+					"title": "veth pair + simple routing demo",
+					"description": "Create a veth pair, move one end into a namespace, and assign IPs.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["Create veth", "sudo ip link add veth0 type veth peer name veth1"],
+							["Create ns", "sudo ip netns add ns1"],
+							["Move veth1", "sudo ip link set veth1 netns ns1"],
+							["Addr on host end", "sudo ip addr add 192.0.2.1/24 dev veth0"],
+							["Addr in ns", "sudo ip netns exec ns1 ip addr add 192.0.2.2/24 dev veth1"],
+							["Bring up", "sudo ip link set veth0 up; sudo ip netns exec ns1 ip link set veth1 up; sudo ip netns exec ns1 ip link set lo up" ]
+						]
+					},
+					"example": "sudo ip link add veth0 type veth peer name veth1\nsudo ip netns add ns1\nsudo ip link set veth1 netns ns1\nsudo ip addr add 192.0.2.1/24 dev veth0\nsudo ip link set veth0 up\nsudo ip netns exec ns1 ip addr add 192.0.2.2/24 dev veth1\nsudo ip netns exec ns1 ip link set veth1 up\nsudo ip netns exec ns1 ip link set lo up\nping -c 2 192.0.2.2"
+				}
+			]
+		},
+		{
+			"title": "Tunnels and Overlays",
+			"description": "GRE/VXLAN/IPIP are common building blocks for overlays and site-to-site connectivity.",
+			"items": [
+				{
+					"title": "GRE tunnel (example)",
+					"description": "Simple GRE tunnel; you must ensure underlying routing/ACLs allow protocol 47.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create", "sudo ip tunnel add gre1 mode gre local [localIP] remote [remoteIP] ttl 64"],
+							["Bring up", "sudo ip link set gre1 up"],
+							["Assign tunnel IP", "sudo ip addr add 10.10.10.1/30 dev gre1"],
+							["Route remote subnet", "sudo ip route add [remoteSubnet/prefix] dev gre1" ]
+						]
+					},
+					"example": "sudo ip tunnel add gre1 mode gre local 203.0.113.10 remote 203.0.113.20 ttl 64\nsudo ip link set gre1 up\nsudo ip addr add 10.10.10.1/30 dev gre1\nsudo ip route add 192.168.200.0/24 dev gre1"
+				},
+				{
+					"title": "VXLAN (example)",
+					"description": "VXLAN over UDP 4789; often bridged into br0 for L2 overlay.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create vxlan", "sudo ip link add vxlan100 type vxlan id 100 dstport 4789 local [localIP] remote [remoteIP]"],
+							["Bring up", "sudo ip link set vxlan100 up"],
+							["Add to bridge", "sudo ip link set vxlan100 master br0" ]
+						]
+					},
+					"example": "sudo ip link add vxlan100 type vxlan id 100 dstport 4789 local 203.0.113.10 remote 203.0.113.20\nsudo ip link set vxlan100 up\nsudo ip link set vxlan100 master br0"
+				}
+			]
+		},
+		{
+			"title": "VPN (WireGuard, OpenVPN)",
+			"description": "Common VPN tooling and quick operational commands.",
+			"items": [
+				{
+					"title": "WireGuard essentials",
+					"description": "Modern VPN with simple tooling (wg, wg-quick).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["wg genkey | tee privatekey | wg pubkey > publickey", "Generate keys"],
+							["wg show", "Show WireGuard status"],
+							["sudo wg-quick up [name]", "Bring up config /etc/wireguard/[name].conf"],
+							["sudo wg-quick down [name]", "Bring down"],
+							["sudo wg set [iface] peer [pubkey] allowed-ips [cidr]", "Live edit peer settings" ]
+						]
+					},
+					"example": "wg show\nsudo wg-quick up wg0"
+				},
+				{
+					"title": "OpenVPN quick ops",
+					"description": "Typical commands differ by packaging/service name.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Run with config", "sudo openvpn --config client.ovpn"],
+							["systemd service (common)", "sudo systemctl status openvpn-client@[name]"],
+							["Logs", "journalctl -u openvpn-client@[name] -n 200 --no-pager" ]
+						]
+					},
+					"example": "sudo openvpn --config client.ovpn"
+				}
+			]
+		},
+		{
+			"title": "Traffic Control (tc) and QoS",
+			"description": "Shape traffic, apply latency/loss (netem), and inspect qdiscs.",
+			"items": [
+				{
+					"title": "tc basics",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show qdisc", "tc qdisc show dev [iface]"],
+							["Show classes", "tc class show dev [iface]"],
+							["Show filters", "tc filter show dev [iface]"],
+							["Delete qdisc", "sudo tc qdisc del dev [iface] root" ]
+						]
+					},
+					"example": "tc qdisc show dev eth0"
+				},
+				{
+					"title": "netem (simulate latency/loss)",
+					"description": "Useful for testing; do this on a lab box.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Add 100ms delay", "sudo tc qdisc add dev [iface] root netem delay 100ms"],
+							["Add 1% packet loss", "sudo tc qdisc change dev [iface] root netem loss 1%"],
+							["Clear netem", "sudo tc qdisc del dev [iface] root" ]
+						]
+					},
+					"example": "sudo tc qdisc add dev eth0 root netem delay 100ms\n# revert\nsudo tc qdisc del dev eth0 root"
+				}
+			]
+		},
+		{
+			"title": "Performance and TCP/IP Tuning",
+			"description": "Observe performance bottlenecks and tune kernel networking knobs (carefully).",
+			"items": [
+				{
+					"title": "sysctl networking knobs",
+					"description": "Use sysctl to view/set runtime kernel parameters. Persist in /etc/sysctl.conf or /etc/sysctl.d/*.conf.",
+					"table": {
+						"headers": ["Knob", "Meaning"],
+						"rows": [
+							["net.ipv4.ip_forward", "Enable IPv4 forwarding (routing/NAT)"],
+							["net.ipv6.conf.all.forwarding", "Enable IPv6 forwarding"],
+							["net.ipv4.tcp_congestion_control", "Congestion control algorithm"],
+							["net.core.somaxconn", "Listen backlog"],
+							["net.ipv4.tcp_tw_reuse", "Reuse TIME_WAIT sockets (be cautious)"],
+							["net.ipv4.conf.all.rp_filter", "Reverse path filter (anti-spoof)" ]
+						]
+					},
+					"example": "sysctl net.ipv4.ip_forward\nsudo sysctl -w net.ipv4.ip_forward=1\n# persist example\necho 'net.ipv4.ip_forward=1' | sudo tee /etc/sysctl.d/99-forwarding.conf"
+				},
+				{
+					"title": "Interface statistics and drops",
+					"description": "Look for errors/drops before deep tuning.",
+					"table": {
+						"headers": ["Command", "What to look for"],
+						"rows": [
+							["ip -s link show dev [iface]", "RX/TX errors/dropped"],
+							["ethtool -S [iface]", "Driver counters"],
+							["ss -s", "Socket summary"],
+							["nstat", "Kernel network statistics" ]
+						]
+					},
+					"example": "ip -s link show dev eth0\nss -s\nsudo nstat -az | head"
+				}
+			]
+		},
+		{
+			"title": "IPv6 Notes",
+			"description": "Common IPv6 operations and gotchas.",
+			"items": [
+				{
+					"title": "IPv6 route/address quick ops",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show addresses", "ip -6 addr show"],
+							["Show routes", "ip -6 route show"],
+							["Neighbor table", "ip -6 neigh show"],
+							["Default route", "ip -6 route show default"],
+							["Disable IPv6 (runtime)", "sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1" ]
+						]
+					},
+					"example": "ip -6 addr show dev eth0\nip -6 route show"
+				},
+				{
+					"title": "Ping MTU issues (PMTUD)",
+					"description": "For IPv4, use DF flag. For IPv6, fragmentation is handled differently; path MTU is important.",
+					"table": {
+						"headers": ["Scenario", "Command"],
+						"rows": [
+							["IPv4 DF ping", "ping -M do -s 1472 [host]"],
+							["IPv6 large ping", "ping6 -s 1452 [host]" ]
+						]
+					},
+					"example": "ping -M do -s 1472 1.1.1.1"
+				}
+			]
+		},
+		{
+			"title": "Common Services (DHCP, DNS, NTP)",
+			"description": "Basic service checks that often affect connectivity.",
+			"items": [
+				{
+					"title": "Check time sync (NTP)",
+					"description": "Time issues often break TLS and authentication.",
+					"table": {
+						"headers": ["Tool", "Command"],
+						"rows": [
+							["systemd-timesyncd", "timedatectl status"],
+							["chrony", "chronyc tracking"],
+							["ntpd", "ntpq -p" ]
+						]
+					},
+					"example": "timedatectl status"
+				},
+				{
+					"title": "DHCP server/client logs",
+					"description": "Depending on your stack, look at NetworkManager/networkd/dnsmasq/isc-dhcp-server logs.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["journalctl -u NetworkManager", "NM logs"],
+							["journalctl -u systemd-networkd", "networkd logs"],
+							["journalctl -u systemd-resolved", "resolver logs"],
+							["journalctl -xe", "General system errors" ]
+						]
+					},
+					"example": "journalctl -u systemd-networkd -n 200 --no-pager"
+				}
+			]
+		}
+	]
+}
