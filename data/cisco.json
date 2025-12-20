@@ -1,5 +1,5 @@
 {
-	"title": "Cisco Networking + APIC/ACI Cheatsheet",
+	"title": "Cisco Networking + APIC/ACI",
 	"description": "General-to-advanced Cisco networking (IOS/IOS-XE/NX-OS) plus Cisco ACI and APIC operations: configuration patterns, verification commands, troubleshooting, and APIC APIs.",
 	"language": "shell",
 	"categories": [

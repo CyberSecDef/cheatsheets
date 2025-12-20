@@ -1,0 +1,581 @@
+{
+	"title": "Networking Basics",
+	"description": "Foundational networking concepts and practical commands: OSI/TCP-IP models, Ethernet/IEEE 802, addressing, net/host IDs, subnetting, frames, handshakes, DHCP/DNS, common topologies, and troubleshooting.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Models: OSI and TCP/IP",
+			"description": "How protocols map to layers and where troubleshooting usually starts.",
+			"items": [
+				{
+					"title": "OSI 7-layer model",
+					"description": null,
+					"table": {
+						"headers": ["Layer", "Name", "Examples"],
+						"rows": [
+							["7", "Application", "HTTP, DNS, SSH, SMTP"],
+							["6", "Presentation", "TLS/SSL, encoding, serialization"],
+							["5", "Session", "Session management, RPC, (conceptual)"],
+							["4", "Transport", "TCP, UDP, QUIC (over UDP)"],
+							["3", "Network", "IP, ICMP, routing"],
+							["2", "Data Link", "Ethernet (802.3), Wi‑Fi (802.11), VLAN (802.1Q)"],
+							["1", "Physical", "Copper/fiber, RF, signaling" ]
+						]
+					},
+					"example": "# Common triage flow\n# L1: link up?\n# L2: VLAN/MAC learning?\n# L3: IP/gateway/routes?\n# L4: ports/handshakes?\n# L7: DNS/TLS/app errors?"
+				},
+				{
+					"title": "OSI device mapping (ISO-style mental model)",
+					"description": "Practical mapping of OSI layers to common network devices and functions.",
+					"table": {
+						"headers": ["Layer", "Device/Function", "Notes"],
+						"rows": [
+							["1", "Hub / Repeater", "Bits only; no MAC awareness"],
+							["2", "Switch / Bridge", "MAC learning, VLANs, STP"],
+							["3", "Router", "IP forwarding, routing protocols"],
+							["3/4", "Stateful firewall", "Policy by IP/port/state"],
+							["4/7", "Load balancer / Proxy", "L4 (TCP) or L7 (HTTP) distribution"],
+							["7", "WAF/API gateway", "Application-aware controls" ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "TCP/IP model",
+					"description": "A pragmatic 4-ish layer model that maps well to real stacks.",
+					"table": {
+						"headers": ["TCP/IP layer", "Rough OSI mapping", "Examples"],
+						"rows": [
+							["Application", "OSI 5-7", "HTTP, DNS, SSH"],
+							["Transport", "OSI 4", "TCP, UDP"],
+							["Internet", "OSI 3", "IP, ICMP"],
+							["Link", "OSI 1-2", "Ethernet, Wi‑Fi" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "IEEE 802 Quick Reference",
+			"description": "Common IEEE 802 standards you’ll see in switching and Wi‑Fi.",
+			"items": [
+				{
+					"title": "Most common 802.* standards",
+					"description": null,
+					"table": {
+						"headers": ["Standard", "Name", "What it’s for"],
+						"rows": [
+							["802.3", "Ethernet", "Wired LAN framing/media"],
+							["802.11", "Wi‑Fi", "Wireless LAN"],
+							["802.1Q", "VLAN tagging", "Tagged VLANs (trunks)"],
+							["802.1p", "QoS (PCP)", "Priority bits in VLAN tag"],
+							["802.1D", "STP", "Spanning Tree Protocol"],
+							["802.1w", "RSTP", "Rapid STP"],
+							["802.1s", "MSTP", "Multiple Spanning Tree"],
+							["802.1X", "Port-based NAC", "802.1X authentication (EAP)"],
+							["802.3ad / 802.1AX", "Link Aggregation", "LACP (port-channel)" ]
+						]
+					},
+					"example": "# VLAN tag has: PCP (802.1p), DEI, VLAN ID (802.1Q)"
+				},
+				{
+					"title": "Ethernet vs Wi‑Fi basics",
+					"description": "Ethernet is full-duplex point-to-point on switched networks; Wi‑Fi is shared medium with CSMA/CA.",
+					"table": {
+						"headers": ["Topic", "Ethernet", "Wi‑Fi"],
+						"rows": [
+							["Medium", "Dedicated (per port)", "Shared RF"],
+							["Duplex", "Full-duplex typical", "Half-duplex medium"],
+							["Collision handling", "Switched (no collisions)", "CSMA/CA + retries"],
+							["Key issues", "CRC errors, MTU", "SNR, interference, roaming" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Ethernet/IP Frames and Packet Anatomy",
+			"description": "How data is encapsulated: Ethernet frame -> IP packet -> TCP/UDP segment.",
+			"items": [
+				{
+					"title": "Ethernet II frame fields (high level)",
+					"description": "Ethernet II is the common framing on modern LANs.",
+					"table": {
+						"headers": ["Field", "Size", "Notes"],
+						"rows": [
+							["Destination MAC", "6 bytes", "Where the frame is going on L2"],
+							["Source MAC", "6 bytes", "Where the frame came from"],
+							["802.1Q tag (optional)", "4 bytes", "PCP/DEI/VLAN ID"],
+							["Ethertype", "2 bytes", "Indicates payload (IPv4=0x0800, ARP=0x0806, IPv6=0x86DD)"],
+							["Payload", "46-1500 bytes typical", "L3 packet (IP/ARP/etc.)"],
+							["FCS", "4 bytes", "CRC for error detection" ]
+						]
+					},
+					"example": "# Capture an Ethernet frame (Linux)\nsudo tcpdump -e -nn -i eth0 -c 5"
+				},
+				{
+					"title": "IPv4 header essentials (high level)",
+					"description": "Enough to understand MTU/fragmentation, TTL, and routing behavior.",
+					"table": {
+						"headers": ["Field", "Why you care"],
+						"rows": [
+							["Source/Destination", "Routing decision and policy"],
+							["TTL", "Decrements each hop; prevents loops; used by traceroute"],
+							["Protocol", "TCP=6, UDP=17, ICMP=1"],
+							["DF/MF + Fragment offset", "Fragmentation behavior"],
+							["Header checksum", "Detects corruption in header" ]
+						]
+					},
+					"example": "# Inspect IPv4 fields\nsudo tcpdump -nn -vv -i eth0 ip -c 5"
+				},
+				{
+					"title": "TCP vs UDP (encapsulation)",
+					"description": null,
+					"table": {
+						"headers": ["Transport", "Properties", "Typical use"],
+						"rows": [
+							["TCP", "Connection-oriented, reliable, ordered", "HTTP/1.1, HTTP/2, SSH, SMTP"],
+							["UDP", "Connectionless, best-effort, unordered", "DNS, VoIP, QUIC/HTTP/3" ]
+						]
+					},
+					"example": "# Show TCP/UDP listeners\nss -tulpn"
+				}
+			]
+		},
+		{
+			"title": "Addressing Fundamentals",
+			"description": "MAC vs IP, private/public ranges, and classful vs CIDR concepts.",
+			"items": [
+				{
+					"title": "MAC vs IP vs Port",
+					"description": "A common mental model: who (MAC), where (IP), which app (port).",
+					"table": {
+						"headers": ["Identifier", "Scope", "Example"],
+						"rows": [
+							["MAC", "Local broadcast domain (L2)", "aa:bb:cc:dd:ee:ff"],
+							["IP", "Routed network (L3)", "192.0.2.10"],
+							["Port", "Transport endpoint (L4)", "TCP/443" ]
+						]
+					},
+					"example": "# Show MAC/IP on Linux\nip -br link\nip -br addr"
+				},
+				{
+					"title": "IPv4 private ranges and special ranges",
+					"description": "Know which addresses are private, loopback, link-local, multicast, etc.",
+					"table": {
+						"headers": ["Range", "Meaning"],
+						"rows": [
+							["10.0.0.0/8", "Private (RFC1918)"],
+							["172.16.0.0/12", "Private (RFC1918)"],
+							["192.168.0.0/16", "Private (RFC1918)"],
+							["127.0.0.0/8", "Loopback"],
+							["169.254.0.0/16", "Link-local (APIPA)"],
+							["224.0.0.0/4", "Multicast"],
+							["255.255.255.255", "Limited broadcast" ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Classful addressing: netid/hostid by class (legacy)",
+					"description": "Classful addressing is mostly historical, but still useful for learning net/host splits.",
+					"table": {
+						"headers": ["Class", "First octet", "Default mask", "Net bits / Host bits", "Notes"],
+						"rows": [
+							["A", "1-126", "/8 (255.0.0.0)", "8 / 24", "Large networks"],
+							["B", "128-191", "/16 (255.255.0.0)", "16 / 16", "Medium networks"],
+							["C", "192-223", "/24 (255.255.255.0)", "24 / 8", "Small networks"],
+							["D", "224-239", "N/A", "N/A", "Multicast"],
+							["E", "240-255", "N/A", "N/A", "Reserved/experimental" ]
+						]
+					},
+					"example": "# Example (Class C default): 192.168.1.0/24\n# NetID = 192.168.1\n# HostID = last octet"
+				}
+			]
+		},
+		{
+			"title": "Subnetting and CIDR",
+			"description": "Calculate network, broadcast, and usable ranges. Understand prefixes, masks, and VLSM.",
+			"items": [
+				{
+					"title": "CIDR quick table",
+					"description": "Common IPv4 prefixes and host counts.",
+					"table": {
+						"headers": ["Prefix", "Mask", "Addresses", "Usable hosts (typical)"],
+						"rows": [
+							["/30", "255.255.255.252", "4", "2"],
+							["/29", "255.255.255.248", "8", "6"],
+							["/28", "255.255.255.240", "16", "14"],
+							["/27", "255.255.255.224", "32", "30"],
+							["/26", "255.255.255.192", "64", "62"],
+							["/25", "255.255.255.128", "128", "126"],
+							["/24", "255.255.255.0", "256", "254"],
+							["/16", "255.255.0.0", "65536", "65534" ]
+						]
+					},
+					"example": "# Usable host count (typical IPv4): 2^(32-prefix) - 2\n# (Except /31 point-to-point and /32 host routes)"
+				},
+				{
+					"title": "Worked subnet example",
+					"description": "Example: 192.168.10.34/27",
+					"table": {
+						"headers": ["Item", "Value"],
+						"rows": [
+							["Prefix", "/27"],
+							["Mask", "255.255.255.224"],
+							["Block size", "32 (256-224)"],
+							["Network", "192.168.10.32"],
+							["Broadcast", "192.168.10.63"],
+							["Usable range", "192.168.10.33 - 192.168.10.62" ]
+						]
+					},
+					"example": "# Find /27 network: round down to nearest multiple of 32 in last octet\n# 34 -> 32"
+				},
+				{
+					"title": "NetID / HostID (CIDR way)",
+					"description": "NetID is the prefix bits; HostID is the remaining bits.",
+					"table": {
+						"headers": ["Concept", "How to compute"],
+						"rows": [
+							["Network address", "IP AND netmask"],
+							["Broadcast address", "Network OR (NOT netmask)"],
+							["Host portion", "IP AND (NOT netmask)" ]
+						]
+					},
+					"example": "# On Linux, see kernel-computed routes that imply NetID\nip route"
+				},
+				{
+					"title": "Handy tools",
+					"description": "Commands that help you confirm subnet assumptions.",
+					"table": {
+						"headers": ["Tool", "Example"],
+						"rows": [
+							["ipcalc", "ipcalc 192.168.10.34/27"],
+							["python (stdlib)", "python3 -c 'import ipaddress; print(ipaddress.ip_interface(\"192.168.10.34/27\").network)'" ]
+						]
+					},
+					"example": "ipcalc 192.168.10.34/27"
+				}
+			]
+		},
+		{
+			"title": "ARP, ICMP, and Local Discovery",
+			"description": "How hosts find local neighbors and troubleshoot reachability.",
+			"items": [
+				{
+					"title": "ARP (IPv4) basics",
+					"description": "ARP maps IPv4 -> MAC on the local LAN. ARP does not cross routers.",
+					"table": {
+						"headers": ["Item", "Value"],
+						"rows": [
+							["What it does", "Resolve L2 destination for an IPv4 next hop"],
+							["Common symptom", "Can’t reach local gateway; ARP incomplete"],
+							["Linux commands", "ip neigh; arp -n (legacy)" ]
+						]
+					},
+					"example": "ip neigh\narp -n"
+				},
+				{
+					"title": "ICMP and ping",
+					"description": "Ping uses ICMP Echo Request/Reply; it checks reachability but not application health.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["ping -c 4 [host]", "Basic reachability"],
+							["ping -M do -s 1472 [host]", "IPv4 MTU/PMTUD test (DF set)"],
+							["traceroute -n [host]", "Path hops (uses TTL)"],
+							["mtr -rwzbc 100 [host]", "Ping + traceroute over time" ]
+						]
+					},
+					"example": "ping -c 3 1.1.1.1\ntraceroute -n 1.1.1.1"
+				}
+			]
+		},
+		{
+			"title": "TCP/UDP, Ports, and Handshakes",
+			"description": "How connections start and end; why ports and state matter.",
+			"items": [
+				{
+					"title": "TCP 3-way handshake",
+					"description": "Connection establishment (simplified).",
+					"table": {
+						"headers": ["Step", "Packet", "Meaning"],
+						"rows": [
+							["1", "SYN", "Client requests connection; proposes initial sequence"],
+							["2", "SYN-ACK", "Server accepts; proposes its own sequence"],
+							["3", "ACK", "Client acknowledges; connection established" ]
+						]
+					},
+					"example": "# Observe a TCP handshake (requires traffic)\nsudo tcpdump -nn -i eth0 'tcp[tcpflags] & (tcp-syn|tcp-ack) != 0'"
+				},
+				{
+					"title": "TCP teardown",
+					"description": "Graceful close uses FIN/ACK; RST indicates abort.",
+					"table": {
+						"headers": ["Flag", "Meaning"],
+						"rows": [
+							["FIN", "Orderly shutdown request"],
+							["ACK", "Acknowledgement"],
+							["RST", "Immediate abort (no graceful close)" ]
+						]
+					},
+					"example": "# Show established connections\nss -tan state established"
+				},
+				{
+					"title": "UDP basics",
+					"description": "UDP has no handshake; apps may implement retries/timeouts.",
+					"table": {
+						"headers": ["Characteristic", "Impact"],
+						"rows": [
+							["No connection state", "Harder for firewalls/NAT without tracking"],
+							["No delivery guarantee", "Apps must handle loss"],
+							["Common examples", "DNS, streaming, QUIC" ]
+						]
+					},
+					"example": "# UDP listeners\nss -uapn"
+				},
+				{
+					"title": "TLS handshake (very high level)",
+					"description": "TLS runs above TCP: negotiate cipher/version, authenticate server (cert), derive session keys.",
+					"table": {
+						"headers": ["Phase", "What happens"],
+						"rows": [
+							["ClientHello", "Client proposes versions/ciphers + SNI"],
+							["ServerHello", "Server chooses parameters + sends cert"],
+							["Key exchange", "Derive shared keys (ECDHE typical)"],
+							["Finished", "Handshake complete; encrypted application data" ]
+						]
+					},
+					"example": "openssl s_client -connect example.com:443 -servername example.com"
+				}
+			]
+		},
+		{
+			"title": "DHCP",
+			"description": "Automatic IP configuration (IPv4 common). Understand the DORA flow and key options.",
+			"items": [
+				{
+					"title": "DHCP DORA handshake",
+					"description": null,
+					"table": {
+						"headers": ["Step", "Message", "Notes"],
+						"rows": [
+							["1", "Discover", "Client broadcasts to find servers"],
+							["2", "Offer", "Server offers IP + options"],
+							["3", "Request", "Client requests offered address"],
+							["4", "ACK", "Server confirms lease" ]
+						]
+					},
+					"example": "# Capture DHCP (IPv4)\nsudo tcpdump -nn -i eth0 'udp and (port 67 or port 68)'"
+				},
+				{
+					"title": "Common DHCP options",
+					"description": "Options define defaults: gateway, DNS, lease time, etc.",
+					"table": {
+						"headers": ["Option", "Meaning"],
+						"rows": [
+							["1", "Subnet mask"],
+							["3", "Default gateway (router)"],
+							["6", "DNS servers"],
+							["15", "DNS domain name"],
+							["51", "Lease time"],
+							["54", "DHCP server identifier" ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "DHCP client commands (common)",
+					"description": "Depends on OS and network stack.",
+					"table": {
+						"headers": ["OS/Stack", "Commands"],
+						"rows": [
+							["Linux (dhclient)", "sudo dhclient -v [iface]; sudo dhclient -r [iface]"],
+							["Linux (NetworkManager)", "nmcli dev disconnect [iface]; nmcli dev connect [iface]"],
+							["Windows", "ipconfig /release; ipconfig /renew" ]
+						]
+					},
+					"example": "sudo dhclient -v eth0"
+				}
+			]
+		},
+		{
+			"title": "DNS",
+			"description": "Name to IP resolution and the tools to query it.",
+			"items": [
+				{
+					"title": "Core DNS record types",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Meaning"],
+						"rows": [
+							["A", "IPv4 address"],
+							["AAAA", "IPv6 address"],
+							["CNAME", "Alias"],
+							["MX", "Mail exchanger"],
+							["TXT", "Text (SPF/verification)"],
+							["NS", "Authoritative nameservers"],
+							["PTR", "Reverse lookup" ]
+						]
+					},
+					"example": "dig example.com A\ndig example.com AAAA\ndig -x 8.8.8.8"
+				},
+				{
+					"title": "DNS troubleshooting commands",
+					"description": "Compare raw DNS answers (dig) vs application view (getent).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["dig +short example.com", "Quick answers"],
+							["dig @1.1.1.1 example.com", "Query specific resolver"],
+							["getent hosts example.com", "System resolver/NSS result"],
+							["resolvectl query example.com", "systemd-resolved query (if used)" ]
+						]
+					},
+					"example": "dig +short example.com\ngetent hosts example.com"
+				}
+			]
+		},
+		{
+			"title": "Routing Basics",
+			"description": "Default gateway, routing tables, and the difference between local and routed traffic.",
+			"items": [
+				{
+					"title": "Key routing concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Default gateway", "Where traffic goes if no more specific route exists"],
+							["Longest prefix match", "Most specific route wins"],
+							["Next hop", "Usually a router IP on your LAN"],
+							["Directly connected", "Routes created when an interface has an IP" ]
+						]
+					},
+					"example": "# Linux routing table\nip route"
+				},
+				{
+					"title": "Route inspection commands",
+					"description": null,
+					"table": {
+						"headers": ["OS", "Commands"],
+						"rows": [
+							["Linux", "ip route; ip route get [dst]"],
+							["macOS", "netstat -rn; route -n get [dst]"],
+							["Windows", "route print; tracert [dst]" ]
+						]
+					},
+					"example": "ip route get 8.8.8.8"
+				}
+			]
+		},
+		{
+			"title": "Network Topologies",
+			"description": "Physical vs logical layout; tradeoffs and common failure patterns.",
+			"items": [
+				{
+					"title": "Common topology types",
+					"description": null,
+					"table": {
+						"headers": ["Topology", "Pros", "Cons"],
+						"rows": [
+							["Bus", "Simple", "Single collision domain, poor fault isolation"],
+							["Star", "Easy management, isolation", "Central switch failure is impactful"],
+							["Ring", "Predictable", "Break impacts many nodes (unless protected)"],
+							["Mesh", "High redundancy", "Cost/complexity"],
+							["Tree/Hierarchical", "Scales well", "Core/aggregation design matters"],
+							["Hybrid", "Flexible", "Design complexity" ]
+						]
+					},
+					"example": "# Most modern LANs: physical star + logical tree (access/agg/core)."
+				},
+				{
+					"title": "Broadcast vs collision domains",
+					"description": "Switches break collision domains; routers/VLANs break broadcast domains.",
+					"table": {
+						"headers": ["Domain", "What it is", "Separated by"],
+						"rows": [
+							["Collision", "Where Ethernet collisions could occur (legacy hubs)", "Switching (per-port)"],
+							["Broadcast", "Where broadcasts (e.g., ARP) propagate", "Router/L3 boundary or VLAN boundary" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Common Ports and Protocols",
+			"description": "A small but high-value list of default ports.",
+			"items": [
+				{
+					"title": "Frequently encountered ports",
+					"description": null,
+					"table": {
+						"headers": ["Port", "Protocol", "Service"],
+						"rows": [
+							["20/21", "TCP", "FTP"],
+							["22", "TCP", "SSH"],
+							["53", "UDP/TCP", "DNS"],
+							["67/68", "UDP", "DHCP server/client"],
+							["80", "TCP", "HTTP"],
+							["123", "UDP", "NTP"],
+							["443", "TCP", "HTTPS"],
+							["587", "TCP", "SMTP submission"],
+							["3389", "TCP", "RDP" ]
+						]
+					},
+					"example": "# List local listeners\nss -tulpn"
+				}
+			]
+		},
+		{
+			"title": "Basic Troubleshooting Toolkit",
+			"description": "Commands that solve most first-response networking issues.",
+			"items": [
+				{
+					"title": "Local configuration",
+					"description": null,
+					"table": {
+						"headers": ["OS", "Commands"],
+						"rows": [
+							["Linux", "ip -br addr; ip route; resolvectl status; ss -tulpn"],
+							["Windows", "ipconfig /all; route print; netstat -ano"],
+							["macOS", "ifconfig; netstat -rn; scutil --dns" ]
+						]
+					},
+					"example": "ip -br addr\nip route\nss -tulpn"
+				},
+				{
+					"title": "End-to-end checks",
+					"description": "Start: IP reachability, then DNS, then TCP/HTTPS.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Ping by IP", "ping -c 3 1.1.1.1"],
+							["DNS lookup", "dig +short example.com"],
+							["TCP port test", "nc -vz example.com 443"],
+							["HTTPS request", "curl -v https://example.com" ]
+						]
+					},
+					"example": "ping -c 3 1.1.1.1\ndig +short example.com\nnc -vz example.com 443\ncurl -v https://example.com"
+				},
+				{
+					"title": "Packet capture basics",
+					"description": "When in doubt, capture traffic.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Capture DNS", "sudo tcpdump -nn -i eth0 udp port 53"],
+							["Capture HTTPS to host", "sudo tcpdump -nn -i eth0 tcp port 443 and host [ip]"],
+							["Write pcap", "sudo tcpdump -i eth0 -w capture.pcap"],
+							["Read pcap", "tcpdump -nn -r capture.pcap" ]
+						]
+					},
+					"example": "sudo tcpdump -nn -i eth0 'udp port 53'"
+				}
+			]
+		}
+	]
+}

@@ -66,10 +66,9 @@
 
     <!-- Sticky Header -->
     <nav class="navbar navbar-expand-lg border-bottom cheatsheet-navbar">
-        <div class="container-fluid">
-            
-            <div class="ms-auto d-flex align-items-center">
-                <div class="dropdown me-2">
+        <div class="container-fluid d-flex align-items-center justify-content-between">
+			<div class="d-flex align-items-center">
+				<div class="dropdown me-2">
                     <button
                         id="toc-toggle"
                         class="btn btn-outline-secondary"
@@ -89,9 +88,11 @@
                     </ul>
                 </div>
 
-                <a class="navbar-brand" id="sticky-title" href="#">Cheat Sheets</a>
+				<a class="navbar-brand" id="sticky-title" href="#">Cheat Sheets</a>
+			</div>
 
-                <div class="me-3">
+			<div class="d-flex align-items-center">
+				<div class="me-3">
                     <select
                         id="sheet-select"
                         class="form-select"
@@ -126,11 +127,11 @@
                         ?>
                     </select>
                 </div>
-                <div class="form-check form-switch">
+				<div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" role="switch" id="theme-toggle">
                     <label class="form-check-label" for="theme-toggle"><i class="bi bi-moon"></i></label>
                 </div>
-            </div>
+			</div>
         </div>
     </nav>
 
