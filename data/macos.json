@@ -1,0 +1,417 @@
+{
+	"title": "macOS",
+	"description": "A practical macOS quick reference covering fundamentals, filesystem layout, Finder/CLI equivalents, Homebrew, shells and scripting, launchd services, logs, networking, security/privacy, and common administration/troubleshooting workflows.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Help",
+			"description": "Command discovery, man pages, and macOS-specific help.",
+			"items": [
+				{
+					"title": "Help and discovery",
+					"description": "Find commands and learn flags quickly.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["man [cmd]", "Manual pages."],
+							["[cmd] --help", "Common GNU-style help (not universal on macOS)."],
+							["apropos [keyword]", "Search man page descriptions."],
+							["whatis [cmd]", "One-line description."],
+							["type [cmd]", "Show whether cmd is builtin/alias/file."],
+							["which [cmd]", "Show path resolution (PATH)."],
+							["open [path-or-url]", "Open file/dir/URL with default app." ]
+						]
+					},
+					"example": "man launchctl\napropos firewall\nopen .\nopen https://apple.com"
+				},
+				{
+					"title": "Common GUI equivalents",
+					"description": "Handy pairs for switching between Finder/System Settings and Terminal.",
+					"table": {
+						"headers": ["Goal", "Finder/GUI", "CLI"],
+						"rows": [
+							["Open current folder", "Finder", "open ."],
+							["Reveal file", "Finder > Show in Finder", "open -R /path/to/file"],
+							["System settings", "System Settings app", "open -a 'System Settings'"],
+							["Activity Monitor", "Activity Monitor app", "top / ps" ]
+						]
+					},
+					"example": "open -a 'System Settings'\nopen -R ~/Downloads"
+				}
+			]
+		},
+		{
+			"title": "Filesystem Layout and Paths",
+			"description": "Know where apps and configuration live; understand APFS volumes and common directories.",
+			"items": [
+				{
+					"title": "High-signal directories",
+					"description": "Locations vary by macOS version and Apple Silicon vs Intel, but these are common.",
+					"table": {
+						"headers": ["Path", "Purpose"],
+						"rows": [
+							["/System", "Apple-supplied system content (sealed system volume)."],
+							["/Applications", "System-wide apps."],
+							["~/Applications", "Per-user apps (optional)."],
+							["/Library", "System-wide support files, LaunchDaemons, caches."],
+							["~/Library", "User-specific support files, preferences, caches."],
+							["/Users", "Home directories."],
+							["/Volumes", "Mounted volumes."],
+							["/private", "Backing store for /tmp, /var, etc." ]
+						]
+					},
+					"example": "ls -lah ~/Library\nls -lah /Library\nls -lah /Applications"
+				},
+				{
+					"title": "Disk usage and mounts",
+					"description": "APFS snapshots and multiple volumes can affect space reporting.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["df -h", "Filesystem usage."],
+							["mount | head", "Mounted volumes."],
+							["diskutil list", "List disks/partitions."],
+							["diskutil info /", "Info for root volume."],
+							["du -sh *", "Disk usage by item (run inside directory)." ]
+						]
+					},
+					"example": "df -h\ndiskutil list"
+				}
+			]
+		},
+		{
+			"title": "Terminal, Shells, and Scripting",
+			"description": "zsh is default; bash is often older. Use safe scripting patterns.",
+			"items": [
+				{
+					"title": "Shell basics",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Current shell", "echo $SHELL"],
+							["List shells", "cat /etc/shells"],
+							["Change login shell", "chsh -s /bin/zsh"],
+							["Reload shell config", "source ~/.zshrc"],
+							["PATH diagnosis", "echo $PATH; which -a python3" ]
+						]
+					},
+					"example": "echo $SHELL\nwhich -a git"
+				},
+				{
+					"title": "Safe scripting baseline (bash/zsh)",
+					"description": "A common baseline for more reliable scripts.",
+					"table": {
+						"headers": ["Pattern", "Meaning"],
+						"rows": [
+							["#!/usr/bin/env bash", "Portable bash shebang."],
+							["set -euo pipefail", "Exit on error, unset var error, fail pipelines (bash)."],
+							["Quote variables", "Use \"$var\" unless you want splitting/globbing."],
+							["mktemp -d", "Secure temp dir."],
+							["trap cleanup EXIT", "Always clean up." ]
+						]
+					},
+					"example": "#!/usr/bin/env bash\nset -euo pipefail\n\ntmp=$(mktemp -d)\ncleanup(){ rm -rf \"$tmp\"; }\ntrap cleanup EXIT\n\necho hello > \"$tmp/file\"\ncat \"$tmp/file\""
+				},
+				{
+					"title": "Text processing essentials",
+					"description": "macOS ships BSD variants of many tools; GNU options may differ.",
+					"table": {
+						"headers": ["Tool", "Example"],
+						"rows": [
+							["grep", "grep -R "],
+							["sed", "sed 's/a/b/g' file"],
+							["awk", "awk '{print $1}' file"],
+							["find", "find . -type f -name '*.log'"],
+							["xargs", "find ... -print0 | xargs -0 ..." ]
+						]
+					},
+					"example": "find . -type f -name '*.txt' -print0 | xargs -0 wc -l"
+				}
+			]
+		},
+		{
+			"title": "Homebrew and Packages",
+			"description": "Homebrew is the common community package manager for macOS.",
+			"items": [
+				{
+					"title": "Install/verify Homebrew",
+					"description": "Follow official instructions; then verify and set up your shell env.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Check brew", "brew --version"],
+							["Update", "brew update"],
+							["Upgrade", "brew upgrade"],
+							["Doctor", "brew doctor"],
+							["Where brew is", "brew --prefix" ]
+						]
+					},
+					"example": "brew --version\nbrew doctor"
+				},
+				{
+					"title": "Everyday brew commands",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Search", "brew search [name]"],
+							["Install", "brew install [formula]"],
+							["Install GUI app", "brew install --cask [cask]"],
+							["List installed", "brew list"],
+							["Info", "brew info [formula]"],
+							["Uninstall", "brew uninstall [formula]"],
+							["Cleanup", "brew cleanup" ]
+						]
+					},
+					"example": "brew install ripgrep\nbrew install --cask iterm2"
+				}
+			]
+		},
+		{
+			"title": "System Information and Hardware",
+			"description": "Identify OS version, hardware, and power/battery status.",
+			"items": [
+				{
+					"title": "OS and hardware identity",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sw_vers", "macOS version info."],
+							["uname -a", "Kernel info."],
+							["system_profiler SPHardwareDataType", "Hardware details (can be slow)."],
+							["sysctl -n machdep.cpu.brand_string", "CPU brand string (Intel only)."],
+							["sysctl -a | grep hw", "Hardware-related sysctl keys." ]
+						]
+					},
+					"example": "sw_vers\nuname -a\nsystem_profiler SPHardwareDataType"
+				},
+				{
+					"title": "Battery and power",
+					"description": "Useful on laptops.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["pmset -g batt", "Battery status."],
+							["pmset -g", "Power management settings."],
+							["ioreg -l | grep -i capacity", "Battery capacity details (verbose)." ]
+						]
+					},
+					"example": "pmset -g batt"
+				}
+			]
+		},
+		{
+			"title": "Processes and Apps",
+			"description": "Inspect processes, quit apps, and debug resource usage.",
+			"items": [
+				{
+					"title": "Process inspection",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ps aux", "Process snapshot."],
+							["top", "Interactive process viewer."],
+							["pgrep -alf name", "Find processes by name."],
+							["lsof -p [pid]", "Open files for PID."],
+							["lsof -iTCP -sTCP:LISTEN -n -P", "List listening TCP sockets." ]
+						]
+					},
+					"example": "pgrep -alf Safari\nlsof -iTCP -sTCP:LISTEN -n -P | head"
+				},
+				{
+					"title": "Kill or quit",
+					"description": "Prefer graceful termination; use SIGKILL only if needed.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["kill -TERM [pid]", "Graceful termination."],
+							["kill -KILL [pid]", "Force kill."],
+							["pkill -TERM name", "Signal by name."],
+							["killall name", "Signal all with that name."],
+							["osascript -e 'quit app \"App\"'", "Ask app to quit (AppleScript)." ]
+						]
+					},
+					"example": "osascript -e 'quit app \"Safari\"'"
+				}
+			]
+		},
+		{
+			"title": "launchd Services",
+			"description": "launchd manages daemons and per-user agents (launchctl, LaunchDaemons/LaunchAgents).",
+			"items": [
+				{
+					"title": "Key locations",
+					"description": null,
+					"table": {
+						"headers": ["Path", "What runs from here"],
+						"rows": [
+							["/Library/LaunchDaemons", "System-wide daemons (root)."],
+							["/Library/LaunchAgents", "System-wide agents (per-user contexts)."],
+							["~/Library/LaunchAgents", "User agents." ]
+						]
+					},
+					"example": "ls -lah /Library/LaunchDaemons | head\nls -lah ~/Library/LaunchAgents | head"
+				},
+				{
+					"title": "launchctl essentials",
+					"description": "Exact behavior differs by macOS version; consult 'man launchctl'.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["launchctl list", "List jobs in the current domain."],
+							["launchctl print system", "Inspect system domain jobs."],
+							["launchctl print gui/$UID", "Inspect current user (GUI) domain."],
+							["launchctl kickstart -k system/[label]", "Restart a system job."],
+							["launchctl kickstart -k gui/$UID/[label]", "Restart a user job." ]
+						]
+					},
+					"example": "launchctl print system | head\nlaunchctl print gui/$UID | head"
+				}
+			]
+		},
+		{
+			"title": "Logging and Diagnostics",
+			"description": "Unified logging with 'log', plus classic logs and crash reports.",
+			"items": [
+				{
+					"title": "Unified log basics (log)",
+					"description": "Use 'log show' for historical, 'log stream' for live. Filtering matters for performance.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["log stream", "Live log stream."],
+							["log stream --predicate 'process == \"ssh\"'", "Filter by predicate."],
+							["log show --last 1h", "Historical logs from last hour."],
+							["log show --predicate 'eventMessage CONTAINS \"error\"' --last 1h", "Search by message." ]
+						]
+					},
+					"example": "log show --last 30m | head\nlog stream --predicate 'process == \"Finder\"'"
+				},
+				{
+					"title": "Crash reports and diagnostics",
+					"description": "Crash logs are often under Library logs.",
+					"table": {
+						"headers": ["Location/Tool", "Notes"],
+						"rows": [
+							["~/Library/Logs/DiagnosticReports", "User crash reports."],
+							["/Library/Logs/DiagnosticReports", "System crash reports."],
+							["Console.app", "GUI log viewer."],
+							["spindump", "Collect hangs/perf diagnostics (can be intrusive)." ]
+						]
+					},
+					"example": "ls -lah ~/Library/Logs/DiagnosticReports | head\nopen -a Console"
+				}
+			]
+		},
+		{
+			"title": "Networking",
+			"description": "Interfaces, routes, DNS, and connectivity checks on macOS.",
+			"items": [
+				{
+					"title": "Interface and IP basics",
+					"description": "macOS uses ifconfig/route; networksetup is also useful.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Interfaces", "ifconfig"],
+							["Wi-Fi info", "networksetup -getairportnetwork en0"],
+							["Hardware ports", "networksetup -listallhardwareports"],
+							["Routes", "netstat -rn; route -n get default"],
+							["DNS (system)", "scutil --dns"],
+							["DNS query", "dig example.com"],
+							["Ping", "ping -c 3 1.1.1.1" ]
+						]
+					},
+					"example": "networksetup -listallhardwareports\nroute -n get default\nscutil --dns"
+				},
+				{
+					"title": "Packet capture",
+					"description": "tcpdump is available and powerful.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["List interfaces", "tcpdump -D"],
+							["Capture DNS", "sudo tcpdump -i en0 -nn udp port 53"],
+							["Write pcap", "sudo tcpdump -i en0 -w capture.pcap"],
+							["Read pcap", "tcpdump -nn -r capture.pcap" ]
+						]
+					},
+					"example": "sudo tcpdump -D\nsudo tcpdump -i en0 -nn 'tcp port 443'"
+				}
+			]
+		},
+		{
+			"title": "Security and Privacy (Basics)",
+			"description": "Key security concepts and a few useful commands.",
+			"items": [
+				{
+					"title": "Gatekeeper and code signing",
+					"description": "Use spctl/codesign to inspect trust and signatures.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["spctl --status", "Gatekeeper status."],
+							["spctl --assess -vv [app]", "Assess an app or binary."],
+							["codesign -dv --verbose=4 [app]", "Inspect signature details."],
+							["xattr -l [file]", "List extended attributes (e.g., quarantine)."],
+							["xattr -d com.apple.quarantine [file]", "Remove quarantine attribute (use with caution)." ]
+						]
+					},
+					"example": "spctl --status\nspctl --assess -vv /Applications/Safari.app"
+				},
+				{
+					"title": "Firewall (Application Firewall)",
+					"description": "macOS includes an Application Firewall; pf also exists but is more advanced.",
+					"table": {
+						"headers": ["Tool", "Command"],
+						"rows": [
+							["Application Firewall state", "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate"],
+							["Enable firewall", "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on"],
+							["Stealth mode", "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode" ]
+						]
+					},
+					"example": "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting Toolkit",
+			"description": "High-signal commands and built-in tools for first-response debugging.",
+			"items": [
+				{
+					"title": "System overview",
+					"description": null,
+					"table": {
+						"headers": ["Need", "Command"],
+						"rows": [
+							["OS version", "sw_vers"],
+							["Kernel", "uname -a"],
+							["Hardware", "system_profiler SPHardwareDataType"],
+							["Disk", "df -h; diskutil list"],
+							["Top processes", "top"],
+							["Logs", "log show --last 1h" ]
+						]
+					},
+					"example": "sw_vers\nuname -a\ndf -h"
+				},
+				{
+					"title": "Networking quick checks",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Default route", "route -n get default"],
+							["DNS config", "scutil --dns"],
+							["Reachability", "ping -c 3 1.1.1.1"],
+							["TLS/HTTP", "curl -v https://example.com" ]
+						]
+					},
+					"example": "route -n get default\nscutil --dns\ncurl -v https://example.com"
+				}
+			]
+		}
+	]
+}

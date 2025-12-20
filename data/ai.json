@@ -1,0 +1,433 @@
+{
+	"title": "AI & LLM Systems (Technical)",
+	"description": "A technical cheatsheet for understanding and operating modern AI/LLM systems: architecture, tokenization, training/inference, quantization, evaluation, embeddings/RAG, deployment, GPU/ops, and common tooling commands. Not about prompt engineering.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Foundations (ML to LLMs)",
+			"description": "High-level concepts and vocabulary that map to implementation choices.",
+			"items": [
+				{
+					"title": "Core terms and what they affect",
+					"description": null,
+					"table": {
+						"headers": ["Term", "Meaning", "Operational impact"],
+						"rows": [
+							["Parameters", "Learned weights of the model.", "More params generally increase memory and compute requirements."],
+							["Tokens", "Subword units processed by the model.", "Latency/cost scale with tokens in + out."],
+							["Context length", "Max tokens the model attends to.", "Longer context increases KV cache memory and compute."],
+							["Embedding", "Vector representation of text/image/audio.", "Used for search, clustering, RAG, similarity."],
+							["Inference", "Generating outputs from a trained model.", "Serving capacity depends on batch, quant, GPU memory."],
+							["Fine-tuning", "Update weights using new data.", "Requires training infra; can reduce prompt complexity."],
+							["LoRA/PEFT", "Parameter-efficient fine-tuning adapters.", "Cheaper updates; often mergeable; simpler to ship."],
+							["Quantization", "Lower precision weights/activations.", "Faster/cheaper inference; may reduce quality."],
+							["KV cache", "Cached keys/values for attention at decode time.", "Dominant memory use for long sequences/many concurrent users."],
+							["Batching", "Serving multiple requests together.", "Higher throughput but may increase tail latency."],
+							["Temperature/top_p", "Sampling controls.", "Higher randomness; affects determinism and reliability."],
+							["Hallucination", "Plausible but incorrect content.", "Mitigate with grounding, verification, retrieval."]
+						]
+					},
+					"example": "Rule of thumb: Serving bottlenecks are usually (1) GPU memory (weights + KV), (2) memory bandwidth, (3) token throughput." 
+				},
+				{
+					"title": "Common model families",
+					"description": "Terminology used in docs and tooling.",
+					"table": {
+						"headers": ["Family", "Notes"],
+						"rows": [
+							["Decoder-only transformers", "Most chat LLMs; predict next token autoregressively."],
+							["Encoder-only transformers", "Often embeddings/classification (e.g., BERT-style)."],
+							["Encoder-decoder", "Sequence-to-sequence (translation/summarization)."],
+							["Multimodal", "Text + vision/audio; includes image encoders and fusion layers."],
+							["MoE", "Mixture-of-Experts; activates subset of parameters per token (throughput/latency tradeoffs)."],
+							["Diffusion", "Common for image generation; different serving characteristics."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Transformer/LLM Architecture (Practical)",
+			"description": "Concepts that map directly to performance, memory, and quality.",
+			"items": [
+				{
+					"title": "Key components",
+					"description": null,
+					"table": {
+						"headers": ["Component", "Purpose", "Why you care"],
+						"rows": [
+							["Token embedding", "Maps token IDs to vectors.", "Affects memory; tied embeddings sometimes used."],
+							["Positional encoding", "Adds token position info.", "Enables longer context variants and RoPE scaling."],
+							["Self-attention", "Lets tokens attend to prior tokens.", "Compute grows with sequence length; KV cache helps decode."],
+							["MLP/FFN", "Non-linear transformation per token.", "Often a big chunk of compute."],
+							["LayerNorm", "Stabilizes training.", "Different variants affect training/quality."],
+							["Output head", "Maps hidden state to logits.", "Tied weights can reduce memory."],
+							["Tokenizer", "Defines token IDs.", "Impacts context packing, languages, and downstream quality."]
+						]
+					},
+					"example": "Operational mapping:\n- Long prompts => KV cache memory\n- High concurrency => KV cache + batching tradeoffs\n- Quantization => weight memory + bandwidth" 
+				},
+				{
+					"title": "Important scaling knobs",
+					"description": "These usually appear in model cards/configs.",
+					"table": {
+						"headers": ["Knob", "Effect"],
+						"rows": [
+							["n_layers", "Depth; affects quality and latency."],
+							["hidden_size", "Width; strongly affects memory/compute."],
+							["n_heads", "Attention heads; impacts parallelism and representation."],
+							["head_dim", "Per-head dimension; affects KV cache size."],
+							["vocab_size", "Tokenizer size; affects embedding/output matrices."],
+							["max_position_embeddings", "Nominal max context; may be extended with RoPE scaling."],
+							["activation dtype", "fp16/bf16/fp32; affects stability and memory."],
+							["weight dtype", "fp16/bf16/int8/int4; affects size and throughput."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Tokenization and Context",
+			"description": "Tokenization changes cost and behavior; context length drives memory and latency.",
+			"items": [
+				{
+					"title": "Tokenizer basics",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["BPE / unigram", "Common subword tokenization approaches."],
+							["Special tokens", "BOS/EOS, padding, separators; required by some pipelines."],
+							["Whitespace sensitivity", "Some tokenizers encode leading spaces distinctly."],
+							["Non-English text", "Token counts can vary heavily by language."],
+							["Chunking", "Split large inputs to fit context; impacts retrieval and summaries."],
+							["Truncation strategy", "Keep head vs tail vs sliding window; task-dependent."]
+						]
+					},
+					"example": "Tip: measure tokens with your exact tokenizer; do not assume characters ~= tokens." 
+				},
+				{
+					"title": "Context management patterns (system design)",
+					"description": "How production systems keep important info in context.",
+					"table": {
+						"headers": ["Pattern", "When to use", "Tradeoffs"],
+						"rows": [
+							["Summarize history", "Long conversations", "Summaries can lose details; evaluate drift."],
+							["Windowed history", "Chat with recent turns only", "May drop earlier constraints."],
+							["RAG retrieval", "Large knowledge base", "Requires good indexing and chunking."],
+							["Tool-based lookup", "Structured sources (DB/API)", "Requires robust tool schema and error handling."],
+							["Memory store", "Personalization/preferences", "Privacy considerations; should be opt-in."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Training and Fine-Tuning (Overview)",
+			"description": "What happens during training and how it affects operations.",
+			"items": [
+				{
+					"title": "Training phases",
+					"description": null,
+					"table": {
+						"headers": ["Phase", "Goal", "Artifacts"],
+						"rows": [
+							["Pretraining", "General language modeling on large corpora.", "Base checkpoint, tokenizer, config."],
+							["Supervised fine-tuning (SFT)", "Teach task-following behavior.", "SFT checkpoint or adapters."],
+							["Preference optimization (RLHF/DPO/etc.)", "Align outputs with preferences.", "Policy/ref model; datasets; reward signals."],
+							["Continual training", "Keep knowledge fresh or domain-specific.", "New checkpoints; drift monitoring."]
+						]
+					},
+					"example": "Operational note: fine-tuning changes weights, so you must re-run evals, safety checks, and latency benchmarks." 
+				},
+				{
+					"title": "Common tooling commands (Hugging Face)",
+					"description": "Useful for pulling models/datasets and authenticating.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["pip install -U transformers datasets accelerate", "Install common libraries."],
+							["huggingface-cli login", "Authenticate to pull gated/private repos."],
+							["huggingface-cli whoami", "Show current identity."],
+							["huggingface-cli download [repo] --local-dir [dir]", "Download model files."]
+						]
+					},
+					"example": "python -m venv .venv && source .venv/bin/activate\npip install -U transformers datasets accelerate\nhuggingface-cli whoami"
+				}
+			]
+		},
+		{
+			"title": "Inference and Serving",
+			"description": "How LLMs run in production, and the common knobs that change speed/cost.",
+			"items": [
+				{
+					"title": "Key serving concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "What it is", "Why it matters"],
+						"rows": [
+							["Prefill", "Processing input tokens.", "Often bandwidth-bound; scales with prompt length."],
+							["Decode", "Generating output tokens sequentially.", "Often latency-critical; uses KV cache heavily."],
+							["Throughput", "Tokens/sec across all requests.", "Capacity planning and cost."],
+							["TTFT", "Time to first token.", "UX metric; impacted by prefill and scheduling."],
+							["Scheduling", "How requests share GPU.", "Batching improves throughput; may hurt tail latency."],
+							["Streaming", "Return tokens as they’re produced.", "Better UX; more complex client handling."],
+							["Max tokens", "Output cap.", "Controls cost and worst-case latency."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Local model runners (common)",
+					"description": "Examples of running local inference. Exact flags vary by version.",
+					"table": {
+						"headers": ["Tool", "Command", "Notes"],
+						"rows": [
+							["Ollama", "ollama run [model]", "Simple local runner; manages downloads."],
+							["Ollama", "ollama list", "List installed models."],
+							["Ollama", "ollama serve", "Start API server."],
+							["llama.cpp", "./main -m model.gguf -p 'Hello' -n 64", "CPU/GPU via ggml/gguf; quant-friendly."],
+							["vLLM", "python -m vllm.entrypoints.openai.api_server --model [repo]", "OpenAI-compatible server; good throughput."],
+							["Text generation inference", "text-generation-launcher --model-id [repo]", "Production-grade HF server (varies by setup)."],
+							["Docker", "docker run --gpus all ...", "Containerized serving; be mindful of GPU runtime."]
+						]
+					},
+					"example": "# Ollama\nollama list\nollama run llama3\n\n# vLLM OpenAI-compatible API server\npython -m vllm.entrypoints.openai.api_server --model meta-llama/Meta-Llama-3-8B-Instruct"
+				},
+				{
+					"title": "OpenAI-compatible API (request pattern)",
+					"description": "Many local servers expose an OpenAI-like endpoint for compatibility.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Health check", "curl -s http://localhost:8000/v1/models | jq"],
+							["Chat completion", "curl -s http://localhost:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{\"model\":\"MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}' | jq"],
+							["Streaming (concept)", "Use --no-buffer and parse SSE/stream chunks (server-specific)."]
+						]
+					},
+					"example": "curl -s http://localhost:8000/v1/chat/completions \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"model\":\"MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hi\"}]}' | jq"
+				}
+			]
+		},
+		{
+			"title": "Quantization and Model Formats",
+			"description": "Practical knobs to fit models into available hardware.",
+			"items": [
+				{
+					"title": "Quantization overview",
+					"description": "Quantization reduces memory and can increase throughput, with possible quality tradeoffs.",
+					"table": {
+						"headers": ["Type", "Typical use", "Notes"],
+						"rows": [
+							["fp16/bf16", "Standard GPU inference/training", "bf16 often preferred for training stability."],
+							["int8", "GPU/CPU inference", "Good balance of speed/quality for some models."],
+							["int4", "Tight memory budgets", "Often best for local/edge; quality can drop."],
+							["GGUF", "llama.cpp ecosystem", "File format optimized for local inference and quants."],
+							["AWQ/GPTQ", "Weight-only quant methods", "Common in GPU inference workflows."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Memory budgeting (rules of thumb)",
+					"description": "Exact numbers depend on architecture, precision, and implementation.",
+					"table": {
+						"headers": ["What consumes memory", "Why", "How to reduce"],
+						"rows": [
+							["Weights", "Model parameters stored in GPU/CPU memory.", "Quantize; use smaller model; tensor parallel."],
+							["KV cache", "Per-request memory that grows with context + output tokens.", "Lower max context; limit concurrency; use paged KV; shorter outputs."],
+							["Activations", "Intermediate tensors during forward pass.", "Use inference-only mode; lower batch; optimized kernels."],
+							["Framework overhead", "Allocator fragmentation; extra buffers.", "Tune allocator; warmup; pin versions; use efficient runtimes."]
+						]
+					},
+					"example": "Symptoms: OOM under load often indicates KV cache pressure rather than weight size." 
+				}
+			]
+		},
+		{
+			"title": "Embeddings and Vector Search (RAG building blocks)",
+			"description": "How retrieval systems work: embeddings, indexing, and similarity.",
+			"items": [
+				{
+					"title": "Embedding workflow",
+					"description": null,
+					"table": {
+						"headers": ["Step", "What to do", "Notes"],
+						"rows": [
+							["Chunk", "Split documents into coherent chunks.", "Chunk size/overlap impacts recall/precision."],
+							["Embed", "Compute vectors for each chunk.", "Use same model for query + docs (unless dual encoder)."],
+							["Index", "Store vectors in a vector DB/ANN index.", "Choose HNSW/IVF/etc depending on scale."],
+							["Retrieve", "Find top-k similar chunks for a query.", "Tune k and filters; use metadata constraints."],
+							["Rerank (optional)", "Apply cross-encoder reranker.", "Improves relevance; adds latency."],
+							["Generate", "Send retrieved text to LLM.", "Include citations/IDs for traceability."]
+						]
+					},
+					"example": "Key knobs: chunk_size, overlap, embedding_model, distance metric, top_k, metadata filters." 
+				},
+				{
+					"title": "Similarity metrics",
+					"description": null,
+					"table": {
+						"headers": ["Metric", "When used", "Notes"],
+						"rows": [
+							["Cosine similarity", "Most common for normalized embeddings", "Often equivalent to dot product if vectors are normalized."],
+							["Dot product", "Fast and common for learned embeddings", "Be careful about vector norms."],
+							["Euclidean distance", "Sometimes for specific indices", "Sensitive to scale; normalization matters."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Evaluation and Benchmarking",
+			"description": "Measure quality, safety, and performance in a repeatable way.",
+			"items": [
+				{
+					"title": "Eval categories",
+					"description": null,
+					"table": {
+						"headers": ["Eval type", "What it checks", "How"],
+						"rows": [
+							["Task accuracy", "Correctness vs gold labels", "Curated dataset; exact-match or rubric."],
+							["Retrieval quality", "Recall/precision of RAG retrieval", "Ground-truth mapping; human review."],
+							["Safety", "Refusals, policy adherence", "Red team sets; refusal/allow metrics."],
+							["Latency", "TTFT, p50/p95", "Load tests with representative prompts."],
+							["Cost", "Tokens, GPU seconds", "Track tokens and compute per request."],
+							["Stability", "Variance across runs", "Seeded runs if supported; repeated trials."]
+						]
+					},
+					"example": "Minimum bar for changes: re-run eval set + load test + safety suite; compare against baseline." 
+				},
+				{
+					"title": "Load testing (generic HTTP)",
+					"description": "Use a load tool appropriate to your environment.",
+					"table": {
+						"headers": ["Tool", "Command", "Notes"],
+						"rows": [
+							["hey", "hey -n 200 -c 10 -m POST -H 'Content-Type: application/json' -d @req.json http://localhost:8000/v1/chat/completions", "Simple HTTP load testing."],
+							["wrk", "wrk -t4 -c50 -d30s -s script.lua http://localhost:8000/", "Requires Lua script for POST bodies."],
+							["k6", "k6 run script.js", "Good for realistic scenarios and thresholds."]
+						]
+					},
+					"example": "# Example request body stored as req.json\ncat > req.json <<'JSON'\n{" 
+				}
+			]
+		},
+		{
+			"title": "GPU and Runtime Operations",
+			"description": "Inspect GPU resources, drivers, and container runtime settings.",
+			"items": [
+				{
+					"title": "GPU visibility and health",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nvidia-smi", "Show GPU utilization, memory, processes."],
+							["nvidia-smi -L", "List GPUs."],
+							["nvidia-smi pmon -c 1", "Process monitoring snapshot."],
+							["nvcc --version", "CUDA compiler version (if installed)."],
+							["python -c 'import torch; print(torch.cuda.is_available())'", "Check PyTorch CUDA access."],
+							["python -c 'import torch; print(torch.version.cuda)'", "PyTorch CUDA build version."]
+						]
+					},
+					"example": "nvidia-smi\npython -c 'import torch; print(torch.cuda.is_available())'"
+				},
+				{
+					"title": "Containers with GPUs",
+					"description": "Common patterns for running GPU workloads in Docker.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["docker run --gpus all [image]", "Expose all GPUs to the container."],
+							["docker run --gpus 'device=0' [image]", "Expose only GPU 0."],
+							["docker run --ipc=host [image]", "Sometimes needed for large shared memory usage."],
+							["docker run -e NVIDIA_VISIBLE_DEVICES=0 [image]", "Alternative GPU selection."],
+							["docker logs -f [container]", "Follow server logs."],
+							["docker stats [container]", "CPU/mem IO; GPU requires other tools."]
+						]
+					},
+					"example": "docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi"
+				}
+			]
+		},
+		{
+			"title": "MLOps and Deployment Patterns",
+			"description": "How teams ship and operate models safely.",
+			"items": [
+				{
+					"title": "Deployment checklist",
+					"description": "A concise checklist for production readiness.",
+					"table": {
+						"headers": ["Area", "Checks"],
+						"rows": [
+							["Model artifact", "Pinned version, checksum, license/usage constraints, tokenizer included."],
+							["Config", "Max context, max output, timeouts, rate limits, batching knobs."],
+							["Observability", "Request IDs, token counts, latency, errors, cache hit rates."],
+							["Safety", "Input/output filtering, refusal policies, logging redaction."],
+							["Fallbacks", "Graceful degradation; smaller model; cached responses."],
+							["SLOs", "Define p95 latency, error budget, availability."],
+							["Security", "AuthN/AuthZ to API; network controls; secret management."],
+							["Data governance", "Retention policy; PII handling; user consent."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Caching strategies",
+					"description": "Often the biggest cost lever is reducing repeated work.",
+					"table": {
+						"headers": ["Cache", "What", "Notes"],
+						"rows": [
+							["Prompt+params cache", "Cache full response for identical inputs.", "Great for deterministic tasks (temp=0)."],
+							["Embedding cache", "Cache embeddings for repeated chunks/queries.", "Useful for RAG ingestion and popular queries."],
+							["Retrieval cache", "Cache top-k retrieval results.", "Must invalidate when index changes."],
+							["KV cache reuse", "Advanced serving reuse.", "Implementation-dependent; can be complex."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Common failure modes and quick diagnostics.",
+			"items": [
+				{
+					"title": "Quality issues",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Fix"],
+						"rows": [
+							["Nonsensical output", "Wrong model/tokenizer pair; corrupted weights", "Verify model files and tokenizer; pin versions."],
+							["Model ignores constraints", "Under-specified interface; truncation", "Enforce schema/output limits at API boundary; inspect truncation settings."],
+							["RAG answers wrong", "Bad chunking or retrieval", "Tune chunk size/overlap; add metadata filters; use reranker."],
+							["Over-refusal", "Overly strict safety filters", "Adjust policy thresholds; add allowlists for benign domains."],
+							["Inconsistent results", "Random sampling", "Use temperature=0 for deterministic tasks; seed if supported."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Performance/OOM issues",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Checks"],
+						"rows": [
+							["GPU OOM on long prompts", "KV cache explosion", "Reduce max context; reduce concurrency; enable paged KV; quantize."],
+							["Slow TTFT", "Long prefill; cold start", "Warm up; reduce prompt; enable batching; check disk/model load time."],
+							["High p95 latency", "Queueing/scheduling", "Tune batch size; add replicas; set timeouts; observe queue depth."],
+							["CPU pinned", "Tokenization bottleneck", "Move tokenization to faster runtime; parallelize; cache."],
+							["Container can’t see GPU", "Runtime/driver mismatch", "Verify nvidia-container-toolkit; use nvidia-smi in container."]
+						]
+					},
+					"example": "# Basic triage\nnvidia-smi\ndocker logs -f llm-server\nps aux | head"
+				}
+			]
+		}
+	]
+}

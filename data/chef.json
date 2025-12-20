@@ -1,0 +1,460 @@
+{
+	"title": "Chef (Chef Infra)",
+	"description": "A practical cheatsheet for Chef configuration management: architecture, chef-cli/knife commands, cookbooks/recipes/resources, attributes, policyfiles, environments, data bags, Chef Server workflows, testing, and troubleshooting.",
+	"language": "ruby",
+	"categories": [
+		{
+			"title": "Fundamentals and Architecture",
+			"description": "Chef concepts and how the pieces fit together.",
+			"items": [
+				{
+					"title": "Core components",
+					"description": null,
+					"table": {
+						"headers": ["Component", "What it does"],
+						"rows": [
+							["Chef Infra Client", "Runs on nodes; converges the system to desired state."],
+							["Chef Infra Server", "Central source of truth for cookbooks, policies, nodes, data bags."],
+							["Workstation", "Where you author cookbooks/policies and run knife/chef CLI tools."],
+							["Cookbook", "Package of recipes/resources, templates, files, metadata."],
+							["Recipe", "Ruby DSL defining resources and desired state."],
+							["Resource", "Declarative unit of configuration (package, service, file, template, etc.)."],
+							["Run list", "Ordered list of recipes/roles applied to a node."],
+							["Policyfile", "Modern workflow: locks cookbook versions and run list in a single artifact."],
+							["Attributes", "Node data used to parameterize cookbooks."],
+							["Ohai", "System profiling that produces node attributes."],
+							["Data bag", "JSON data stored on server (often secrets via encryption)."],
+							["Role/Environment", "Legacy mechanisms for grouping config and cookbook constraints."]
+						]
+					},
+					"example": "Typical flow:\n1) Author cookbooks/policy on workstation\n2) Upload policy/cookbooks to server\n3) Nodes run chef-client to converge" 
+				},
+				{
+					"title": "Idempotency and convergence",
+					"description": "Chef aims for idempotent resources: repeated runs should result in no changes when state already matches.",
+					"table": {
+						"headers": ["Concept", "Meaning", "Tip"],
+						"rows": [
+							["Converge", "Apply resources to reach desired state.", "Prefer built-in resources over shell commands."],
+							["Compile vs converge", "Chef compiles resource collection, then converges.", "Be careful with Ruby logic vs resource execution."],
+							["Guards", "only_if / not_if to skip resources.", "Use guards to keep resources safe/conditional."],
+							["Notifications", "notify/subscribes to trigger actions.", "Restart services only when config changes."]
+						]
+					},
+					"example": "service 'nginx' do\n  action [:enable, :start]\nend\n\ntemplate '/etc/nginx/nginx.conf' do\n  source 'nginx.conf.erb'\n  notifies :reload, 'service[nginx]', :immediately\nend"
+				}
+			]
+		},
+		{
+			"title": "Installation and Setup",
+			"description": "Set up a workstation and validate connectivity to Chef Infra Server.",
+			"items": [
+				{
+					"title": "Chef Workstation / chef-cli",
+					"description": "Modern tooling usually centers around `chef` (chef-cli).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["chef --version", "Show chef-cli version."],
+							["knife --version", "Show knife version."],
+							["chef env", "Show environment details (Ruby, paths)."],
+							["chef gem list | head", "List Ruby gems in Chef's embedded Ruby."]
+						]
+					},
+					"example": "chef --version\nknife --version\nchef env"
+				},
+				{
+					"title": "Knife config (knife.rb)",
+					"description": "Knife uses `~/.chef/knife.rb` and client keys to authenticate to the Chef Server.",
+					"table": {
+						"headers": ["Setting", "Meaning"],
+						"rows": [
+							["chef_server_url", "Chef Server API endpoint."],
+							["node_name", "Client/user name used to authenticate."],
+							["client_key", "Path to private key (pem)."],
+							["validation_client_name", "Validator client (legacy bootstrap workflows)."],
+							["validation_key", "Validator key path (legacy)."],
+							["cookbook_path", "Local cookbook directory paths."]
+						]
+					},
+					"example": "# Common file location\nls -lah ~/.chef\n# knife.rb typically references client_key and chef_server_url"
+				}
+			]
+		},
+		{
+			"title": "Knife Essentials",
+			"description": "Knife is the primary CLI for interacting with Chef Infra Server objects.",
+			"items": [
+				{
+					"title": "Basic server connectivity",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["knife ssl check", "Verify SSL connectivity to server."],
+							["knife ssl fetch", "Fetch SSL certs (use carefully; verify trust)."],
+							["knife client list", "List API clients."],
+							["knife user list", "List users (if permitted)."],
+							["knife node list", "List nodes."],
+							["knife status", "Show node last check-in and run status."],
+							["knife environment list", "List environments."],
+							["knife cookbook list", "List cookbooks on server."]
+						]
+					},
+					"example": "knife ssl check\nknife node list\nknife status"
+				},
+				{
+					"title": "Nodes and run lists",
+					"description": "Inspect and modify node run lists and attributes.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Show node", "knife node show NODE -l"],
+							["Edit node", "knife node edit NODE"],
+							["Set run list", "knife node run_list set NODE 'recipe[base],recipe[nginx]'"],
+							["Add to run list", "knife node run_list add NODE 'recipe[nginx]'"],
+							["Remove from run list", "knife node run_list remove NODE 'recipe[nginx]'"],
+							["Search nodes", "knife search node 'role:web AND chef_environment:prod'"],
+							["Show client", "knife client show NODE"],
+							["Delete node/client", "knife node delete NODE; knife client delete NODE"]
+						]
+					},
+					"example": "knife node show web01 -l\nknife node run_list add web01 'recipe[nginx]'"
+				},
+				{
+					"title": "Cookbook lifecycle",
+					"description": "Upload and manage cookbooks on the server.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Upload cookbooks", "knife cookbook upload COOKBOOK"],
+							["Upload all cookbooks", "knife cookbook upload -a"],
+							["Show cookbook versions", "knife cookbook show COOKBOOK"],
+							["Show a file/template", "knife cookbook show COOKBOOK templates default FILE"],
+							["Delete cookbook version", "knife cookbook delete COOKBOOK VERSION"],
+							["Download cookbook", "knife cookbook download COOKBOOK"],
+							["Cookbook metadata", "knife cookbook metadata COOKBOOK"]
+						]
+					},
+					"example": "knife cookbook upload myapp\nknife cookbook show myapp"
+				}
+			]
+		},
+		{
+			"title": "Cookbooks, Recipes, and Resources",
+			"description": "Authoring fundamentals: resources, common patterns, and the Chef DSL.",
+			"items": [
+				{
+					"title": "Common resources",
+					"description": "Frequently used built-in resources.",
+					"table": {
+						"headers": ["Resource", "Purpose"],
+						"rows": [
+							["package", "Install/remove packages."],
+							["service", "Enable/start/stop services."],
+							["file", "Manage file contents/permissions."],
+							["template", "Render an ERB template with variables."],
+							["directory", "Ensure directories exist with correct perms."],
+							["execute", "Run a command (use sparingly; ensure idempotency)."],
+							["bash", "Run bash script (use sparingly)."],
+							["user/group", "Manage local users/groups."],
+							["cron", "Manage cron jobs."],
+							["remote_file", "Download file from URL."],
+							["cookbook_file", "Copy static file from cookbook."],
+							["ruby_block", "Run Ruby code at converge time."]
+						]
+					},
+					"example": "package 'nginx' do\n  action :install\nend\n\nservice 'nginx' do\n  action [:enable, :start]\nend"
+				},
+				{
+					"title": "Guards and notifications",
+					"description": "Keep resources safe and reactive.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["only_if", "only_if 'test -f /etc/app/enabled'"],
+							["not_if", "not_if { ::File.exist?('/etc/app/initialized') }"],
+							["notifies", "notifies :restart, 'service[nginx]', :delayed"],
+							["subscribes", "subscribes :reload, 'template[/etc/nginx/nginx.conf]', :immediately"],
+							["creates", "execute 'init' do ... creates '/etc/app/initialized' end"]
+						]
+					},
+					"example": "execute 'initialize app' do\n  command '/usr/local/bin/app-init'\n  creates '/etc/app/initialized'\nend"
+				},
+				{
+					"title": "chef-client local modes",
+					"description": "Useful for development and debugging without server involvement.",
+					"table": {
+						"headers": ["Mode", "Command", "Notes"],
+						"rows": [
+							["local-mode (zero)", "chef-client -z -o 'recipe[cookbook::default]'", "Runs using local cookbooks."],
+							["why-run", "chef-client -W", "Dry-run style; shows what would change."],
+							["log level", "chef-client -l info|warn|debug", "Increase verbosity when debugging."],
+							["override run list", "chef-client -o 'recipe[a],recipe[b]'", "Temporarily override run list."]
+						]
+					},
+					"example": "chef-client -z -o 'recipe[myapp::default]' -l info"
+				}
+			]
+		},
+		{
+			"title": "Policyfiles (Modern Workflow)",
+			"description": "Policyfiles lock cookbook versions and define run lists as immutable artifacts.",
+			"items": [
+				{
+					"title": "Policyfile workflow commands",
+					"description": "Common policyfile operations using chef-cli.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["chef install", "Resolve dependencies and create Policyfile.lock.json."],
+							["chef update", "Update dependencies (unlock/re-resolve)."],
+							["chef exec", "Run commands within the policy's gem context."],
+							["chef push [policy_group] [policyfile]", "Upload policy and cookbooks to server."],
+							["chef show-policy", "Show policy details from lock file or server."],
+							["chef export [policyfile] [dir]", "Export policy for local use (e.g., for -z)."],
+							["chef diff", "Compare policy revisions (server vs local)."]
+						]
+					},
+					"example": "chef install\nchef push production Policyfile.rb\nchef show-policy -p Policyfile.lock.json"
+				},
+				{
+					"title": "Policy concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["policy_name", "Identifier for the policy."],
+							["run_list", "Ordered recipes applied."],
+							["named_run_list", "Alternate run lists within one policy."],
+							["policy_group", "Environment-like grouping for policies (e.g., dev/prod)."],
+							["lock file", "Pinned cookbook versions + sources."],
+							["immutable revisions", "Each push creates a policy revision."]
+						]
+					},
+					"example": "# View policy revisions\nknife show-policy -g production -n my_policy (if knife plugin available)"
+				}
+			]
+		},
+		{
+			"title": "Attributes, Ohai, and Data",
+			"description": "How Chef derives and uses node data.",
+			"items": [
+				{
+					"title": "Attribute types and precedence (overview)",
+					"description": "Chef attribute precedence can be complex; use minimal layers and document overrides.",
+					"table": {
+						"headers": ["Type", "Notes"],
+						"rows": [
+							["default", "Lowest precedence; cookbook defaults."],
+							["normal", "Persisted on node object; avoid when possible."],
+							["override", "Higher precedence; use sparingly."],
+							["automatic", "Ohai-provided (facts); cannot be set by cookbooks."]
+						]
+					},
+					"example": "# In a recipe\nnode['myapp']['port'] # read a node attribute"
+				},
+				{
+					"title": "Ohai commands",
+					"description": "Ohai collects system data used as automatic attributes.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ohai", "Dump system data as JSON."],
+							["ohai ipaddress", "Print a specific attribute."],
+							["ohai | jq '.platform,.platform_version'", "Filter output."],
+							["chef-shell -z", "Interactive shell for experimenting with node and resources."]
+						]
+					},
+					"example": "ohai | jq '.hostname,.ipaddress'"
+				}
+			]
+		},
+		{
+			"title": "Environments and Roles (Legacy Workflow)",
+			"description": "Legacy constructs still found in many estates.",
+			"items": [
+				{
+					"title": "Environment commands",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["knife environment list", "List environments."],
+							["knife environment show ENV", "Show an environment."],
+							["knife environment edit ENV", "Edit environment JSON."],
+							["knife environment from file env.json", "Upload/update environment from file."]
+						]
+					},
+					"example": "knife environment list\nknife environment show production"
+				},
+				{
+					"title": "Role commands",
+					"description": "Roles define run lists and attributes (often replaced by Policyfiles).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["knife role list", "List roles."],
+							["knife role show ROLE", "Show role."],
+							["knife role edit ROLE", "Edit role."],
+							["knife role from file role.json", "Upload role from file."]
+						]
+					},
+					"example": "knife role show webserver -l"
+				}
+			]
+		},
+		{
+			"title": "Data Bags and Secrets",
+			"description": "Store structured data on the server; use encrypted data bags for secrets (or external secret managers).",
+			"items": [
+				{
+					"title": "Data bag commands",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["knife data bag list", "List data bags."],
+							["knife data bag show BAG", "Show items in a bag."],
+							["knife data bag show BAG ITEM", "Show one item."],
+							["knife data bag create BAG", "Create a data bag."],
+							["knife data bag from file BAG item.json", "Upload item from file."],
+							["knife data bag delete BAG ITEM", "Delete an item."]
+						]
+					},
+					"example": "knife data bag list\nknife data bag show secrets"
+				},
+				{
+					"title": "Encrypted data bags (concept)",
+					"description": "Encryption uses a shared secret key; manage it carefully.",
+					"table": {
+						"headers": ["Topic", "Notes"],
+						"rows": [
+							["Secret key", "Stored on workstation and (often) deployed to nodes securely."],
+							["Rotation", "Requires re-encrypting items and redeploying keys."],
+							["Alternative", "Use external secret managers and fetch at runtime when possible."]
+						]
+					},
+					"example": "# Example: create encrypted item (syntax depends on tooling version)\n# knife data bag create BAG ITEM --secret-file /path/to/secret"
+				}
+			]
+		},
+		{
+			"title": "Bootstrap and Node Onboarding",
+			"description": "Add new nodes to the Chef Server and start converging.",
+			"items": [
+				{
+					"title": "Bootstrap basics",
+					"description": "Bootstrap installs chef-client and registers the node with the server.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Bootstrap Linux (SSH)", "knife bootstrap HOST -N nodename -x user --sudo", "Flags vary; may need identity file and run-list."],
+							["Bootstrap with run list", "knife bootstrap HOST -N nodename -r 'recipe[base],recipe[myapp]'", "Assign initial run list."],
+							["List nodes after bootstrap", "knife node list", "Confirm registration."],
+							["Check node status", "knife status", "Last check-in time."]
+						]
+					},
+					"example": "knife bootstrap 10.0.0.10 -N web01 -x ubuntu --sudo -r 'recipe[base],recipe[nginx]'"
+				}
+			]
+		},
+		{
+			"title": "Administration and Operations",
+			"description": "Day-2 operations for Chef environments.",
+			"items": [
+				{
+					"title": "Chef client runs and scheduling",
+					"description": "chef-client is typically run via cron/systemd or a daemon approach.",
+					"table": {
+						"headers": ["Command/Config", "Description"],
+						"rows": [
+							["chef-client", "Run a normal converge."],
+							["chef-client -l debug", "Verbose run."],
+							["chef-client -o 'recipe[x]'", "Override run list for a single run."],
+							["chef-client -W", "Why-run (dry-run style)."],
+							["chef-client --once", "Run once (if using daemonized mode)."],
+							["/etc/chef/client.rb", "Primary client config file."],
+							["/etc/chef/first-boot.json", "Bootstrap initial attributes/run list (legacy)."]
+						]
+					},
+					"example": "sudo chef-client -l info"
+				},
+				{
+					"title": "Search",
+					"description": "Search across nodes/roles/data bags (depending on index).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Search nodes", "knife search node 'chef_environment:prod AND role:webserver'"],
+							["Search roles", "knife search role 'name:webserver'"],
+							["Search clients", "knife search client 'name:web*'"],
+							["Search data bag", "knife search BAG 'id:prod'" ]
+						]
+					},
+					"example": "knife search node 'platform:ubuntu AND platform_version:22.04'"
+				}
+			]
+		},
+		{
+			"title": "Testing and CI",
+			"description": "Validate cookbooks and policies with unit/integration style tests.",
+			"items": [
+				{
+					"title": "Common testing tools",
+					"description": "Exact commands depend on your cookbook setup and gem dependencies.",
+					"table": {
+						"headers": ["Tool", "What it does"],
+						"rows": [
+							["Cookstyle", "Lint Chef cookbooks (Ruby style + Chef rules)."],
+							["ChefSpec", "Unit tests for cookbooks (resource expectations)."],
+							["Test Kitchen", "Integration tests in VMs/containers/cloud instances."],
+							["InSpec", "Compliance and validation tests (often used with Kitchen)."],
+							["Policyfile tests", "Lockfile diffing and promotion gates."]
+						]
+					},
+					"example": "# Typical patterns (project-dependent)\nchef exec cookstyle\nchef exec rspec\nchef exec kitchen test"
+				},
+				{
+					"title": "Test Kitchen basics",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["kitchen list", "List instances."],
+							["kitchen create", "Create instance(s)."],
+							["kitchen converge", "Apply cookbook."],
+							["kitchen verify", "Run tests (InSpec)."],
+							["kitchen test", "Create+converge+verify+destroy."],
+							["kitchen login", "Shell into instance."],
+							["kitchen destroy", "Cleanup."]
+						]
+					},
+					"example": "kitchen list\nkitchen test"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Common failures and how to diagnose them.",
+			"items": [
+				{
+					"title": "Debugging a chef-client run",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Action"],
+						"rows": [
+							["401/403 from server", "Bad client key or permissions", "Verify client_key path; check client/user permissions."],
+							["SSL errors", "Missing/incorrect trusted certs", "Run knife ssl check/fetch; verify TLS trust chain."],
+							["Cookbook not found", "Not uploaded or wrong version", "knife cookbook list/show; upload correct version or update Policyfile."],
+							["Non-idempotent changes", "Shell commands or drifting config", "Replace with resources; add guards; use templates and notifications."],
+							["Attribute not found", "Wrong precedence/typo", "Inspect node attributes; ensure correct attribute keys."],
+							["Resource fails", "OS differences or missing deps", "Use platform-specific logic; ensure package repos; log debug."]
+						]
+					},
+					"example": "sudo chef-client -l debug\nknife node show NODE -l"
+				}
+			]
+		}
+	]
+}

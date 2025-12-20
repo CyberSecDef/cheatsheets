@@ -1,0 +1,386 @@
+{
+	"title": "Cryptocurrency",
+	"description": "A technical cheatsheet for cryptocurrency systems: keys and wallets, addresses, transactions (UTXO vs account), fees/mempool, nodes and RPC, consensus, smart contracts, scripting/automation, security, operations, and troubleshooting (Bitcoin + Ethereum examples).",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Architecture",
+			"description": "Core ideas that apply across most cryptocurrencies and blockchains.",
+			"items": [
+				{
+					"title": "Key terms (quick map)",
+					"description": null,
+					"table": {
+						"headers": ["Term", "Meaning"],
+						"rows": [
+							["Private key", "Secret scalar used to sign transactions; controls funds."],
+							["Public key", "Derived from private key; used to verify signatures."],
+							["Address", "Short identifier derived from a public key (or script)."],
+							["Wallet", "Key management + transaction construction (software/hardware)."],
+							["Node", "Software that validates blocks/transactions and serves data (P2P + RPC)."],
+							["Mempool", "Set of valid-but-unconfirmed transactions a node is aware of."],
+							["Block", "Batch of transactions committed to the chain."],
+							["Consensus", "Rules/process for agreeing on the canonical chain (PoW, PoS, etc.)."],
+							["Finality", "When a transaction is very unlikely to be reverted."],
+							["Fork", "Rule change (soft/hard) or temporary chain split."],
+							["Reorg", "Replacement of recent blocks when a longer/heavier chain appears."],
+							["UTXO model", "State = set of unspent outputs; transactions consume/produce UTXOs."],
+							["Account model", "State = account balances/nonces; transactions mutate accounts."],
+							["Gas (EVM)", "Metering unit for computation/storage; fees = gas * price (+ tips)."],
+							["Merkle tree", "Commitment structure for transactions (and other data) in a block."],
+							["Light client", "Verifies headers/proofs without full transaction validation."]
+						]
+					},
+					"example": "Rule of thumb: custody = private key control.\nIf you cannot access or sign with the private key (or seed), you do not control the funds."
+				},
+				{
+					"title": "UTXO vs account model",
+					"description": "Understand how state is represented and how fees/nonces work.",
+					"table": {
+						"headers": ["Topic", "UTXO (e.g., Bitcoin)", "Account (e.g., Ethereum)"],
+						"rows": [
+							["State", "Unspent outputs", "Account balances + nonces"],
+							["Double-spend prevention", "UTXO can only be spent once", "Nonce enforces ordering"],
+							["Change", "Explicit change output", "Implicit leftover balance"],
+							["Parallelism", "Often easier (independent UTXOs)", "Nonce can serialize from one account"],
+							["Privacy", "More flexible (many addresses/UTXOs)", "Balances tied to account address"],
+							["Fee mechanism", "Fee = inputs - outputs", "Fee = gasUsed * gasPrice (+ tip)" ]
+						]
+					},
+					"example": "Bitcoin fee example: sum(inputs) - sum(outputs) = miner fee.\nEthereum fee example: gasUsed * (baseFee + priorityFee)."
+				}
+			]
+		},
+		{
+			"title": "Keys, Seeds, and Wallets",
+			"description": "Key material, deterministic wallets, signing, and safe backups.",
+			"items": [
+				{
+					"title": "Seed phrases and HD wallets (BIP-32/39/44)",
+					"description": "Common approach for deriving many keys from one seed.",
+					"table": {
+						"headers": ["Concept", "Purpose", "Notes"],
+						"rows": [
+							["BIP-39 mnemonic", "Human-friendly seed encoding", "12/18/24 words; treat as the secret."],
+							["BIP-32 HD derivation", "Tree of keys from a master seed", "Derivation paths produce child keys."],
+							["BIP-44 path", "Standard account/address structure", "e.g. m/44'/0'/0'/0/0 for BTC legacy path."],
+							["xpub/xprv", "Extended pub/priv keys", "xpub can derive addresses without spending capability."],
+							["Passphrase (\"25th word\")", "Extra factor on mnemonic", "Losing it = losing funds; store safely." ]
+						]
+					},
+					"example": "Operational guidance:\n- Store seed offline; consider metal backup.\n- Do not type seed into random websites/tools.\n- For organizations: consider multisig + documented recovery process."
+				},
+				{
+					"title": "Wallet types",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Pros", "Cons"],
+						"rows": [
+							["Hot wallet", "Fast UX; good for small balances", "Higher exposure to malware/phishing"],
+							["Cold wallet", "Strong isolation", "Operational overhead"],
+							["Hardware wallet", "Keys stay in device; secure signing", "Supply chain + PIN/passphrase management"],
+							["Multisig", "Reduces single-key risk", "More complex backups and signing workflow"],
+							["Custodial", "No key management burden", "Counterparty risk; withdrawal limits/policies" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Addresses and Encodings",
+			"description": "Address formats, checksums, and common encodings.",
+			"items": [
+				{
+					"title": "Common encodings",
+					"example": null,
+					"table": {
+						"headers": ["Encoding", "Where used", "Notes"],
+						"rows": [
+							["hex", "Keys, txids, hashes", "Often 0x-prefixed in EVM tooling."],
+							["base58check", "Bitcoin legacy addresses", "Avoids ambiguous characters; includes checksum."],
+							["bech32", "Bitcoin SegWit addresses", "Human-friendly; strong error detection."],
+							["base64", "Binary blobs in APIs", "Not address-specific; common in tooling." ]
+						]
+					},
+					"description": "Be careful: some tools output little-endian vs big-endian hex for certain fields (chain-specific)."
+				},
+				{
+					"title": "Ethereum addresses (EIP-55 checksum)",
+					"description": "Ethereum addresses are 20 bytes; checksum is mixed-case hex (optional but recommended).",
+					"table": {
+						"headers": ["Form", "Example", "Notes"],
+						"rows": [
+							["Lowercase", "0xabc...", "Valid but checksum not encoded."],
+							["EIP-55", "0xAbC...", "Case encodes checksum; helps catch typos."],
+							["ENS", "alice.eth", "Name resolves to address via ENS." ]
+						]
+					},
+					"example": "Many APIs accept lowercase, but UIs prefer EIP-55 checksummed addresses."
+				}
+			]
+		},
+		{
+			"title": "Transactions and Fees",
+			"description": "How transactions are formed, propagated, confirmed, and paid for.",
+			"items": [
+				{
+					"title": "Lifecycle",
+					"description": null,
+					"table": {
+						"headers": ["Stage", "What happens"],
+						"rows": [
+							["Construct", "Wallet builds unsigned transaction with correct inputs/outputs or nonce/gas."],
+							["Sign", "Private key signs (or multisig/hardware device signs)."],
+							["Broadcast", "Transaction sent to a node; propagates via P2P."],
+							["Mempool", "Nodes keep it if valid and pays adequate fee."],
+							["Inclusion", "Miner/validator includes in block."],
+							["Confirmations", "More blocks on top reduces reorg risk."],
+							["Finality", "Chain-dependent: PoW probabilistic; PoS may have stronger finality." ]
+						]
+					},
+					"example": "For PoW chains, confirmation count is a risk-control policy decision (depends on value and chain security)."
+				},
+				{
+					"title": "Fee knobs (high-level)",
+					"description": "Common levers users/operators control.",
+					"table": {
+						"headers": ["Chain type", "Knob", "Effect"],
+						"rows": [
+							["UTXO", "fee rate (sat/vB)", "Higher increases chance of mempool inclusion."],
+							["UTXO", "RBF (Replace-By-Fee)", "Allows fee bump by replacing transaction."],
+							["Account/EVM", "maxFeePerGas", "Absolute cap per unit gas."],
+							["Account/EVM", "maxPriorityFeePerGas", "Tip to validators; affects inclusion speed."],
+							["Account/EVM", "gasLimit", "Upper bound on gas usage; too low reverts/out-of-gas." ]
+						]
+					},
+					"example": "EIP-1559 style: effectiveGasPrice = min(maxFeePerGas, baseFee + maxPriorityFeePerGas)."
+				}
+			]
+		},
+		{
+			"title": "Nodes, Networks, and RPC",
+			"description": "Running and interacting with full nodes and RPC endpoints.",
+			"items": [
+				{
+					"title": "Node roles",
+					"description": null,
+					"table": {
+						"headers": ["Role", "What it does", "Typical use"],
+						"rows": [
+							["Full node", "Validates blocks/txs from genesis or checkpoints", "Trust-minimized verification"],
+							["Archive node (EVM)", "Stores full historical state", "Advanced analytics/debugging"],
+							["Pruned node", "Drops old data to save disk", "Validation without full history"],
+							["Light client", "Verifies headers/proofs only", "Mobile/embedded clients"],
+							["RPC provider", "Hosts nodes behind an API", "Apps that don’t self-host nodes" ]
+						]
+					},
+					"example": "Security note: treat RPC endpoints as sensitive; they can leak metadata or allow signing if misconfigured."
+				},
+				{
+					"title": "RPC patterns",
+					"description": "Common methods across many clients (names differ).",
+					"table": {
+						"headers": ["Function", "Bitcoin (bitcoind)", "Ethereum (JSON-RPC)"],
+						"rows": [
+							["Get chain tip", "getblockchaininfo", "eth_blockNumber"],
+							["Get peer info", "getpeerinfo", "admin_peers (client-specific)"],
+							["Get tx", "getrawtransaction", "eth_getTransactionByHash"],
+							["Broadcast tx", "sendrawtransaction", "eth_sendRawTransaction"],
+							["Get mempool", "getrawmempool", "txpool_content (client-specific)" ]
+						]
+					},
+					"example": "Avoid exposing RPC to the public internet. Bind to localhost, enforce auth, and restrict firewall rules."
+				}
+			]
+		},
+		{
+			"title": "Bitcoin Core (bitcoind / bitcoin-cli)",
+			"description": "Practical commands for operating and querying Bitcoin Core.",
+			"items": [
+				{
+					"title": "Status and health",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Get basic chain info", "bitcoin-cli getblockchaininfo"],
+							["Get network/peer info", "bitcoin-cli getnetworkinfo && bitcoin-cli getpeerinfo | head"],
+							["Wallet list", "bitcoin-cli listwallets"],
+							["Mempool summary", "bitcoin-cli getmempoolinfo"],
+							["Estimate fees", "bitcoin-cli estimatesmartfee 6"],
+							["Validate address", "bitcoin-cli validateaddress <address>"],
+							["Decode raw transaction", "bitcoin-cli decoderawtransaction <hex>" ]
+						]
+					},
+					"example": "bitcoin-cli getblockchaininfo\nbitcoin-cli getmempoolinfo"
+				},
+				{
+					"title": "Create and send (high-level wallet RPC)",
+					"description": "Wallet RPC depends on wallet being enabled and loaded; treat as illustrative.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Get new address", "bitcoin-cli getnewaddress", "Uses wallet descriptor settings."],
+							["Send to address", "bitcoin-cli sendtoaddress <addr> <amount>", "Creates, funds, signs, broadcasts."],
+							["List transactions", "bitcoin-cli listtransactions", "Wallet history."],
+							["Bump fee (if eligible)", "bitcoin-cli bumpfee <txid>", "Requires RBF policy." ]
+						]
+					},
+					"example": "bitcoin-cli getnewaddress\n# bitcoin-cli sendtoaddress bc1q... 0.001"
+				}
+			]
+		},
+		{
+			"title": "Ethereum (JSON-RPC + clients)",
+			"description": "How to query Ethereum-style chains via JSON-RPC (geth/nethermind/erigon).",
+			"items": [
+				{
+					"title": "JSON-RPC with curl",
+					"description": "Generic Ethereum JSON-RPC request structure.",
+					"table": {
+						"headers": ["Goal", "Method", "Notes"],
+						"rows": [
+							["Latest block number", "eth_blockNumber", "Returns hex quantity."],
+							["Balance", "eth_getBalance", "Address + block tag (latest)."],
+							["Transaction by hash", "eth_getTransactionByHash", "Returns tx fields including gas params."],
+							["Receipt", "eth_getTransactionReceipt", "Status, logs, gas used."],
+							["Call (no state change)", "eth_call", "Simulate contract call." ]
+						]
+					},
+					"example": "curl -s http://localhost:8545 -H 'Content-Type: application/json' --data '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_blockNumber\",\"params\":[]}'"
+				},
+				{
+					"title": "Common EVM troubleshooting",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Fix"],
+						"rows": [
+							["replacement transaction underpriced", "Nonce reuse without sufficient tip", "Increase tip/fee or wait for inclusion."],
+							["nonce too low", "Tx already mined or pending", "Fetch nonce; clear pending; adjust signing wallet state."],
+							["out of gas", "gasLimit too low", "Raise gasLimit or fix contract call pattern."],
+							["execution reverted", "Contract reverted", "Inspect revert reason (eth_call), check inputs/state."],
+							["chain id mismatch", "Wrong network config", "Use correct chainId in signer and RPC endpoint." ]
+						]
+					},
+					"example": "# Example: get receipt for a tx hash\n# curl -s http://localhost:8545 -H 'Content-Type: application/json' --data '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getTransactionReceipt\",\"params\":[\"0x...\"]}'"
+				}
+			]
+		},
+		{
+			"title": "Smart Contracts (High-Level)",
+			"description": "Understand contract deployment/calls/events and common tooling patterns.",
+			"items": [
+				{
+					"title": "Core concepts",
+					"example": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Contract address", "Address where contract code lives; created by deploy tx."],
+							["ABI", "Interface description used to encode calls and decode events."],
+							["Events/logs", "Append-only logs emitted by contracts; indexed topics enable search."],
+							["Call vs transaction", "Calls are read-only simulations; txs change state and pay gas."],
+							["Revert", "Abort state changes; gas still consumed up to point of failure."],
+							["Upgrade patterns", "Proxy patterns (transparent/UUPS) replace logic while preserving storage." ]
+						]
+					},
+					"description": "Operational caution: contract interactions are irreversible once confirmed; verify chainId, recipient, and calldata before signing."
+				}
+			]
+		},
+		{
+			"title": "Scripting and Automation",
+			"description": "Automation patterns for querying networks and managing wallets/nodes.",
+			"items": [
+				{
+					"title": "Shell: safe JSON-RPC wrapper",
+					"description": "Small helper pattern for curl-based JSON-RPC (keep secrets out of shell history).",
+					"table": {
+						"headers": ["Tip", "Why"],
+						"rows": [
+							["Use env vars for endpoints", "Avoid hard-coding and ease environment switching."],
+							["Use jq for decoding", "Hex quantities and nested JSON are easier to parse."],
+							["Avoid embedding private keys", "Prefer external signers/hardware wallets."],
+							["Rate limit", "Public RPC providers enforce limits; backoff/retry gracefully." ]
+						]
+					},
+					"example": "RPC=${RPC:-http://localhost:8545}\nreq(){\n  method=$1; shift\n  params=$1\n  curl -s \"$RPC\" -H 'Content-Type: application/json' --data \"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$method\",\"params\":$params}\"\n}\n\nreq eth_blockNumber '[]' | jq -r .result"
+				},
+				{
+					"title": "Python: web3.py skeleton",
+					"description": "Example outline for querying EVM networks (install: pip install web3).",
+					"table": {
+						"headers": ["Task", "Snippet"],
+						"rows": [
+							["Connect", "Web3(Web3.HTTPProvider(RPC_URL))"],
+							["Latest block", "w3.eth.block_number"],
+							["Balance", "w3.eth.get_balance(addr)"],
+							["Receipt", "w3.eth.get_transaction_receipt(txhash)" ]
+						]
+					},
+					"example": "from web3 import Web3\n\nw3 = Web3(Web3.HTTPProvider('http://localhost:8545'))\nprint('chainId', w3.eth.chain_id)\nprint('block', w3.eth.block_number)\nprint('balance', w3.eth.get_balance('0x0000000000000000000000000000000000000000'))"
+				}
+			]
+		},
+		{
+			"title": "Security and Administration",
+			"description": "Operational security for keys, nodes, and infrastructure.",
+			"items": [
+				{
+					"title": "Key security checklist",
+					"description": "Practical steps for reducing risk.",
+					"table": {
+						"headers": ["Control", "What it mitigates"],
+						"rows": [
+							["Hardware wallets / offline signing", "Malware stealing private keys"],
+							["Multisig for treasury", "Single-key compromise"],
+							["Separate hot/cold funds", "Blast radius"],
+							["Backups (seed + passphrase)", "Device loss"],
+							["Change management", "Accidental address/chain mistakes"],
+							["Least-privileged RPC access", "Unauthorized wallet/node control"],
+							["Monitoring", "Detect stuck txs, reorgs, node lag" ]
+						]
+					},
+					"example": "Treat seeds like root credentials. For teams, define: approval workflow, recovery drill, and incident response playbook."
+				},
+				{
+					"title": "Node hardening basics",
+					"description": null,
+					"table": {
+						"headers": ["Area", "Guidance"],
+						"rows": [
+							["RPC exposure", "Bind to localhost; use reverse proxy with auth; restrict by firewall."],
+							["Updates", "Track client releases and consensus changes; patch quickly on critical fixes."],
+							["Disk", "Provision adequate IOPS; monitor growth; plan pruning/archive needs."],
+							["Backups", "Back up wallet data and config; chain data is usually reproducible."],
+							["Logs/metrics", "Collect logs; expose metrics if available; alert on sync lag." ]
+						]
+					},
+					"example": "Never expose an unauthenticated wallet-enabled RPC port to the internet."
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Common operational issues across wallets, nodes, and networks.",
+			"items": [
+				{
+					"title": "Symptoms and fixes",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "What to do"],
+						"rows": [
+							["Node not syncing", "Disk/IO bottleneck, peer issues", "Check peers, disk usage, logs; ensure ports open; consider snapshot (chain-dependent)."],
+							["Transaction stuck", "Fee too low", "Use RBF/fee bump if supported; or wait; avoid spamming replacements."],
+							["Balances differ between explorers", "Explorer indexing lag or reorg", "Compare to your node; wait for confirmations/finality."],
+							["Wrong network", "Mainnet vs testnet", "Verify chainId/network; separate configs/keys."],
+							["Address typo", "No checksum validation", "Use checksummed formats (EIP-55, bech32) and copy/paste hygiene." ]
+						]
+					},
+					"example": "Always verify chain/network before sending: chainId (EVM) or network magic/parameters (UTXO chains)."
+				}
+			]
+		}
+	]
+}

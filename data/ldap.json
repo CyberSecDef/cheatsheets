@@ -1,0 +1,486 @@
+{
+	"title": "LDAP",
+	"description": "A practical, technical cheatsheet for LDAP: naming and schema, filters, authentication and TLS, common CLI tools (ldapsearch/ldapadd/ldapmodify/etc.), OpenLDAP administration (cn=config), indexing and replication, scripting, and troubleshooting.",
+	"language": "ldap",
+	"categories": [
+		{
+			"title": "Fundamentals and Concepts",
+			"description": "Core building blocks and terms used by LDAP servers and clients.",
+			"items": [
+				{
+					"title": "Directory model quick map",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Directory Information Tree (DIT)", "Hierarchical namespace of entries (like a tree)."],
+							["Entry", "An object in the directory identified by a DN; has attributes."],
+							["Attribute", "Key/value(s) on an entry (cn, sn, uid, mail, member, ...)."],
+							["ObjectClass", "Defines required/allowed attributes for an entry."],
+							["DN (Distinguished Name)", "Unique name of an entry (e.g., uid=alice,ou=People,dc=example,dc=com)."],
+							["RDN (Relative DN)", "The leftmost component of a DN (e.g., uid=alice)."],
+							["Base DN", "Starting point for searches (search base)."],
+							["Bind", "Authentication step to establish an identity (simple bind, SASL, anonymous)."],
+							["Search scope", "base (object), one (onelevel), sub (subtree)."],
+							["LDAP URL", "Specifies scheme/host/base/filter/scope (ldap://host/dc=...??sub?(filter))."],
+							["Controls", "Protocol extensions (paged results, server-side sorting, assertion, etc.)."],
+							["Referrals", "Server points client to another LDAP server for the data."],
+							["Operational attributes", "Server-maintained attrs (createTimestamp, modifiersName, entryUUID, ...)."]
+						]
+					},
+					"example": "Common naming pieces:\n- DN: uid=alice,ou=People,dc=example,dc=com\n- RDN: uid=alice\n- Base DN: dc=example,dc=com\n- Onelevel: ou=People,dc=example,dc=com (only direct children)\n- Subtree: dc=example,dc=com (everything under it)"
+				},
+				{
+					"title": "Common LDAP ports and schemes",
+					"description": null,
+					"table": {
+						"headers": ["Scheme", "Default port", "Notes"],
+						"rows": [
+							["ldap://", "389", "Plain TCP; can upgrade with StartTLS."],
+							["ldaps://", "636", "LDAP over TLS from connect time (legacy but common)."],
+							["StartTLS", "389", "Use `-ZZ` in OpenLDAP tools to require TLS." ]
+						]
+					},
+					"example": "# Require StartTLS (fails if TLS cannot be negotiated)\nldapsearch -H ldap://ldap.example.com -ZZ -x -b 'dc=example,dc=com' '(objectClass=*)' dn"
+				}
+			]
+		},
+		{
+			"title": "Naming, DNs, and LDIF",
+			"description": "How names are represented and how data is imported/exported.",
+			"items": [
+				{
+					"title": "DN and RDN rules",
+					"description": "DNs are sequences of RDNs; escape special characters correctly.",
+					"table": {
+						"headers": ["Rule", "Example", "Notes"],
+						"rows": [
+							["RDN uses attribute=value", "uid=alice", "Common RDNs: cn, uid, ou, dc."],
+							["DN is comma-separated", "uid=alice,ou=People,dc=example,dc=com", "Leftmost is most specific."],
+							["Escape special chars", "cn=Smith\\, Alice,ou=People,dc=example,dc=com", "Comma in value must be escaped."],
+							["Leading/trailing spaces", "cn=\\ Alice,ou=People,dc=example,dc=com", "Spaces at ends must be escaped."],
+							["UTF-8 supported", "cn=J\u00F6rg,dc=example,dc=com", "Some tools represent as UTF-8 directly." ]
+						]
+					},
+					"example": "# Good practice: always single-quote DNs in shell\nldapsearch -x -D 'cn=admin,dc=example,dc=com' -W -b 'ou=People,dc=example,dc=com' '(uid=alice)' dn"
+				},
+				{
+					"title": "LDIF basics",
+					"description": "LDIF is the standard text format for LDAP entries and change records.",
+					"table": {
+						"headers": ["LDIF element", "Meaning"],
+						"rows": [
+							["dn:", "Entry DN."],
+							["objectClass:", "Class membership (multiple allowed)."],
+							["attr: value", "Attribute values (multi-valued = repeated lines)."],
+							["changetype:", "Change record: add/modify/delete/modrdn."],
+							["add/replace/delete:", "Modify operations in change records."],
+							["-", "Separator between modify operations."],
+							["::", "Base64-encoded value follows." ]
+						]
+					},
+					"example": "# Entry LDIF example\ndn: uid=alice,ou=People,dc=example,dc=com\nobjectClass: inetOrgPerson\nobjectClass: organizationalPerson\nobjectClass: person\nobjectClass: top\nuid: alice\ncn: Alice Smith\nsn: Smith\nmail: alice@example.com\n\n# Modify LDIF example\ndn: uid=alice,ou=People,dc=example,dc=com\nchangetype: modify\nreplace: mail\nmail: alice.smith@example.com\n-\nadd: description\ndescription: added by automation"
+				}
+			]
+		},
+		{
+			"title": "Schema and ObjectClasses",
+			"description": "Understand and troubleshoot directory schema, required attributes, and constraints.",
+			"items": [
+				{
+					"title": "Common structural objectClasses",
+					"description": "Frequently used classes in many directories (OpenLDAP, 389 DS, AD LDS, etc.).",
+					"table": {
+						"headers": ["objectClass", "Typical use", "Notes"],
+						"rows": [
+							["organizationalUnit", "Containers (ou=People)", "Often used as DIT nodes."],
+							["groupOfNames", "Groups with `member` DNs", "Requires at least one member."],
+							["groupOfUniqueNames", "Groups with `uniqueMember`", "Similar semantics to groupOfNames."],
+							["posixAccount", "Unix account mapping", "uidNumber/gidNumber/homeDirectory/loginShell."],
+							["posixGroup", "Unix groups", "cn + gidNumber + memberUid (strings)."],
+							["inetOrgPerson", "User/person entries", "Common attributes: cn, sn, mail, uid."],
+							["device", "Device entries", "Can represent hardware or network devices." ]
+						]
+					},
+					"example": "# Discover schema details (OpenLDAP schema is under cn=schema,cn=config)\nldapsearch -Y EXTERNAL -H ldapi:/// -b 'cn=schema,cn=config' '(cn=*)' dn"
+				},
+				{
+					"title": "Inspect objectClass requirements",
+					"description": "Schema constraints often explain add/modify failures (missing MUST attrs, syntax mismatches).",
+					"table": {
+						"headers": ["Goal", "Approach"],
+						"rows": [
+							["Find required attributes", "Look up the objectClass definition (MUST / MAY)."],
+							["Find attribute syntax", "Look up attributeType syntax (Directory String, IA5String, DN, Integer, ...)."],
+							["Fix violations", "Add missing attrs, correct value types, or choose proper objectClass."],
+							["Check duplicates", "Some attributes are single-valued; multiple values will fail." ]
+						]
+					},
+					"example": "# Example: query schema for inetOrgPerson definitions (server-dependent)\nldapsearch -x -H ldap://ldap.example.com -b 'cn=subschema' -s base '(objectClass=*)' objectClasses"
+				}
+			]
+		},
+		{
+			"title": "LDAP Filters and Search Semantics",
+			"description": "Build correct filters and understand scopes, alias dereferencing, and operational attributes.",
+			"items": [
+				{
+					"title": "Filter syntax essentials",
+					"description": "LDAP filters are prefix notation with parentheses.",
+					"table": {
+						"headers": ["Type", "Example", "Meaning"],
+						"rows": [
+							["Equality", "(uid=alice)", "Attribute equals value."],
+							["Presence", "(mail=*)", "Attribute exists."],
+							["Substring", "(cn=Ali*)", "Starts/contains/ends match."],
+							["AND", "(&(objectClass=person)(mail=*))", "All conditions must match."],
+							["OR", "(|(uid=alice)(uid=bob))", "Any condition may match."],
+							["NOT", "(!(userAccountControl:1.2.840.113556.1.4.803:=2))", "Negation (AD example uses matching rule)." ]
+						]
+					},
+					"example": "# Return DNs for all users with mail in subtree\nldapsearch -x -H ldap://ldap.example.com -b 'dc=example,dc=com' -s sub '(&(objectClass=inetOrgPerson)(mail=*))' dn"
+				},
+				{
+					"title": "Search options that matter",
+					"description": "Control result formatting, scope, time/size limits, and attributes returned.",
+					"table": {
+						"headers": ["Option", "Meaning"],
+						"rows": [
+							["-b BASE", "Search base DN."],
+							["-s {base|one|sub}", "Search scope."],
+							["ATTRS...", "List attributes to return (e.g., cn mail)."],
+							["+", "Request operational attributes."],
+							["-z SIZE", "Client-requested size limit (server may enforce its own)."],
+							["-l SECONDS", "Client-requested time limit."],
+							["-LLL", "Clean LDIF output (no comments/version/dn wrapping extras)."],
+							["-o ldif-wrap=no", "Disable line wrapping (OpenLDAP clients)." ]
+						]
+					},
+					"example": "# Pull cn/mail plus operational attributes without wrapping\nldapsearch -x -LLL -o ldif-wrap=no -H ldap://ldap.example.com -b 'ou=People,dc=example,dc=com' '(uid=alice)' cn mail +"
+				}
+			]
+		},
+		{
+			"title": "Client Tools (OpenLDAP ldap* commands)",
+			"description": "The most common cross-platform CLI for LDAP operations.",
+			"items": [
+				{
+					"title": "ldapsearch",
+					"description": "Search and retrieve entries.",
+					"table": {
+						"headers": ["Flag", "Meaning"],
+						"rows": [
+							["-H URI", "Server URI (ldap://, ldaps://, ldapi:///)."],
+							["-x", "Simple bind (instead of SASL)."],
+							["-D BINDDN", "Bind DN."],
+							["-W", "Prompt for password."],
+							["-w PASS", "Password on command line (avoid for security)."],
+							["-y FILE", "Read password from file."],
+							["-b BASE", "Search base DN."],
+							["-s sub", "Scope subtree/one/base."],
+							["-E pr=1000/noprompt", "Paged results control (OpenLDAP client syntax)."],
+							["-ZZ", "Require StartTLS."],
+							["-Y GSSAPI", "SASL bind (Kerberos)." ]
+						]
+					},
+					"example": "# Simple bind search\nldapsearch -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W -b 'dc=example,dc=com' '(objectClass=*)' dn\n\n# Paged search\nldapsearch -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W -b 'dc=example,dc=com' -E pr=1000/noprompt '(objectClass=person)' dn"
+				},
+				{
+					"title": "ldapadd / ldapmodify / ldapdelete",
+					"description": "Create, change, and delete entries via LDIF.",
+					"table": {
+						"headers": ["Tool", "Purpose", "Common pattern"],
+						"rows": [
+							["ldapadd", "Add new entries", "ldapadd -x -H URI -D BINDDN -W -f add.ldif"],
+							["ldapmodify", "Modify existing entries", "ldapmodify -x -H URI -D BINDDN -W -f mod.ldif"],
+							["ldapdelete", "Delete entries", "ldapdelete -x -H URI -D BINDDN -W 'uid=alice,ou=People,dc=example,dc=com'" ]
+						]
+					},
+					"example": "# Add entries from LDIF\nldapadd -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W -f add.ldif\n\n# Modify an entry\nldapmodify -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W -f mod.ldif\n\n# Delete an entry\nldapdelete -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W 'uid=alice,ou=People,dc=example,dc=com'"
+				},
+				{
+					"title": "ldapwhoami / ldapcompare / ldappasswd",
+					"description": "Small tools for auth debugging and attribute comparisons.",
+					"table": {
+						"headers": ["Tool", "Use", "Example"],
+						"rows": [
+							["ldapwhoami", "Show bound identity (authzid)", "ldapwhoami -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W"],
+							["ldapcompare", "Compare an attribute to a value", "ldapcompare -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W 'uid=alice,ou=People,dc=example,dc=com' mail:alice@example.com"],
+							["ldappasswd", "Change password (server policy dependent)", "ldappasswd -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W -S 'uid=alice,ou=People,dc=example,dc=com'" ]
+						]
+					},
+					"example": "ldapwhoami -x -H ldap://ldap.example.com -D 'uid=alice,ou=People,dc=example,dc=com' -W"
+				}
+			]
+		},
+		{
+			"title": "Authentication, Authorization, and ACLs",
+			"description": "Bind methods, authorization identity, and server-side access control.",
+			"items": [
+				{
+					"title": "Bind types",
+					"description": null,
+					"table": {
+						"headers": ["Type", "How", "Notes"],
+						"rows": [
+							["Anonymous", "No bind credentials", "Often restricted; may allow limited reads."],
+							["Simple bind", "DN + password", "Use StartTLS/LDAPS to protect credentials."],
+							["SASL (GSSAPI)", "Kerberos", "Common in enterprise environments."],
+							["SASL (EXTERNAL)", "Client certificate / local socket", "Often used with ldapi:/// for admin tasks." ]
+						]
+					},
+					"example": "# SASL EXTERNAL over local ldapi socket (OpenLDAP cn=config admin)\nldapwhoami -Y EXTERNAL -H ldapi:///"
+				},
+				{
+					"title": "OpenLDAP olcAccess basics",
+					"description": "OpenLDAP ACLs are evaluated top-down; first match wins.",
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["to <what>", "Target (dn.subtree, attrs, filter, etc.)."],
+							["by <who>", "Subject (users, anonymous, dn.exact, group, self, ...)."],
+							["access", "Level (none, auth, compare, search, read, write, manage)."],
+							["order", "First matching rule stops evaluation."]
+						]
+					},
+					"example": "# Example ACL snippet (illustrative; edit via cn=config in real systems)\n# to attrs=userPassword\n#   by self write\n#   by anonymous auth\n#   by * none"
+				}
+			]
+		},
+		{
+			"title": "TLS, Certificates, and Security",
+			"description": "Secure binds, verify certificates, and troubleshoot TLS.",
+			"items": [
+				{
+					"title": "StartTLS and LDAPS",
+					"description": "Prefer StartTLS or LDAPS for anything involving credentials or sensitive attributes.",
+					"table": {
+						"headers": ["Method", "Client option", "Notes"],
+						"rows": [
+							["StartTLS", "-ZZ (OpenLDAP tools)", "Upgrade ldap:// connection to TLS."],
+							["LDAPS", "-H ldaps://host:636", "TLS from connect time."],
+							["CA trust", "TLS_CACERT / system trust store", "Clients must trust issuing CA."],
+							["Hostname verification", "Use correct SAN/CN", "Mismatch causes verify failure." ]
+						]
+					},
+					"example": "# StartTLS bind\nldapsearch -H ldap://ldap.example.com -ZZ -x -D 'cn=admin,dc=example,dc=com' -W -b 'dc=example,dc=com' '(objectClass=*)' dn"
+				},
+				{
+					"title": "TLS troubleshooting",
+					"description": "Validate cert chain and protocol negotiation.",
+					"table": {
+						"headers": ["Check", "Command"],
+						"rows": [
+							["Inspect server cert (LDAPS)", "openssl s_client -connect ldap.example.com:636 -showcerts"],
+							["Inspect StartTLS", "openssl s_client -connect ldap.example.com:389 -starttls ldap -showcerts"],
+							["Force CA file (OpenLDAP tools)", "LDAPTLS_CACERT=/path/ca.pem ldapsearch ..."],
+							["Verbose TLS debug", "LDAPTLS_TRACE=1 ldapsearch ..." ]
+						]
+					},
+					"example": "openssl s_client -connect ldap.example.com:389 -starttls ldap -showcerts </dev/null"
+				}
+			]
+		},
+		{
+			"title": "OpenLDAP Administration (cn=config)",
+			"description": "Administer OpenLDAP in runtime configuration mode (recommended).",
+			"items": [
+				{
+					"title": "Key cn=config DNs",
+					"description": null,
+					"table": {
+						"headers": ["DN", "Purpose"],
+						"rows": [
+							["cn=config", "Root of runtime config."],
+							["cn=schema,cn=config", "Loaded schema definitions."],
+							["olcDatabase={0}config,cn=config", "Config database."],
+							["olcDatabase={1}mdb,cn=config", "Typical main DB (number varies)."],
+							["cn=module{0},cn=config", "Module load configuration."],
+							["cn=monitor", "Monitoring database root (if enabled)." ]
+						]
+					},
+					"example": "# Enumerate databases (OpenLDAP)\nldapsearch -Y EXTERNAL -H ldapi:/// -b 'cn=config' '(objectClass=olcDatabaseConfig)' dn"
+				},
+				{
+					"title": "Modify cn=config via ldapmodify",
+					"description": "Most OpenLDAP admin is LDIF changes against cn=config using SASL EXTERNAL over ldapi:///.",
+					"table": {
+						"headers": ["Task", "DN target", "Notes"],
+						"rows": [
+							["Set loglevel", "cn=config", "Change olcLogLevel."],
+							["Add indexes", "olcDatabase=...,cn=config", "Change olcDbIndex."],
+							["Tune DB", "olcDatabase=...,cn=config", "MDB cache size, checkpoints, etc."],
+							["Add overlay", "olcDatabase=...,cn=config", "ppolicy, memberof, syncprov, etc." ]
+						]
+					},
+					"example": "# Example: set log level (illustrative)\ncat > set-loglevel.ldif <<'LDIF'\ndn: cn=config\nchangetype: modify\nreplace: olcLogLevel\nolcLogLevel: stats sync\nLDIF\n\nldapmodify -Y EXTERNAL -H ldapi:/// -f set-loglevel.ldif"
+				}
+			]
+		},
+		{
+			"title": "Backup, Restore, and Maintenance",
+			"description": "Safely export/import directory data and keep databases healthy.",
+			"items": [
+				{
+					"title": "OpenLDAP slap* tools",
+					"description": "Offline tools are powerful; stop slapd/puppetserver-managed service when required.",
+					"table": {
+						"headers": ["Tool", "Use", "Notes"],
+						"rows": [
+							["slapcat", "Export DB to LDIF", "Often safe online for read-only export; verify docs."],
+							["slapadd", "Import LDIF into DB", "Usually offline; rebuild database."],
+							["slapindex", "Build/rebuild indexes", "Often requires offline or specific flags."],
+							["slaptest", "Validate config", "Checks slapd.conf or cn=config file layout." ]
+						]
+					},
+					"example": "# Export main DB to LDIF (paths depend on distro)\nslapcat -n 1 > backup.ldif\n\n# Rebuild indexes (offline recommended)\n# systemctl stop slapd\n# slapindex -n 1\n# systemctl start slapd"
+				}
+			]
+		},
+		{
+			"title": "Indexing and Performance",
+			"description": "Make searches fast and predictable with correct indexing and limits.",
+			"items": [
+				{
+					"title": "Index strategy (OpenLDAP MDB)",
+					"description": "Index attributes used in frequent filters and joins.",
+					"table": {
+						"headers": ["Index type", "When to use", "Example (conceptual)"],
+						"rows": [
+							["eq", "Equality filters", "(uid=alice)"],
+							["pres", "Presence filters", "(mail=*)"],
+							["sub", "Substring filters", "(cn=Ali*)"],
+							["approx", "Approx match (rare)", "(cn~=alice)" ]
+						]
+					},
+					"example": "# Example LDIF to add an index (dn will vary)\n# dn: olcDatabase={1}mdb,cn=config\n# changetype: modify\n# add: olcDbIndex\n# olcDbIndex: uid eq\n# olcDbIndex: mail eq,pres,sub"
+				},
+				{
+					"title": "Client-side paging",
+					"description": "Large directories require paging to avoid server size limits and huge responses.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Page through users", "ldapsearch -x -H ldap://ldap.example.com -b 'dc=example,dc=com' -E pr=1000/noprompt '(objectClass=inetOrgPerson)' dn"],
+							["Return minimal attrs", "ldapsearch ... '(filter)' dn"],
+							["Disable wrapping", "ldapsearch -o ldif-wrap=no ..." ]
+						]
+					},
+					"example": "ldapsearch -x -LLL -o ldif-wrap=no -H ldap://ldap.example.com -b 'dc=example,dc=com' -E pr=500/noprompt '(objectClass=*)' dn"
+				}
+			]
+		},
+		{
+			"title": "Replication (High-Level)",
+			"description": "Common replication concepts across LDAP servers (OpenLDAP syncrepl, 389 DS, vendor systems).",
+			"items": [
+				{
+					"title": "Replication concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Provider / Consumer", "Source server vs replica client."],
+							["Multi-master", "Multiple writable masters; conflict handling required."],
+							["CSN/Change tracking", "Change sequence numbers or equivalent to identify updates."],
+							["RefreshOnly vs RefreshAndPersist", "Poll vs long-lived sync sessions (OpenLDAP syncrepl)."],
+							["TLS/Bind for replication", "Replication binds should use TLS and least privilege." ]
+						]
+					},
+					"example": "# syncrepl is configured server-side; client-side verification usually means\n# comparing entryUUID/modifyTimestamp between nodes, and checking provider logs."
+				}
+			]
+		},
+		{
+			"title": "Active Directory LDAP Interop",
+			"description": "LDAP is the access protocol; AD has additional semantics (Kerberos, UAC flags, matching rules).",
+			"items": [
+				{
+					"title": "AD-specific attributes and behaviors",
+					"description": null,
+					"table": {
+						"headers": ["Item", "Notes"],
+						"rows": [
+							["Base DN", "Often DC=corp,DC=example,DC=com."],
+							["Users", "objectClass=user, but person/user schema differs from inetOrgPerson."],
+							["Groups", "group objects; membership via member attribute (DNs)."],
+							["sAMAccountName / userPrincipalName", "Common logon attributes."],
+							["userAccountControl", "Bitmask for enabled/disabled, password settings, etc."],
+							["Matching rules", "Special OIDs for bitwise and DN-chain matching." ]
+						]
+					},
+					"example": "# AD: find disabled users (bitwise match rule 1.2.840.113556.1.4.803)\nldapsearch -H ldap://dc.corp.example.com -x -D 'CORP\\ldapbind' -W -b 'DC=corp,DC=example,DC=com' '(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=2))' dn"
+				},
+				{
+					"title": "AD: DN chain matching",
+					"description": "Useful for nested group membership queries (memberOf:1.2.840.113556.1.4.1941:=...).",
+					"table": {
+						"headers": ["Goal", "Filter"],
+						"rows": [
+							["Users in group (nested)", "(memberOf:1.2.840.113556.1.4.1941:=CN=Group,OU=Groups,DC=corp,DC=example,DC=com)"],
+							["Computers in OU subtree", "(distinguishedName=*,OU=Servers,DC=corp,DC=example,DC=com)" ]
+						]
+					},
+					"example": "ldapsearch -H ldap://dc.corp.example.com -x -D 'CORP\\ldapbind' -W -b 'DC=corp,DC=example,DC=com' '(&(objectClass=user)(memberOf:1.2.840.113556.1.4.1941:=CN=VPNUsers,OU=Groups,DC=corp,DC=example,DC=com))' sAMAccountName"
+				}
+			]
+		},
+		{
+			"title": "Scripting and Automation",
+			"description": "Practical patterns for automating LDAP queries and updates.",
+			"items": [
+				{
+					"title": "Shell scripting patterns",
+					"description": "Use -LLL and -o ldif-wrap=no for predictable parsing; prefer JSON tools when possible.",
+					"table": {
+						"headers": ["Task", "Pattern"],
+						"rows": [
+							["Read password securely", "Use -W (prompt) or -y file (protected permissions)."],
+							["Avoid wrapping", "ldapsearch -o ldif-wrap=no"],
+							["Extract values", "ldapsearch ... attr | sed -n 's/^attr: //p'"],
+							["Generate LDIF", "Use heredocs with single-quoted delimiter (<<'LDIF')." ]
+						]
+					},
+					"example": "# List all uids under ou=People\nldapsearch -x -LLL -o ldif-wrap=no -H ldap://ldap.example.com -b 'ou=People,dc=example,dc=com' '(uid=*)' uid |\n  sed -n 's/^uid: //p'"
+				},
+				{
+					"title": "Python (ldap3) quickstart",
+					"description": "Example using the ldap3 library (install: pip install ldap3).",
+					"table": {
+						"headers": ["Concept", "ldap3"],
+						"rows": [
+							["Connect", "Server('ldap.example.com', use_ssl=True)"],
+							["Bind", "Connection(server, user=bind_dn, password=pw, auto_bind=True)"],
+							["Search", "conn.search(base, filter, attributes=[...])"],
+							["Modify", "conn.modify(dn, {'mail': [('REPLACE', ['x@y'])]})" ]
+						]
+					},
+					"example": "from ldap3 import Server, Connection, ALL\n\nserver = Server('ldap.example.com', get_info=ALL, use_ssl=True)\nconn = Connection(server, user='cn=admin,dc=example,dc=com', password='secret', auto_bind=True)\n\nconn.search('dc=example,dc=com', '(&(objectClass=inetOrgPerson)(uid=alice))', attributes=['cn','mail'])\nfor entry in conn.entries:\n    print(entry.entry_dn, entry.cn, entry.mail)\n\nconn.unbind()"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting and Diagnostics",
+			"description": "Fast triage for connectivity, auth, schema, and search issues.",
+			"items": [
+				{
+					"title": "Common failure modes",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "What to check"],
+						"rows": [
+							["Can't connect", "Firewall/DNS/service down", "Test TCP port (389/636), server logs, name resolution."],
+							["Invalid credentials", "Bad bind DN/password, auth backend", "Verify bind DN, try ldapwhoami, check account lockout/policies."],
+							["No such object", "Wrong base DN or DN", "Confirm base DN; search higher in tree."],
+							["Insufficient access", "ACL denies", "Review server ACLs; bind as admin; confirm authzid."],
+							["Constraint violation", "Schema/attribute rules", "Check objectClass MUST attrs and attribute syntax."],
+							["Size limit exceeded", "Large result set", "Use paging control; narrow filters; return fewer attrs."],
+							["TLS handshake failure", "CA trust/cert mismatch", "Use openssl s_client and LDAPTLS_TRACE." ]
+						]
+					},
+					"example": "# Connectivity\nss -lntp | grep -E '389|636'\n\n# Who am I\nldapwhoami -x -H ldap://ldap.example.com -D 'cn=admin,dc=example,dc=com' -W\n\n# Explain TLS\nLDAPTLS_TRACE=1 ldapsearch -H ldap://ldap.example.com -ZZ -x -b 'dc=example,dc=com' '(objectClass=*)' dn"
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,621 @@
+{
+	"title": "Ansible",
+	"description": "A comprehensive cheatsheet for Ansible automation: installation, inventories, ad-hoc commands, playbooks, variables, templating, roles/collections, vault, debugging, testing, and operational best practices.",
+	"language": "yaml",
+	"categories": [
+		{
+			"title": "Installation and Environment",
+			"description": "Install Ansible and validate your control node environment.",
+			"items": [
+				{
+					"title": "Install (common methods)",
+					"description": "Use a Python venv when you want reproducible tooling; use OS packages when you want system integration.",
+					"table": {
+						"headers": ["Method", "Command", "Notes"],
+						"rows": [
+							["Python venv (recommended)", "python3 -m venv .venv && source .venv/bin/activate && pip install -U pip && pip install ansible", "Works on most Linux/macOS control nodes."],
+							["pipx", "pipx install ansible", "Isolates CLI tools without manual venv activation."],
+							["Debian/Ubuntu", "sudo apt-get update && sudo apt-get install -y ansible", "Version may lag behind PyPI."],
+							["RHEL/CentOS/Fedora", "sudo dnf install -y ansible", "Package name/version varies by distro."],
+							["macOS (Homebrew)", "brew install ansible", "Convenient, usually up to date."],
+							["Windows", "Use WSL for control node", "Ansible control is most common on Linux/WSL."]
+						]
+					},
+					"example": "python3 -m venv .venv\nsource .venv/bin/activate\npip install -U pip ansible\nansible --version"
+				},
+				{
+					"title": "Quick sanity checks",
+					"description": "Confirm versions and configuration paths.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ansible --version", "Shows Ansible core version and config file locations."],
+							["ansible-config dump --only-changed", "Show effective (overridden) settings."],
+							["ansible-doc -l | head", "List modules (short list)."],
+							["ansible-galaxy --version", "Galaxy client version."],
+							["python -c 'import ansible; print(ansible.__version__)'", "Verify Python module import."]
+						]
+					},
+					"example": "ansible --version\nansible-config dump --only-changed"
+				}
+			]
+		},
+		{
+			"title": "Inventory",
+			"description": "Define hosts and groups; inventories can be INI, YAML, or dynamic plugins.",
+			"items": [
+				{
+					"title": "Inventory basics",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning", "Tip"],
+						"rows": [
+							["Host", "An addressable node (SSH/WinRM).", "Use stable names; store connection vars in inventory/group_vars."],
+							["Group", "A collection of hosts.", "Group hosts by function/environment."],
+							["Group vars", "Variables applied to a group.", "Prefer group_vars/host_vars directories."],
+							["Dynamic inventory", "Inventory generated from cloud/CMDB.", "Cache results; validate with --graph/--list."],
+							["Connection vars", "ansible_user, ansible_port, etc.", "Keep secrets in Vault, not plaintext."]
+						]
+					},
+					"example": "# Show inventory structure\nansible-inventory -i inventory.ini --graph"
+				},
+				{
+					"title": "ansible-inventory commands",
+					"description": "Validate and troubleshoot inventories.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ansible-inventory -i inventory.ini --list", "Dump resolved inventory as JSON."],
+							["ansible-inventory -i inventory.ini --graph", "Show group/host relationships."],
+							["ansible-inventory -i inventory.ini --host host1", "Show variables for a specific host."],
+							["ansible all -i inventory.ini --list-hosts", "Confirm host matching for a pattern."]
+						]
+					},
+					"example": "ansible-inventory -i inventory.yml --list | jq '.all.children'"
+				},
+				{
+					"title": "Host patterns",
+					"description": "How to target hosts.",
+					"table": {
+						"headers": ["Pattern", "Meaning"],
+						"rows": [
+							["all", "All hosts."],
+							["web", "Group named web."],
+							["web:&prod", "Intersection: hosts in both web and prod."],
+							["web:!prod", "Difference: web excluding prod."],
+							["web[0:2]", "Slice range for numbered hosts (pattern-dependent)."],
+							["host1,host2", "Comma-separated hosts."],
+							["*.example.com", "Wildcard hostnames (inventory-dependent)."]
+						]
+					},
+					"example": "ansible 'web:&prod' -i inventory.ini -m ping"
+				}
+			]
+		},
+		{
+			"title": "Configuration (ansible.cfg)",
+			"description": "Tune behavior: inventory path, forks, privilege escalation, SSH args, etc.",
+			"items": [
+				{
+					"title": "Config precedence",
+					"description": "Ansible loads configuration from several locations; highest precedence typically wins.",
+					"table": {
+						"headers": ["Order (common)", "Location"],
+						"rows": [
+							["1", "ANSIBLE_CONFIG env var"],
+							["2", "./ansible.cfg (project directory)"],
+							["3", "~/.ansible.cfg"],
+							["4", "/etc/ansible/ansible.cfg"]
+						]
+					},
+					"example": "ansible --version"
+				},
+				{
+					"title": "ansible-config quick usage",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ansible-config list", "List all configuration options."],
+							["ansible-config dump", "Dump current effective config."],
+							["ansible-config view", "Show the active config file contents."],
+							["ansible-config dump --only-changed", "Show only overrides."]
+						]
+					},
+					"example": "ANSIBLE_CONFIG=./ansible.cfg ansible-config dump --only-changed"
+				}
+			]
+		},
+		{
+			"title": "Ad-hoc Commands",
+			"description": "One-liners to run modules without writing a playbook.",
+			"items": [
+				{
+					"title": "Common ad-hoc patterns",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Connectivity check", "ansible all -i inventory.ini -m ping"],
+							["Run a shell command", "ansible web -i inventory.ini -m shell -a 'uptime'"],
+							["Use command module", "ansible web -i inventory.ini -m command -a 'id'"],
+							["Copy a file", "ansible web -i inventory.ini -m copy -a 'src=./file.conf dest=/etc/file.conf mode=0644'"],
+							["Fetch a file", "ansible web -i inventory.ini -m fetch -a 'src=/var/log/syslog dest=./logs/ flat=yes'"],
+							["Manage a service", "ansible web -i inventory.ini -m service -a 'name=nginx state=restarted' -b"],
+							["Gather facts", "ansible web -i inventory.ini -m setup"],
+							["Run as sudo", "ansible web -i inventory.ini -m command -a 'whoami' -b"],
+							["Limit", "ansible-playbook site.yml -i inventory.ini --limit 'web:&prod'"],
+							["Check mode", "ansible web -i inventory.ini -m apt -a 'name=nginx state=present' -b --check"]
+						]
+					},
+					"example": "ansible all -i inventory.ini -m ping\nansible web -i inventory.ini -m shell -a 'df -h' -b"
+				},
+				{
+					"title": "Useful flags",
+					"description": "Flags that apply to both ad-hoc and playbook runs.",
+					"table": {
+						"headers": ["Flag", "Meaning"],
+						"rows": [
+							["-i", "Inventory path."],
+							["-l / --limit", "Limit to a host pattern."],
+							["-u", "Remote user."],
+							["-b / --become", "Privilege escalation (sudo)."],
+							["--become-user", "Run as a specific user."],
+							["-K", "Prompt for become password."],
+							["-k", "Prompt for SSH password (prefer keys)."],
+							["-e", "Extra vars (key=value or @file.yml)."],
+							["-v/-vv/-vvv", "Verbosity; increases debug output."],
+							["--check", "Dry-run; not all modules fully support."],
+							["--diff", "Show diffs when files/templates change."],
+							["--forks", "Parallelism; default depends on config."],
+							["--timeout", "SSH timeout."]
+						]
+					},
+					"example": "ansible-playbook site.yml -i inventory.ini -l web -b --check --diff -vv"
+				}
+			]
+		},
+		{
+			"title": "Playbooks",
+			"description": "YAML automation: plays, tasks, handlers, and idempotency.",
+			"items": [
+				{
+					"title": "Playbook structure",
+					"description": "A play targets hosts and runs tasks in order.",
+					"table": {
+						"headers": ["Key", "What it is"],
+						"rows": [
+							["hosts", "Target hosts/group."],
+							["become", "Privilege escalation for tasks."],
+							["vars", "Variables for the play."],
+							["tasks", "Ordered list of tasks."],
+							["handlers", "Triggered actions (usually service restarts)."],
+							["roles", "Reusable sets of tasks/vars/templates."],
+							["tags", "Selective execution controls."],
+							["serial", "Rolling updates: number/percentage of hosts at a time."],
+							["strategy", "Execution strategy (linear/free)."],
+							["pre_tasks/post_tasks", "Run before/after roles and tasks."]
+						]
+					},
+					"example": "---\n- name: Example play\n  hosts: web\n  become: true\n  tasks:\n    - name: Ensure nginx installed\n      ansible.builtin.package:\n        name: nginx\n        state: present"
+				},
+				{
+					"title": "ansible-playbook common commands",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ansible-playbook site.yml -i inventory.ini", "Run a playbook."],
+							["ansible-playbook site.yml -i inventory.ini --check --diff", "Dry-run with diffs."],
+							["ansible-playbook site.yml -i inventory.ini -l web", "Limit to hosts."],
+							["ansible-playbook site.yml -i inventory.ini --tags deploy", "Only tasks tagged deploy."],
+							["ansible-playbook site.yml -i inventory.ini --skip-tags slow", "Skip tasks tagged slow."],
+							["ansible-playbook site.yml -i inventory.ini --start-at-task 'Task name'", "Start execution at a task name."],
+							["ansible-playbook site.yml -i inventory.ini --step", "Confirm each task before running."],
+							["ansible-playbook site.yml -i inventory.ini --list-tasks", "List tasks without running."],
+							["ansible-playbook site.yml -i inventory.ini --list-tags", "List tags."],
+							["ansible-playbook site.yml -i inventory.ini --syntax-check", "Parse-only validation."]
+						]
+					},
+					"example": "ansible-playbook site.yml -i inventory.ini --syntax-check\nansible-playbook site.yml -i inventory.ini --list-tasks"
+				},
+				{
+					"title": "Idempotency tips",
+					"description": "Ansible is strongest when tasks can be run repeatedly without causing change.",
+					"table": {
+						"headers": ["Tip", "Example"],
+						"rows": [
+							["Prefer modules over shell", "Use package/service/template instead of apt/systemctl/sed."],
+							["Use handlers", "Restart services only when notified by a change."],
+							["Use check mode", "Validate idempotency with --check and repeat runs."],
+							["Use changed_when/failed_when", "Classify command output correctly."],
+							["Use creates/removes", "Prevent re-running commands unnecessarily."],
+							["Use register", "Capture outputs and branch on them."]
+						]
+					},
+					"example": "- name: Run only if file absent\n  ansible.builtin.command: /usr/local/bin/init\n  args:\n    creates: /etc/app/initialized"
+				}
+			]
+		},
+		{
+			"title": "Modules (Core Toolkit)",
+			"description": "Know the most-used built-in modules and how to discover docs.",
+			"items": [
+				{
+					"title": "Module discovery",
+					"description": "Use ansible-doc to find module names and options.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ansible-doc -l | grep package", "Search module list."],
+							["ansible-doc ansible.builtin.package", "Full docs for a module."],
+							["ansible-doc -s ansible.builtin.template", "Show a module's YAML snippet."],
+							["ansible-doc -t lookup -l", "List lookup plugins."],
+							["ansible-doc -t filter -l", "List Jinja2 filters available."]
+						]
+					},
+					"example": "ansible-doc ansible.builtin.copy\nansible-doc -s ansible.builtin.service"
+				},
+				{
+					"title": "Common modules",
+					"description": null,
+					"table": {
+						"headers": ["Area", "Modules"],
+						"rows": [
+							["Packages", "ansible.builtin.package, ansible.builtin.apt, ansible.builtin.dnf, ansible.builtin.yum"],
+							["Services", "ansible.builtin.service, ansible.builtin.systemd"],
+							["Files", "ansible.builtin.file, ansible.builtin.copy, ansible.builtin.template, ansible.builtin.lineinfile, ansible.builtin.blockinfile"],
+							["Users/Groups", "ansible.builtin.user, ansible.builtin.group"],
+							["Commands", "ansible.builtin.command, ansible.builtin.shell"],
+							["Facts", "ansible.builtin.setup"],
+							["Networking", "ansible.builtin.uri, ansible.builtin.get_url"],
+							["Archiving", "ansible.builtin.unarchive"],
+							["System", "ansible.builtin.reboot, ansible.builtin.cron"],
+							["Control flow", "ansible.builtin.include_tasks, ansible.builtin.import_tasks"],
+							["Debug", "ansible.builtin.debug, ansible.builtin.assert"],
+							["Secrets", "ansible.builtin.vault (via ansible-vault CLI)"]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Variables, Facts, and Precedence",
+			"description": "How data flows through inventories, plays, roles, and extra vars.",
+			"items": [
+				{
+					"title": "Variable precedence (practical view)",
+					"description": "Exact precedence is detailed; these rules usually resolve confusion.",
+					"table": {
+						"headers": ["Rule", "Guidance"],
+						"rows": [
+							["Extra vars win", "`-e` values override most other sources."],
+							["Role defaults are lowest", "Use defaults/main.yml for safe defaults."],
+							["Inventory/group/host vars", "Prefer group_vars/host_vars for environment and host-specific config."],
+							["Play vars", "Good for play-scoped configuration."],
+							["Registered vars", "Created during execution; exist after the task runs."],
+							["Facts", "Gathered by setup; can be disabled for speed."]
+						]
+					},
+					"example": "ansible-config dump | grep -i DEFAULT_GATHERING"
+				},
+				{
+					"title": "Gathering facts",
+					"description": "Facts are useful but can be slow; you can limit or disable.",
+					"table": {
+						"headers": ["Task", "How"],
+						"rows": [
+							["Gather facts (default)", "Set `gather_facts: true` (default)."],
+							["Disable facts", "Set `gather_facts: false` for faster runs."],
+							["Subset facts", "Use `gather_subset` to reduce overhead."],
+							["Show facts", "Use `debug: var=ansible_facts` or ad-hoc `-m setup`."]
+						]
+					},
+					"example": "- hosts: all\n  gather_facts: false\n  tasks:\n    - debug:\n        msg: 'Facts disabled for speed'"
+				},
+				{
+					"title": "Register, changed_when, failed_when",
+					"description": "Control task outcomes when using command/shell.",
+					"table": {
+						"headers": ["Feature", "Example"],
+						"rows": [
+							["register", "register: cmd_out"],
+							["changed_when", "changed_when: false"],
+							["failed_when", "failed_when: cmd_out.rc != 0 and 'allowed' not in cmd_out.stderr"],
+							["ignore_errors", "ignore_errors: true (use sparingly)"],
+							["check_mode", "check_mode: false (force a task to run even in --check)"]
+						]
+					},
+					"example": "- name: Query version\n  ansible.builtin.command: myapp --version\n  register: ver\n  changed_when: false\n  failed_when: ver.rc != 0\n\n- debug:\n    var: ver.stdout"
+				}
+			]
+		},
+		{
+			"title": "Jinja2 Templating",
+			"description": "Templates, filters, tests, and safe rendering patterns.",
+			"items": [
+				{
+					"title": "template module basics",
+					"description": "Renders a Jinja2 template on the control node and copies it to the target.",
+					"table": {
+						"headers": ["Task", "Snippet"],
+						"rows": [
+							["Render a config", "ansible.builtin.template: src=app.conf.j2 dest=/etc/app/app.conf mode=0644"],
+							["Show diffs", "Run with `--diff` to see template changes."],
+							["Trigger handler", "Use `notify` to restart when template changes."]
+						]
+					},
+					"example": "- name: Deploy config\n  ansible.builtin.template:\n    src: nginx.conf.j2\n    dest: /etc/nginx/nginx.conf\n  notify: Restart nginx\n\nhandlers:\n  - name: Restart nginx\n    ansible.builtin.service:\n      name: nginx\n      state: restarted"
+				},
+				{
+					"title": "Common filters/tests",
+					"description": null,
+					"table": {
+						"headers": ["Type", "Examples"],
+						"rows": [
+							["Filters", "default, join, split, regex_search, regex_replace, to_json, to_yaml, from_json, from_yaml"],
+							["Tests", "defined, undefined, succeeded, failed, match, search"],
+							["Data shaping", "dict2items, items2dict, map, select, reject, unique"],
+							["Dates", "strftime (limited), custom handling via facts"],
+							["IP/network", "ipaddr filter (community.general)" ]
+						]
+					},
+					"example": "# Example in a template\nserver_name {{ fqdn | default(inventory_hostname) }};\n\n# Example in YAML\n- debug: msg={{ mylist | unique | join(',') }}"
+				}
+			]
+		},
+		{
+			"title": "Control Flow: Loops, Conditionals, Handlers",
+			"description": "Make playbooks expressive while remaining readable.",
+			"items": [
+				{
+					"title": "Loops",
+					"description": "Prefer modern loop syntax over legacy with_items.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["loop list", "loop: ['a','b','c']"],
+							["loop dict items", "loop: {{ mymap | dict2items }}"],
+							["loop with index", "loop_control: index_var: idx"],
+							["label", "loop_control: label: '{{ item.name }}'"],
+							["until/retries/delay", "until: result.rc == 0; retries: 5; delay: 3"]
+						]
+					},
+					"example": "- name: Create users\n  ansible.builtin.user:\n    name: '{{ item }}'\n    state: present\n  loop:\n    - alice\n    - bob"
+				},
+				{
+					"title": "Conditionals (when)",
+					"description": "Use when to gate tasks based on facts or vars.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["OS conditional", "when: ansible_facts.os_family == 'Debian'"],
+							["Var defined", "when: myvar is defined"],
+							["Multiple conditions", "when: condition1 and condition2"],
+							["Block with when", "block: ...; when: ..."],
+							["Changed-based handlers", "notify: Restart service (only triggers on change)"]
+						]
+					},
+					"example": "- block:\n    - name: Install nginx\n      ansible.builtin.apt: name=nginx state=present\n  when: ansible_facts.os_family == 'Debian'"
+				},
+				{
+					"title": "Handlers",
+					"description": "Handlers run once at the end of a play (or when flushed), only when notified.",
+					"table": {
+						"headers": ["Feature", "How"],
+						"rows": [
+							["notify", "notify: Restart nginx"],
+							["listen", "listen: 'restart web' (multiple handlers can listen on same name)"],
+							["meta: flush_handlers", "Force handlers to run immediately."],
+							["Multiple notifies", "A handler runs once even if notified many times."]
+						]
+					},
+					"example": "- name: Flush handlers now\n  ansible.builtin.meta: flush_handlers"
+				}
+			]
+		},
+		{
+			"title": "Roles and Collections",
+			"description": "Structure automation for reuse and maintainability.",
+			"items": [
+				{
+					"title": "Role layout",
+					"description": "Standard role directory structure.",
+					"table": {
+						"headers": ["Path", "Purpose"],
+						"rows": [
+							["roles/myrole/tasks/main.yml", "Main tasks entry."],
+							["roles/myrole/handlers/main.yml", "Handlers."],
+							["roles/myrole/templates/", "Jinja templates."],
+							["roles/myrole/files/", "Static files."],
+							["roles/myrole/defaults/main.yml", "Lowest-precedence vars."],
+							["roles/myrole/vars/main.yml", "Higher-precedence vars (use carefully)."],
+							["roles/myrole/meta/main.yml", "Dependencies and metadata."],
+							["roles/myrole/tests/", "Optional tests."]
+						]
+					},
+					"example": "ansible-galaxy role init myrole"
+				},
+				{
+					"title": "ansible-galaxy essentials",
+					"description": "Install and manage roles/collections.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ansible-galaxy role init myrole", "Create a skeleton role."],
+							["ansible-galaxy install geerlingguy.nginx", "Install a Galaxy role."],
+							["ansible-galaxy collection install community.general", "Install a collection."],
+							["ansible-galaxy collection list", "List installed collections."],
+							["ansible-galaxy install -r requirements.yml", "Install dependencies from a file."],
+							["ansible-galaxy collection install -r requirements.yml", "Collections via requirements."]
+						]
+					},
+					"example": "cat > requirements.yml <<'YML'\n---\ncollections:\n  - name: community.general\nroles:\n  - name: geerlingguy.nginx\nYML\n\nansible-galaxy collection install -r requirements.yml\nansible-galaxy install -r requirements.yml"
+				},
+				{
+					"title": "Collections vs roles",
+					"description": "Collections package modules/plugins/roles; roles are mainly tasks+content.",
+					"table": {
+						"headers": ["Thing", "Contains"],
+						"rows": [
+							["Role", "Tasks, handlers, templates, files, vars."],
+							["Collection", "Modules, plugins, roles, docs, and more."],
+							["FQCN", "Fully-qualified collection name, e.g. ansible.builtin.copy."]
+						]
+					},
+					"example": "# Prefer FQCN in playbooks\n- ansible.builtin.copy:\n    src: a\n    dest: /tmp/a"
+				}
+			]
+		},
+		{
+			"title": "Secrets and ansible-vault",
+			"description": "Encrypt sensitive vars and files.",
+			"items": [
+				{
+					"title": "Vault commands",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ansible-vault create secrets.yml", "Create an encrypted file."],
+							["ansible-vault edit secrets.yml", "Edit encrypted file."],
+							["ansible-vault view secrets.yml", "View decrypted contents."],
+							["ansible-vault encrypt vars.yml", "Encrypt an existing file."],
+							["ansible-vault decrypt vars.yml", "Decrypt (use carefully)."],
+							["ansible-vault rekey secrets.yml", "Change vault password."],
+							["ansible-vault encrypt_string 'value' --name 'mysecret'", "Encrypt a single value for inline vars."]
+						]
+					},
+					"example": "ansible-vault encrypt_string 'SuperSecret' --name 'db_password'"
+				},
+				{
+					"title": "Using vault in runs",
+					"description": "Provide vault password via prompt, file, or external secret manager integration.",
+					"table": {
+						"headers": ["Method", "Command"],
+						"rows": [
+							["Prompt", "ansible-playbook site.yml --ask-vault-pass"],
+							["Password file", "ansible-playbook site.yml --vault-password-file .vault-pass"],
+							["Multiple vault IDs", "ansible-playbook site.yml --vault-id dev@prompt --vault-id prod@.prod-pass"],
+							["Vault-encrypted vars", "vars_files: - secrets.yml" ]
+						]
+					},
+					"example": "ansible-playbook site.yml -i inventory.ini --vault-id dev@prompt"
+				}
+			]
+		},
+		{
+			"title": "Networking and Connections (SSH/WinRM)",
+			"description": "Connection plugins, SSH args, and privilege escalation.",
+			"items": [
+				{
+					"title": "SSH common settings",
+					"description": "Most Linux targets use SSH; ensure key-based auth.",
+					"table": {
+						"headers": ["Setting", "Where", "Meaning"],
+						"rows": [
+							["ansible_user", "inventory/group_vars/host_vars", "Remote username."],
+							["ansible_port", "inventory", "SSH port."],
+							["ansible_ssh_private_key_file", "inventory", "Key path."],
+							["ansible_ssh_common_args", "inventory", "Extra SSH options (ProxyJump, etc.)."],
+							["become", "play/task", "Use sudo."],
+							["become_method", "play/task", "sudo/su/etc."],
+							["become_user", "play/task", "User to become."]
+						]
+					},
+					"example": "ansible all -i inventory.ini -m ping -u ubuntu --private-key ~/.ssh/id_rsa"
+				},
+				{
+					"title": "Windows targets (overview)",
+					"description": "Windows automation is typically over WinRM; requires extra setup.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["Connection", "ansible_connection=winrm"],
+							["Auth", "NTLM/Kerberos/Basic (depends on environment)"],
+							["Port", "Default 5985 (HTTP) / 5986 (HTTPS)"],
+							["Modules", "Use ansible.windows and community.windows collections"],
+							["Python", "Not required on Windows hosts; Ansible uses PowerShell/WinRM"]
+						]
+					},
+					"example": "ansible-galaxy collection install ansible.windows community.windows"
+				}
+			]
+		},
+		{
+			"title": "Debugging, Logging, and Troubleshooting",
+			"description": "Diagnose failures with verbosity, diffs, and targeted runs.",
+			"items": [
+				{
+					"title": "Debug techniques",
+					"description": null,
+					"table": {
+						"headers": ["Technique", "How"],
+						"rows": [
+							["Increase verbosity", "Use -vvv to see SSH, module args, and failures."],
+							["Show diffs", "Use --diff for template/copy changes."],
+							["Narrow scope", "Use --limit and --tags."],
+							["Print variables", "Use debug: var=... or debug: msg=..."],
+							["Assert expectations", "Use assert module for invariants."],
+							["Run interactively", "Use --step or --start-at-task."],
+							["Syntax check", "Use --syntax-check early."],
+							["Check mode", "Use --check to see planned changes."]
+						]
+					},
+					"example": "ansible-playbook site.yml -i inventory.ini -l web --tags deploy -vvv --diff"
+				},
+				{
+					"title": "Common error patterns",
+					"description": null,
+					"table": {
+						"headers": ["Error", "Likely cause", "Fix"],
+						"rows": [
+							["UNREACHABLE", "SSH auth/network", "Check keys, firewall, inventory vars, DNS."],
+							["Permission denied", "Missing become or wrong user", "Add become, correct user, ensure sudo rights."],
+							["Template fails", "Undefined variable", "Use defaults, `| default(...)`, or ensure vars defined."],
+							["Changed every run", "Non-idempotent command", "Use proper module or `creates/removes/changed_when`."],
+							["Module not found", "Missing collection or wrong FQCN", "Install collection; use fully qualified name."],
+							["YAML parse error", "Indentation/quotes", "Run --syntax-check; lint YAML."]
+						]
+					},
+					"example": "ansible-playbook site.yml --syntax-check\nansible-doc -l | grep -i windows"
+				}
+			]
+		},
+		{
+			"title": "Testing and Quality",
+			"description": "Linting, syntax checks, and role testing approaches.",
+			"items": [
+				{
+					"title": "Lint and static checks",
+					"description": "Recommended for CI.",
+					"table": {
+						"headers": ["Tool", "Command", "Notes"],
+						"rows": [
+							["Syntax check", "ansible-playbook site.yml --syntax-check", "Fast parse validation."],
+							["ansible-lint", "ansible-lint", "Community linter; enforce best practices."],
+							["yamllint", "yamllint .", "General YAML linting."]
+						]
+					},
+					"example": "pip install ansible-lint yamllint\nansible-playbook site.yml --syntax-check\nansible-lint"
+				},
+				{
+					"title": "Molecule (roles testing)",
+					"description": "Molecule is commonly used to test roles with disposable instances/containers.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["molecule init role -r myrole -d docker", "Initialize role test scenario (driver depends)."],
+							["molecule test", "Create, converge, verify, destroy."],
+							["molecule converge", "Apply the role."],
+							["molecule login", "Shell into test instance."],
+							["molecule destroy", "Cleanup."]
+						]
+					},
+					"example": "pip install molecule molecule-plugins[docker]\ncd roles/myrole\nmolecule test"
+				}
+			]
+		}
+	]
+}

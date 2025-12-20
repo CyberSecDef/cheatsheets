@@ -1,0 +1,414 @@
+{
+	"title": "PowerShell DSC",
+	"description": "A comprehensive cheatsheet for PowerShell DSC: concepts, authoring configurations, resources, compilation, applying configurations (LCM), pull servers (legacy), reporting, testing, and troubleshooting. Includes classic Windows PowerShell DSC and notes on modern DSC v3 concepts where helpful.",
+	"language": "powershell",
+	"categories": [
+		{
+			"title": "Fundamentals",
+			"description": "Core DSC concepts and how the system works.",
+			"items": [
+				{
+					"title": "Key concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Configuration", "A PowerShell scriptblock that describes desired state (produces MOF)."],
+							["Resource", "A unit of configuration (File, Service, Registry, WindowsFeature, etc.)."],
+							["Resource module", "A PowerShell module that provides one or more DSC resources."],
+							["MOF", "Managed Object Format document compiled from a configuration."],
+							["Node", "Target machine described in the configuration."],
+							["LCM", "Local Configuration Manager: DSC engine on each node."],
+							["Push", "You apply MOFs directly to nodes (Start-DscConfiguration)."],
+							["Pull", "Nodes pull their configuration from a server (legacy Windows PS DSC)."],
+							["Configuration drift", "Actual state deviates from desired state."],
+							["Test/Set/Get", "DSC resources implement Test/Get/Set methods to be idempotent."],
+							["Idempotency", "Re-applying should result in no changes when already compliant."],
+							["CIM/WMI", "DSC uses CIM to apply and query state."]
+						]
+					},
+					"example": "DSC lifecycle (push):\n1) Author configuration\n2) Compile to MOF\n3) Push MOF to node\n4) LCM enforces desired state (once or periodically)"
+				},
+				{
+					"title": "Common DSC modules/resources",
+					"description": "Many resources come from built-in modules or community modules.",
+					"table": {
+						"headers": ["Module", "Examples"],
+						"rows": [
+							["PSDesiredStateConfiguration", "File, Service, Registry, WindowsFeature, Environment, Archive, Script"],
+							["ComputerManagementDsc", "Computer settings, time zone, joins, scheduled tasks (varies)."],
+							["NetworkingDsc", "IP settings, DNS client settings (varies)."],
+							["xPSDesiredStateConfiguration (legacy)", "Older community module set; often replaced by newer modules."],
+							["SqlServerDsc", "SQL Server configuration resources."],
+							["ActiveDirectoryDsc", "AD DS configuration resources."]
+						]
+					},
+					"example": "Find installed resources:\nGet-DscResource | Sort-Object Module,Name | Select-Object -First 25"
+				}
+			]
+		},
+		{
+			"title": "Installation and Prereqs",
+			"description": "DSC is built into Windows PowerShell on Windows; modules/resources extend it.",
+			"items": [
+				{
+					"title": "Check DSC availability",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["$PSVersionTable", "PowerShell version; Windows PowerShell 5.1 is common for classic DSC."],
+							["Get-Command -Module PSDesiredStateConfiguration", "Lists DSC cmdlets if module exists."],
+							["Get-DscResource", "List available DSC resources."],
+							["Get-DscLocalConfigurationManager", "Get current LCM settings."],
+							["Get-Service WinRM", "WinRM needed for remote management in many setups."]
+						]
+					},
+					"example": "$PSVersionTable\nGet-Command -Module PSDesiredStateConfiguration\nGet-DscResource | Select-Object -First 10"
+				},
+				{
+					"title": "Install community resource modules",
+					"description": "Use PowerShellGet/PSGallery or an internal repository; pin versions for repeatability.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Search modules", "Find-Module -Tag DSC | Select-Object -First 20"],
+							["Install module", "Install-Module -Name ComputerManagementDsc -Scope AllUsers"],
+							["Update module", "Update-Module -Name ComputerManagementDsc"],
+							["List installed", "Get-InstalledModule | Sort-Object Name"],
+							["Offline install idea", "Save-Module -Name ComputerManagementDsc -Path .\\packages", "Use for air-gapped environments."]
+						]
+					},
+					"example": "Install-Module -Name ComputerManagementDsc -Scope AllUsers\nGet-DscResource -Module ComputerManagementDsc"
+				}
+			]
+		},
+		{
+			"title": "Authoring Configurations",
+			"description": "Write DSC configurations, define nodes, and compile to MOF.",
+			"items": [
+				{
+					"title": "Minimal configuration example",
+					"description": "A configuration is a PowerShell function-like block that can target one or more nodes.",
+					"table": {
+						"headers": ["Piece", "Meaning"],
+						"rows": [
+							["Configuration Name", "Defines the configuration and output folder name."],
+							["Node block", "Targets a node by name; can use 'localhost'."],
+							["Resources", "Declarative blocks (File, Service, etc.)."],
+							["Compilation", "Running the config produces .mof files."]
+						]
+					},
+					"example": "Configuration Baseline {\n  Import-DscResource -ModuleName PSDesiredStateConfiguration\n\n  Node 'localhost' {\n    File ExampleFile {\n      Ensure = 'Present'\n      Type   = 'File'\n      DestinationPath = 'C:\\Temp\\dsc.txt'\n      Contents = 'hello from dsc'\n    }\n  }\n}\n\nBaseline -OutputPath .\\out"
+				},
+				{
+					"title": "Using parameters and configuration data",
+					"description": "Use params for reusable configs and ConfigurationData for per-node settings.",
+					"table": {
+						"headers": ["Technique", "How"],
+						"rows": [
+							["Parameters", "Configuration MyCfg([string]$Message) { ... }"],
+							["ConfigurationData", "Use a hashtable with AllNodes to pass per-node data."],
+							["NodeName", "AllNodes entries typically include NodeName and properties."]
+						]
+					},
+					"example": "$cd = @{\n  AllNodes = @(\n    @{ NodeName='localhost'; Message='Hello' }\n  )\n}\n\nConfiguration Demo {\n  param([string]$DefaultMessage='Hi')\n  Node $AllNodes.NodeName {\n    File Msg {\n      Ensure='Present'\n      DestinationPath='C:\\Temp\\msg.txt'\n      Contents = $Node.Message | ForEach-Object { $_ }\n    }\n  }\n}\n\nDemo -ConfigurationData $cd -OutputPath .\\out"
+				}
+			]
+		},
+		{
+			"title": "Compilation and MOF Output",
+			"description": "Compile configurations to MOF and manage output artifacts.",
+			"items": [
+				{
+					"title": "Compile and inspect MOFs",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Compile", "MyConfig -OutputPath .\\out"],
+							["List MOFs", "Get-ChildItem .\\out -Filter '*.mof'"],
+							["View MOF", "Get-Content .\\out\\localhost.mof | Select-Object -First 60"],
+							["Recompile", "Re-run after changes; treat output as build artifact."]
+						]
+					},
+					"example": "MyConfig -OutputPath .\\out\nGet-ChildItem .\\out\nGet-Content .\\out\\localhost.mof | more"
+				},
+				{
+					"title": "Common compilation pitfalls",
+					"description": null,
+					"table": {
+						"headers": ["Issue", "Cause", "Fix"],
+						"rows": [
+							["Resource not found", "Module not installed / wrong Import-DscResource", "Install module; use correct -ModuleName."],
+							["Duplicate resource name", "Two resources with same identifier in a Node", "Make resource block names unique."],
+							["Type mismatch", "Wrong property type for resource", "Check Get-DscResource -Syntax."],
+							["Credentials in MOF", "Plaintext secrets", "Use certificates and PSDscAllowPlainTextPassword only in labs."],
+							["Compile-time vs run-time", "Using live system values at compile time", "Use ConfigurationData or resource properties instead."]
+						]
+					},
+					"example": "Get-DscResource -Name File -Syntax"
+				}
+			]
+		},
+		{
+			"title": "Applying Configurations (Push)",
+			"description": "Push MOFs to nodes and control execution.",
+			"items": [
+				{
+					"title": "Start-DscConfiguration basics",
+					"description": "Apply a compiled configuration to a node.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["Start-DscConfiguration -Path .\\out -Wait -Verbose", "Apply configuration and wait for completion."],
+							["Start-DscConfiguration -Path .\\out -Wait -Force", "Force re-apply even if config seems current."],
+							["Start-DscConfiguration -Path .\\out -AsJob", "Run asynchronously as a background job."],
+							["Get-DscConfiguration", "Return current desired state from DSC perspective."],
+							["Test-DscConfiguration", "Check if node is in desired state."]
+						]
+					},
+					"example": "Start-DscConfiguration -Path .\\out -Wait -Verbose\nTest-DscConfiguration -Verbose"
+				},
+				{
+					"title": "Remote nodes (push)",
+					"description": "You can push to remote nodes if remoting is configured. Approaches vary by environment.",
+					"table": {
+						"headers": ["Approach", "Notes"],
+						"rows": [
+							["Copy MOF + Start remotely", "Copy .mof to node and run Start-DscConfiguration there."],
+							["CimSession", "Some cmdlets support CimSession; depends on version and scenario."],
+							["WinRM/PSRemoting", "Common transport for remote execution."],
+							["Authentication", "Kerberos in-domain; HTTPS/Certs cross-domain."]
+						]
+					},
+					"example": "$s = New-PSSession -ComputerName server1\nCopy-Item .\\out\\server1.mof -ToSession $s -Destination C:\\DSC\\server1.mof\nInvoke-Command -Session $s -ScriptBlock { Start-DscConfiguration -Path C:\\DSC -Wait -Verbose }"
+				}
+			]
+		},
+		{
+			"title": "LCM (Local Configuration Manager)",
+			"description": "Configure how DSC runs: frequency, reboot behavior, correction mode, etc.",
+			"items": [
+				{
+					"title": "Inspect and set LCM",
+					"description": "LCM settings are configured using a special meta-configuration.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["Get-DscLocalConfigurationManager", "Show current LCM settings."],
+							["Set-DscLocalConfigurationManager -Path .\\meta -Verbose", "Apply LCM meta-configuration."],
+							["Update-DscConfiguration", "Trigger a pull update (pull mode)."],
+							["Get-DscConfigurationStatus", "Show last DSC run status."],
+							["Remove-DscConfigurationDocument -Stage Current,Pending,Previous", "Clear DSC docs (use with care)."],
+							["Restore-DscConfiguration", "Revert to previous configuration (when available)." ]
+						]
+					},
+					"example": "Get-DscLocalConfigurationManager | Format-List *\nGet-DscConfigurationStatus | Select-Object -First 5"
+				},
+				{
+					"title": "LCM settings you should know",
+					"description": "These determine how drift is handled and how often DSC runs.",
+					"table": {
+						"headers": ["Setting", "Meaning"],
+						"rows": [
+							["ConfigurationMode", "ApplyOnly | ApplyAndMonitor | ApplyAndAutoCorrect"],
+							["ConfigurationModeFrequencyMins", "How often consistency checks occur."],
+							["RefreshMode", "Push | Pull"],
+							["RefreshFrequencyMins", "How often to check pull server for new configs."],
+							["RebootNodeIfNeeded", "Allow DSC to reboot if required."],
+							["ActionAfterReboot", "ContinueConfiguration | StopConfiguration"],
+							["StatusRetentionTimeInDays", "How long statuses are retained."],
+							["AllowModuleOverwrite", "Allow pulling newer resource modules."]
+						]
+					},
+					"example": "[DscLocalConfigurationManager()]\nConfiguration LcmConfig {\n  Node 'localhost' {\n    Settings {\n      ConfigurationMode = 'ApplyAndAutoCorrect'\n      RefreshMode = 'Push'\n      RebootNodeIfNeeded = $true\n    }\n  }\n}\n\nLcmConfig -OutputPath .\\meta\nSet-DscLocalConfigurationManager -Path .\\meta -Verbose"
+				}
+			]
+		},
+		{
+			"title": "Resources Deep Dive",
+			"description": "Discover resource syntax and author custom resources.",
+			"items": [
+				{
+					"title": "Discover resource syntax",
+					"description": "Get syntax and properties for a resource.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["Get-DscResource", "List resources."],
+							["Get-DscResource -Name Service -Syntax", "Show syntax for Service resource."],
+							["Get-DscResource -Module NetworkingDsc", "List resources in a module."],
+							["Get-DscResource -Name Registry | Select-Object -ExpandProperty Properties", "Inspect properties." ]
+						]
+					},
+					"example": "Get-DscResource -Name File -Syntax\nGet-DscResource -Name WindowsFeature -Syntax"
+				},
+				{
+					"title": "Script resource (when you must)",
+					"description": "Script is a generic escape hatch. Ensure TestScript is correct to maintain idempotency.",
+					"table": {
+						"headers": ["Field", "What it does"],
+						"rows": [
+							["GetScript", "Returns current state."],
+							["TestScript", "Returns $true if in desired state."],
+							["SetScript", "Remediates to desired state."],
+							["DependsOn", "Ordering relative to other resources."],
+							["Credential", "Run as a different user (sensitive)."]
+						]
+					},
+					"example": "Script EnsureMarker {\n  GetScript  = { @{ Result = Test-Path 'C:\\Temp\\marker.txt' } }\n  TestScript = { Test-Path 'C:\\Temp\\marker.txt' }\n  SetScript  = { New-Item -Path 'C:\\Temp\\marker.txt' -ItemType File -Force | Out-Null }\n}"
+				}
+			]
+		},
+		{
+			"title": "Credentials and Certificates",
+			"description": "Handle secrets safely (avoid plaintext in MOFs).",
+			"items": [
+				{
+					"title": "Credential handling principles",
+					"description": "Classic DSC can encrypt credentials in MOF using certificates.",
+					"table": {
+						"headers": ["Principle", "Why"],
+						"rows": [
+							["Avoid plaintext passwords", "MOFs are files and can be copied/leaked."],
+							["Use certificate encryption", "Encrypt MOF secrets for the target node."],
+							["Limit secret scope", "Provide only the credentials needed for a resource."],
+							["Rotate secrets", "Plan secret rotation and redeploy MOFs."],
+							["Consider external secret stores", "Integrate with vaults/secret managers when feasible."]
+						]
+					},
+					"example": "# Common pattern: set a certificate thumbprint in ConfigurationData and use it for MOF encryption."
+				},
+				{
+					"title": "Common gotchas",
+					"description": null,
+					"table": {
+						"headers": ["Gotcha", "Fix"],
+						"rows": [
+							["Credential ends up in plaintext MOF", "Use certificate encryption; do not use PSDscAllowPlainTextPassword except lab."],
+							["Wrong cert on node", "Ensure node has private key and thumbprint matches ConfigurationData."],
+							["Remote resources need access", "Use correct run-as account; ensure network permissions." ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Pull Mode and Pull Server (Legacy Windows PS DSC)",
+			"description": "Pull servers exist in classic DSC; modern ecosystems may use different mechanisms. Keep this high-level.",
+			"items": [
+				{
+					"title": "Pull mode concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["ConfigurationID", "GUID that identifies node configuration on pull server."],
+							["Checksum", ".checksum files used to validate integrity."],
+							["Module repository", "Where DSC resources are hosted for download."],
+							["RefreshFrequencyMins", "How often node checks for new config."],
+							["Report server", "Endpoint for reporting (depends on implementation)." ]
+						]
+					},
+					"example": "Get-DscLocalConfigurationManager | Select-Object RefreshMode,RefreshFrequencyMins,ConfigurationMode"
+				},
+				{
+					"title": "Pull troubleshooting (common)",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Action"],
+						"rows": [
+							["Node not updating", "Wrong URL/ID or schedule", "Check LCM meta-config; run Update-DscConfiguration -Wait -Verbose."],
+							["Checksum errors", "Missing or stale .checksum", "Regenerate checksums; ensure matching MOF content."],
+							["Module download fails", "Repo path/permissions", "Verify module zip and checksum; check IIS logs if applicable."],
+							["Auth failures", "Cert/registration key mismatch", "Validate registration key/cert settings." ]
+						]
+					},
+					"example": "Update-DscConfiguration -Wait -Verbose\nGet-DscConfigurationStatus | Select-Object -First 5"
+				}
+			]
+		},
+		{
+			"title": "Operations and Administration",
+			"description": "Run scheduling, compliance posture, reporting, and safe change workflows.",
+			"items": [
+				{
+					"title": "Day-2 operations commands",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Get current config", "Get-DscConfiguration"],
+							["Test compliance", "Test-DscConfiguration -Verbose"],
+							["Show last run status", "Get-DscConfigurationStatus -All"],
+							["Apply new config", "Start-DscConfiguration -Path .\\out -Wait -Verbose"],
+							["Stop a running config", "Stop-DscConfiguration -Force"],
+							["Clear docs", "Remove-DscConfigurationDocument -Stage Current,Pending,Previous"],
+							["View DSC event logs", "Get-WinEvent -LogName 'Microsoft-Windows-DSC/Operational' -MaxEvents 50"]
+						]
+					},
+					"example": "Test-DscConfiguration -Verbose\nGet-DscConfigurationStatus -All | Select-Object -First 5"
+				},
+				{
+					"title": "Safe change workflow",
+					"description": "Treat configs as code.",
+					"table": {
+						"headers": ["Step", "Practice"],
+						"rows": [
+							["1", "Version configurations and resource module versions (pin)."],
+							["2", "Compile in CI and store MOFs as artifacts."],
+							["3", "Test on a small canary group first."],
+							["4", "Use logging + status collection to verify compliance."],
+							["5", "Roll back by redeploying previous MOFs / restoring previous config."]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Testing and Quality",
+			"description": "Linting and testing for DSC code and resources.",
+			"items": [
+				{
+					"title": "Common testing approaches",
+					"description": null,
+					"table": {
+						"headers": ["Approach", "How"],
+						"rows": [
+							["Syntax checks", "Compile configs in CI to catch resource/syntax errors."],
+							["Pester", "Write tests for helper functions and resource behavior."],
+							["Integration tests", "Apply configs to test VMs and assert state."],
+							["Static analysis", "PSScriptAnalyzer can help with PowerShell quality." ]
+						]
+					},
+					"example": "# PSScriptAnalyzer (example)\nInstall-Module PSScriptAnalyzer -Scope CurrentUser\nInvoke-ScriptAnalyzer -Path . -Recurse"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Common DSC failures and quick diagnostics.",
+			"items": [
+				{
+					"title": "Common error patterns",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Fix"],
+						"rows": [
+							["Configuration doesn't apply", "LCM misconfigured or bad MOF", "Check Get-DscConfigurationStatus and DSC Operational log."],
+							["Resource not found", "Module missing on node", "Install module on node or enable pull module distribution."],
+							["Stuck in Pending", "Reboot required or previous run incomplete", "Check reboot settings; clear pending docs cautiously."],
+							["Repeated changes", "Resource Test method wrong or external drift", "Fix resource idempotency; verify TestScript/guards."],
+							["Access denied", "Credential/permissions issue", "Run with proper account; ensure rights to target paths/services."],
+							["CIM/WMI errors", "Corrupted WMI or CIM issues", "Check services; review event logs; repair WMI if needed."]
+						]
+					},
+					"example": "Get-DscConfigurationStatus -All | Select-Object -First 3\nGet-WinEvent -LogName 'Microsoft-Windows-DSC/Operational' -MaxEvents 50 | Format-Table TimeCreated,Id,LevelDisplayName,Message -Wrap"
+				}
+			]
+		}
+	]
+}

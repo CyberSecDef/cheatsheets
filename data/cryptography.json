@@ -1,0 +1,480 @@
+{
+	"title": "Cryptography",
+	"description": "A technical cheatsheet for applied cryptography: primitives (hash/MAC/ciphers/signatures), key management, PKI and certificates, TLS, file/disk encryption, GPG/age, OpenSSL workflows, SSH keys, JWT basics, and troubleshooting/verification.",
+	"language": "shell",
+	"categories": [
+		{
+			"title": "Fundamentals and Threat Model",
+			"description": "What crypto can (and cannot) guarantee; choose primitives based on goals and adversaries.",
+			"items": [
+				{
+					"title": "Security goals",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "What it provides", "Common primitives"],
+						"rows": [
+							["Confidentiality", "Hide content from unauthorized parties", "Symmetric encryption (AES-GCM/ChaCha20-Poly1305), hybrid encryption"],
+							["Integrity", "Detect modification", "MAC (HMAC), AEAD (GCM/Poly1305), signatures"],
+							["Authenticity", "Prove who created/sent something", "Signatures, mutual TLS, MACs in shared-key settings"],
+							["Non-repudiation", "Harder to deny signing later", "Digital signatures + key custody controls"],
+							["Forward secrecy", "Past traffic stays safe if long-term key leaks", "Ephemeral key exchange (ECDHE)"],
+							["Availability", "System remains usable", "Not a cryptographic primitive; architecture/ops" ]
+						]
+					},
+					"example": "Rule of thumb: prefer AEAD modes for encryption (AES-GCM or ChaCha20-Poly1305). Avoid inventing custom schemes."
+				},
+				{
+					"title": "Common mistakes",
+					"description": null,
+					"table": {
+						"headers": ["Mistake", "Why it's bad", "Safer alternative"],
+						"rows": [
+							["Using ECB", "Leaks structure (pattern leaks)", "Use AEAD (GCM/Poly1305)"],
+							["Rolling your own crypto", "Subtle failures are common", "Use vetted libraries/protocols"],
+							["Reusing nonces/IVs", "Can fully break confidentiality/integrity", "Unique nonce per key (use library-managed nonces)"],
+							["Comparing MACs with ==", "Timing leaks can reveal MAC", "Use constant-time compare"],
+							["Storing keys in source code", "Leads to compromise at scale", "Use secret manager/HSM/KMS"],
+							["Skipping certificate validation", "Enables MITM", "Validate chain + hostname" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Hashing and Checksums",
+			"description": "Hash functions for integrity and identification (not confidentiality).",
+			"items": [
+				{
+					"title": "Common hash algorithms",
+					"description": null,
+					"table": {
+						"headers": ["Algorithm", "Use", "Notes"],
+						"rows": [
+							["SHA-256", "General-purpose integrity, IDs", "Widely supported; good default"],
+							["SHA-512", "Integrity, sometimes faster on 64-bit", "Different security margin than SHA-256"],
+							["SHA-3", "Alternative hash family", "Different construction; not a drop-in performance win"],
+							["BLAKE2/BLAKE3", "Fast hashing", "BLAKE3 is very fast; adoption varies"],
+							["MD5/SHA-1", "Legacy only", "Collision broken; avoid for security" ]
+						]
+					},
+					"example": "# File hashing\nsha256sum file.iso\nsha512sum file.iso\n\n# OpenSSL (portable)\nopenssl dgst -sha256 file.iso"
+				},
+				{
+					"title": "Verify downloads",
+					"description": "Prefer signature verification when available; hashes alone require a trusted channel.",
+					"table": {
+						"headers": ["Method", "Command", "Trust assumption"],
+						"rows": [
+							["Hash", "sha256sum -c SHA256SUMS", "You trust the source of the checksum"],
+							["GPG signature", "gpg --verify SHA256SUMS.asc SHA256SUMS", "You trust the signer’s public key"],
+							["Sigstore (ecosystem-specific)", "cosign verify ...", "You trust transparency log / identity provider" ]
+						]
+					},
+					"example": "# Verify a checksum file\nsha256sum -c SHA256SUMS | head"
+				}
+			]
+		},
+		{
+			"title": "MACs and Authenticated Encryption (AEAD)",
+			"description": "Integrity and authenticity with shared keys; AEAD combines encryption + integrity.",
+			"items": [
+				{
+					"title": "MAC vs hash vs AEAD",
+					"description": null,
+					"table": {
+						"headers": ["Primitive", "Provides", "Typical use"],
+						"rows": [
+							["Hash", "Integrity (no key)", "Checksums, content addressing"],
+							["MAC (HMAC)", "Integrity + authenticity (shared key)", "API request signing, message auth"],
+							["AEAD", "Confidentiality + integrity", "Encrypt data at rest/in transit safely" ]
+						]
+					},
+					"example": "Avoid 'encrypt-then-hash' or 'hash-then-encrypt' DIY combos. Use AEAD from a vetted library." 
+				},
+				{
+					"title": "HMAC with OpenSSL",
+					"description": "HMAC is a keyed MAC built from a hash function.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["HMAC-SHA256", "printf '%s' 'message' | openssl dgst -sha256 -hmac 'secret'"],
+							["HMAC from file", "openssl dgst -sha256 -hmac 'secret' file.bin" ]
+						]
+					},
+					"example": "printf '%s' 'hello' | openssl dgst -sha256 -hmac 'supersecret'"
+				}
+			]
+		},
+		{
+			"title": "Symmetric Encryption",
+			"description": "Fast encryption with a shared secret key.",
+			"items": [
+				{
+					"title": "Recommended modes",
+					"description": "Use AEAD modes; avoid raw CBC without authentication.",
+					"table": {
+						"headers": ["Mode", "Why", "Notes"],
+						"rows": [
+							["AES-256-GCM", "AEAD, widely supported", "Nonce must be unique per key"],
+							["ChaCha20-Poly1305", "AEAD, great on systems without AES-NI", "Nonce uniqueness still required"],
+							["AES-CTR + HMAC", "Can be safe if done correctly", "Easy to misuse; prefer AEAD"],
+							["AES-CBC", "Legacy", "Must add a MAC; padding-oracle risks" ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "OpenSSL file encryption (legacy patterns)",
+					"description": "OpenSSL `enc` is easy to misuse; prefer purpose-built tools (age/gpg) for files.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Encrypt (password)", "openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 -in in.txt -out out.enc", "CBC needs MAC for integrity; PBKDF2 helps password key derivation"],
+							["Decrypt", "openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in out.enc -out in.txt", "Must match params" ]
+						]
+					},
+					"example": "# Prefer age for files, but if you must use openssl enc, enable PBKDF2:\nopenssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 -in secrets.txt -out secrets.enc"
+				}
+			]
+		},
+		{
+			"title": "Asymmetric Crypto (RSA/ECC)",
+			"description": "Public/private key cryptography for key exchange, signatures, and identity.",
+			"items": [
+				{
+					"title": "RSA vs ECC (high-level)",
+					"description": null,
+					"table": {
+						"headers": ["Aspect", "RSA", "ECC"],
+						"rows": [
+							["Key sizes", "Larger (e.g., 2048/3072)", "Smaller (e.g., P-256)"],
+							["Performance", "Slower signatures/decrypt", "Often faster and smaller"],
+							["Common usage", "Legacy TLS, PKI", "Modern TLS, SSH, signatures"],
+							["Pitfalls", "Padding choices matter", "Curve choice, implementation quality" ]
+						]
+					},
+					"example": "Practical default today: ECDSA/Ed25519 for signatures when supported; RSA 3072 where required by legacy tooling." 
+				},
+				{
+					"title": "Generate keys with OpenSSL",
+					"description": "Create keypairs for TLS, signing, or internal PKI.",
+					"table": {
+						"headers": ["Key type", "Command", "Output"],
+						"rows": [
+							["RSA 3072", "openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out rsa.key", "PEM private key"],
+							["ECDSA P-256", "openssl ecparam -name prime256v1 -genkey -noout -out ecdsa.key", "PEM EC private key"],
+							["Ed25519", "openssl genpkey -algorithm ED25519 -out ed25519.key", "PEM private key" ]
+						]
+					},
+					"example": "openssl genpkey -algorithm ED25519 -out ed25519.key\nopenssl pkey -in ed25519.key -pubout -out ed25519.pub"
+				}
+			]
+		},
+		{
+			"title": "Digital Signatures",
+			"description": "Signing proves integrity and authenticity using a private key.",
+			"items": [
+				{
+					"title": "Sign and verify with OpenSSL",
+					"description": "Ed25519 and ECDSA are common for signing; verify with the public key.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create public key", "openssl pkey -in priv.key -pubout -out pub.pem"],
+							["Sign (SHA-256)", "openssl dgst -sha256 -sign priv.key -out file.sig file.bin"],
+							["Verify", "openssl dgst -sha256 -verify pub.pem -signature file.sig file.bin" ]
+						]
+					},
+					"example": "openssl dgst -sha256 -sign ed25519.key -out artifact.sig artifact.bin\nopenssl dgst -sha256 -verify ed25519.pub -signature artifact.sig artifact.bin"
+				},
+				{
+					"title": "GPG detached signatures",
+					"description": "Common for release artifacts.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Generate key", "gpg --full-generate-key", "Interactive"],
+							["Sign (detached)", "gpg --armor --detach-sign file.bin", "Creates file.bin.asc"],
+							["Verify", "gpg --verify file.bin.asc file.bin", "Requires signer key in keyring" ]
+						]
+					},
+					"example": "gpg --armor --detach-sign release.tar.gz\ngpg --verify release.tar.gz.asc release.tar.gz"
+				}
+			]
+		},
+		{
+			"title": "Key Exchange and KDFs",
+			"description": "Derive shared keys and stretch passwords safely.",
+			"items": [
+				{
+					"title": "KDF choices",
+					"description": null,
+					"table": {
+						"headers": ["KDF", "Use", "Notes"],
+						"rows": [
+							["HKDF", "Derive keys from secret material", "Common with TLS/Noise-style protocols"],
+							["PBKDF2", "Password stretching (legacy but common)", "Use high iteration count; still GPU-friendly"],
+							["scrypt", "Password hashing / KDF", "Memory-hard"],
+							["Argon2id", "Password hashing / KDF", "Modern recommended default where available" ]
+						]
+					},
+					"example": "For user passwords, use a password-hashing scheme (Argon2id/bcrypt/scrypt) rather than a raw hash." 
+				},
+				{
+					"title": "OpenSSL PBKDF2 (derive key/iv)",
+					"description": "Useful for interoperability testing; prefer libraries in real apps.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["PBKDF2 params (enc)", "openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt ...", "Derives key/iv from password"],
+							["Show supported ciphers", "openssl list -cipher-algorithms | head", "Enumerate ciphers" ]
+						]
+					},
+					"example": "openssl list -cipher-algorithms | grep -E 'gcm|chacha' | head"
+				}
+			]
+		},
+		{
+			"title": "Certificates and PKI",
+			"description": "Certificate creation, inspection, CSRs, and trust chains.",
+			"items": [
+				{
+					"title": "Inspect certificates",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["View certificate", "openssl x509 -in cert.pem -text -noout"],
+							["Print subject/issuer", "openssl x509 -in cert.pem -noout -subject -issuer"],
+							["List SANs", "openssl x509 -in cert.pem -noout -ext subjectAltName"],
+							["Check key matches cert", "openssl x509 -noout -modulus -in cert.pem | openssl md5"],
+							["Check CSR", "openssl req -in req.csr -text -noout" ]
+						]
+					},
+					"example": "openssl x509 -in server.crt -noout -subject -issuer -dates -fingerprint -sha256"
+				},
+				{
+					"title": "Create a CSR",
+					"description": "Create a private key and a CSR for a CA to sign.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Key", "openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out server.key", "Or use ECDSA/Ed25519 where supported"],
+							["CSR", "openssl req -new -key server.key -out server.csr", "Prompts for subject; SAN needs config"],
+							["CSR with config", "openssl req -new -key server.key -out server.csr -config openssl.cnf", "Include SANs via req_ext" ]
+						]
+					},
+					"example": "openssl req -new -key server.key -out server.csr"
+				},
+				{
+					"title": "Self-signed cert (dev/test)",
+					"description": "Useful for local testing; do not use as public trust.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Generate self-signed", "openssl req -x509 -newkey rsa:2048 -keyout dev.key -out dev.crt -days 365 -nodes", "Prompts for subject"],
+							["Inspect", "openssl x509 -in dev.crt -text -noout", "Confirm SAN/subject" ]
+						]
+					},
+					"example": "openssl req -x509 -newkey rsa:2048 -keyout dev.key -out dev.crt -days 30 -nodes"
+				}
+			]
+		},
+		{
+			"title": "TLS and HTTPS Troubleshooting",
+			"description": "Validate TLS configuration, certificate chains, and protocol negotiation.",
+			"items": [
+				{
+					"title": "openssl s_client",
+					"description": "Connect to a server and inspect the handshake.",
+					"table": {
+						"headers": ["Goal", "Command", "Notes"],
+						"rows": [
+							["Connect (SNI)", "openssl s_client -connect example.com:443 -servername example.com", "Use -servername for SNI"],
+							["Show cert chain", "openssl s_client -connect example.com:443 -servername example.com -showcerts", "Prints full chain"],
+							["Force TLS version", "openssl s_client -connect example.com:443 -tls1_2", "Debug compatibility"],
+							["Check OCSP stapling", "openssl s_client -connect example.com:443 -servername example.com -status", "Requests OCSP status" ]
+						]
+					},
+					"example": "openssl s_client -connect example.com:443 -servername example.com -showcerts </dev/null"
+				},
+				{
+					"title": "Common TLS failures",
+					"description": null,
+					"table": {
+						"headers": ["Error", "Cause", "Fix"],
+						"rows": [
+							["certificate verify failed", "Missing CA or chain", "Install CA/intermediate; serve fullchain"],
+							["hostname mismatch", "SAN/CN mismatch", "Issue cert with correct SAN(s)"],
+							["handshake failure", "Cipher/protocol mismatch", "Enable compatible cipher suites / TLS versions"],
+							["unknown ca", "Client doesn't trust CA", "Distribute CA or use publicly trusted CA" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "File Encryption (age and GPG)",
+			"description": "Practical tools for encrypting files for people/systems.",
+			"items": [
+				{
+					"title": "age (simple modern file encryption)",
+					"description": "age is a small, modern tool for file encryption (recipient-based or passphrase).",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Generate key", "age-keygen -o key.txt", "Store securely"],
+							["Encrypt to recipient", "age -r <RECIPIENT> -o file.age file", "Recipient is public key"],
+							["Decrypt", "age -d -i key.txt -o file file.age", "Needs private key"],
+							["Passphrase mode", "age -p -o file.age file", "Interactive passphrase" ]
+						]
+					},
+					"example": "age-keygen -o age.key\nRECIP=$(grep -E '^# public key:' -m1 -o 'age1[0-9a-z]+' age.key || true)\n# age -r \"$RECIP\" -o secret.txt.age secret.txt"
+				},
+				{
+					"title": "GPG encrypt/decrypt",
+					"description": "Common for email and artifact encryption.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Encrypt for recipient", "gpg --encrypt --armor --recipient user@example.com file", "Uses recipient public key"],
+							["Decrypt", "gpg --decrypt file.asc > file", "Uses your private key"],
+							["Symmetric encryption", "gpg --symmetric --cipher-algo AES256 file", "Passphrase-based" ]
+						]
+					},
+					"example": "gpg --symmetric --cipher-algo AES256 secrets.txt\n# Produces secrets.txt.gpg"
+				}
+			]
+		},
+		{
+			"title": "Disk and Secret Storage (Ops)",
+			"description": "Practical at-rest protection patterns and operational considerations.",
+			"items": [
+				{
+					"title": "At-rest encryption layers",
+					"description": null,
+					"table": {
+						"headers": ["Layer", "Examples", "Notes"],
+						"rows": [
+							["Disk/volume", "LUKS/dm-crypt, BitLocker", "Protects data if disk is stolen; key mgmt is critical"],
+							["Filesystem", "fscrypt (Linux)", "Per-directory encryption in some setups"],
+							["Application", "age/gpg, envelope encryption", "End-to-end protection; more key handling"],
+							["HSM/KMS", "Cloud KMS, HSM appliances", "Central policy/audit; reduces key export" ]
+						]
+					},
+					"example": "Envelope encryption pattern: data key encrypts data; data key is encrypted (wrapped) by a KMS key." 
+				},
+				{
+					"title": "Secret handling do/don't",
+					"description": null,
+					"table": {
+						"headers": ["Do", "Don't"],
+						"rows": [
+							["Use a secret manager and rotation", "Commit secrets to git"],
+							["Log redaction", "Log full JWTs/API keys"],
+							["Separate dev/stage/prod keys", "Reuse prod keys in dev"],
+							["Audit key access", "Share one admin key across team" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "SSH Keys (Common Admin Tasks)",
+			"description": "SSH key generation and inspection for secure remote access.",
+			"items": [
+				{
+					"title": "ssh-keygen essentials",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Generate Ed25519", "ssh-keygen -t ed25519 -a 64 -C 'me@host'", "Recommended default"],
+							["Generate RSA", "ssh-keygen -t rsa -b 3072 -a 64 -C 'me@host'", "For compatibility"],
+							["Show fingerprint", "ssh-keygen -lf ~/.ssh/id_ed25519.pub", "Useful for verification"],
+							["Show key details", "ssh-keygen -lf ~/.ssh/id_ed25519.pub -E sha256", "Display SHA256 fingerprint" ]
+						]
+					},
+					"example": "ssh-keygen -t ed25519 -a 64 -f ~/.ssh/id_ed25519 -C 'me@example.com'"
+				}
+			]
+		},
+		{
+			"title": "JWT/JWS/JWE (Quick Practical Map)",
+			"description": "Commonly encountered in APIs; ensure you understand what is signed vs encrypted.",
+			"items": [
+				{
+					"title": "JWT building blocks",
+					"description": null,
+					"table": {
+						"headers": ["Term", "Meaning", "Common pitfall"],
+						"rows": [
+							["JWT", "Base64url header.payload.signature", "Assuming it's encrypted by default"],
+							["JWS", "Signed JWT", "Not validating signature/alg"],
+							["JWE", "Encrypted JWT", "Mismanaging key rotation and recipient keys"],
+							["Claims", "Fields like iss, aud, exp, sub", "Not validating exp/aud/iss"],
+							["kid", "Key identifier", "Trusting attacker-controlled kid without restrictions" ]
+						]
+					},
+					"example": "Security checklist: validate signature, issuer, audience, expiration, and algorithm allowlist." 
+				}
+			]
+		},
+		{
+			"title": "Scripting and Automation",
+			"description": "Common scripting tasks for crypto operations and validation.",
+			"items": [
+				{
+					"title": "Shell: compute and compare digests safely",
+					"description": "Use constant-time compares in application code; in shell, avoid subtle parsing bugs.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["SHA-256 of stdin", "printf '%s' 'data' | openssl dgst -sha256"],
+							["Verify checksum file", "sha256sum -c SHA256SUMS"],
+							["Extract hash only", "openssl dgst -sha256 file | awk '{print $2}'" ]
+						]
+					},
+					"example": "expected=$(cat expected.sha256)\nactual=$(sha256sum file.bin | awk '{print $1}')\n[ \"$expected\" = \"$actual\" ] && echo OK || echo FAIL"
+				},
+				{
+					"title": "Python: verify a signature (conceptual)",
+					"description": "Use a mature library (cryptography, PyNaCl). Avoid implementing primitives yourself.",
+					"table": {
+						"headers": ["Library", "Use"],
+						"rows": [
+							["cryptography", "X.509, TLS, signatures, encryption primitives"],
+							["PyNaCl", "Ed25519/X25519 bindings"],
+							["hashlib/hmac", "Standard library hashing/HMAC" ]
+						]
+					},
+					"example": "# Standard library HMAC example\nimport hmac, hashlib\nkey = b'secret'\nmsg = b'hello'\ntag = hmac.new(key, msg, hashlib.sha256).hexdigest()\nprint(tag)"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Fast checks for the most common crypto/PKI/TLS mistakes.",
+			"items": [
+				{
+					"title": "Common errors and fixes",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Fix"],
+						"rows": [
+							["Signature verification fails", "Wrong public key or wrong hash", "Confirm key pair; confirm algorithm and input bytes"],
+							["Bad decrypt", "Wrong key/passphrase/params", "Ensure same KDF/mode/salt/iv; avoid manual OpenSSL enc"],
+							["TLS verify failed", "Missing CA/intermediate", "Use full chain; install CA in trust store"],
+							["Hostname mismatch", "Cert SAN doesn't match host", "Reissue cert with correct SAN"],
+							["JWT accepted when unsigned", "alg confusion", "Allowlist algorithms; reject none" ]
+						]
+					},
+					"example": "# Quick TLS triage\nopenssl s_client -connect example.com:443 -servername example.com -showcerts </dev/null"
+				}
+			]
+		}
+	]
+}

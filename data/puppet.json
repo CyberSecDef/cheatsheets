@@ -1,0 +1,440 @@
+{
+	"title": "Puppet",
+	"description": "A comprehensive cheatsheet for Puppet configuration management: architecture, installation, manifests, modules, Hiera data, Facter facts, certificates, environments, Puppet Server/PuppetDB, testing, and troubleshooting.",
+	"language": "puppet",
+	"categories": [
+		{
+			"title": "Fundamentals and Architecture",
+			"description": "How Puppet works and the vocabulary you'll see everywhere.",
+			"items": [
+				{
+					"title": "Core components",
+					"description": null,
+					"table": {
+						"headers": ["Component", "What it does"],
+						"rows": [
+							["Puppet agent", "Runs on nodes; requests a catalog and enforces desired state."],
+							["Puppet server", "Compiles catalogs and serves files/modules (often via puppetserver)."],
+							["Catalog", "Compiled set of resources for a node; applied by the agent."],
+							["Manifest", "Puppet DSL code describing resources (site.pp, classes, defined types)."],
+							["Module", "Reusable package of manifests/templates/files (modules/<name>/...)."],
+							["Resource", "Declarative unit like package/service/file/user."],
+							["Class", "Reusable group of resources (class mymodule::profile)."],
+							["Defined type", "Parameterized reusable block (define mytype($x) { ... })."],
+							["Hiera", "Data lookup system for parameters and secrets (YAML/JSON/eyaml, etc.)."],
+							["Facter", "Fact collection (OS, IP, disks, custom facts)."],
+							["Environments", "Separate code branches (production, dev, etc.)."],
+							["PuppetDB", "Stores catalogs/facts/reports for queries and inventory."]
+						]
+					},
+					"example": "High-level flow:\n1) Agent runs (manual or scheduled)\n2) Agent fetches facts (Facter)\n3) Agent requests catalog from Puppet Server\n4) Server compiles catalog using modules + Hiera data\n5) Agent applies catalog and reports results"
+				},
+				{
+					"title": "Idempotency and ordering",
+					"description": "Puppet resources should be idempotent; use relationships to control ordering.",
+					"table": {
+						"headers": ["Mechanism", "Example", "Meaning"],
+						"rows": [
+							["require", "require => Package['nginx']", "This resource depends on another."],
+							["before", "before => Service['nginx']", "This resource must run before another."],
+							["notify", "notify => Service['nginx']", "Triggers refresh/restart on change."],
+							["subscribe", "subscribe => File['/etc/nginx/nginx.conf']", "Refresh when target changes."],
+							["Chaining arrows", "Package['nginx'] -> File['cfg'] ~> Service['nginx']", "Explicit ordering/notifications."]
+						]
+					},
+					"example": "package { 'nginx': ensure => installed }\nfile { '/etc/nginx/nginx.conf':\n  ensure  => file,\n  content => template('mymodule/nginx.conf.erb'),\n  require => Package['nginx'],\n  notify  => Service['nginx'],\n}\nservice { 'nginx': ensure => running, enable => true }"
+				}
+			]
+		},
+		{
+			"title": "Installation and Setup",
+			"description": "Common commands and checks for getting Puppet installed and healthy.",
+			"items": [
+				{
+					"title": "Puppet command basics",
+					"description": "Commands vary by packaging and platform; these are common across many installs.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["puppet --version", "Show Puppet version."],
+							["puppet config print", "Show configuration values."],
+							["puppet config print server certname environment", "Show key settings."],
+							["puppet config --section agent print", "Show agent-specific config."],
+							["puppet module list", "List installed modules on the current node."],
+							["puppet resource service ssh", "Query a resource from CLI."]
+						]
+					},
+					"example": "puppet --version\npuppet config print server certname environment"
+				},
+				{
+					"title": "Service status (server-side)",
+					"description": "On Puppet Server hosts, validate the service and logs.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["systemctl status puppetserver", "Check puppetserver status."],
+							["journalctl -u puppetserver -n 100 --no-pager", "View recent logs."],
+							["ss -lntp | grep 8140", "Verify Puppet Server listening (8140 default)."],
+							["curl -k https://localhost:8140/status/v1/services", "Status endpoint (auth/SSL dependent)." ]
+						]
+					},
+					"example": "systemctl status puppetserver\nss -lntp | grep 8140"
+				}
+			]
+		},
+		{
+			"title": "Agent Runs and Day-2 Operations",
+			"description": "Run the agent, inspect last run results, and perform safe operations.",
+			"items": [
+				{
+					"title": "Agent run commands",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Run agent (foreground)", "puppet agent -t"],
+							["Run in noop", "puppet agent -t --noop"],
+							["Disable agent", "puppet agent --disable 'maintenance'"],
+							["Enable agent", "puppet agent --enable"],
+							["Show last run summary", "puppet last_run_summary"],
+							["Show last run report", "puppet last_run_report"],
+							["List resources from CLI", "puppet resource package vim"],
+							["Run with debug", "puppet agent -t --debug"],
+							["Specify environment", "puppet agent -t --environment dev"],
+							["Only one time", "puppet agent -t --onetime" ]
+						]
+					},
+					"example": "puppet agent -t\npuppet agent -t --noop\npuppet last_run_summary"
+				},
+				{
+					"title": "Common useful flags",
+					"description": "Flags vary slightly by Puppet version; check `puppet agent --help`.",
+					"table": {
+						"headers": ["Flag", "Meaning"],
+						"rows": [
+							["--noop", "Simulate changes without applying."],
+							["--environment", "Choose environment (code branch)."],
+							["--server", "Override server used."],
+							["--waitforcert", "Wait for a signed cert (seconds)."],
+							["--debug / --verbose", "Increase logging."],
+							["--test (-t)", "Enables common test-mode behaviors."]
+						]
+					},
+					"example": "puppet agent -t --server puppet.example.com --environment production --waitforcert 60"
+				}
+			]
+		},
+		{
+			"title": "Manifests and Language Basics",
+			"description": "Write Puppet code: classes, resources, variables, and control flow.",
+			"items": [
+				{
+					"title": "Core resource types",
+					"description": "Most configurations are built with these primitives.",
+					"table": {
+						"headers": ["Type", "Example"],
+						"rows": [
+							["package", "package { 'nginx': ensure => installed }"],
+							["service", "service { 'nginx': ensure => running, enable => true }"],
+							["file", "file { '/etc/app.conf': ensure => file, mode => '0644' }"],
+							["user", "user { 'app': ensure => present, shell => '/bin/bash' }"],
+							["group", "group { 'app': ensure => present }"],
+							["cron", "cron { 'job': command => '/usr/local/bin/job', hour => 2 }"],
+							["exec", "exec { 'do': command => '...'; unless => 'test -f /x' }"],
+							["notify", "notify { 'hello': message => 'hi' }"],
+							["mount", "mount { '/mnt': ensure => mounted, device => '/dev/sdb1', fstype => 'ext4' }" ]
+						]
+					},
+					"example": "package { 'vim': ensure => installed }\nfile { '/etc/motd': content => 'managed by puppet\n' }"
+				},
+				{
+					"title": "Classes and includes",
+					"description": "Classes group resources; include/contain controls class relationships.",
+					"table": {
+						"headers": ["Pattern", "Example", "Notes"],
+						"rows": [
+							["Define class", "class profile::web { ... }", "Usually in modules/profile/manifests/web.pp"],
+							["Include class", "include profile::web", "Declares class without params."],
+							["Parameterized class", "class profile::web($port=80) { ... }", "Prefer Hiera for data."],
+							["Contain", "contain profile::web", "Stronger containment semantics for ordering."],
+							["Class ordering", "Class['a'] -> Class['b']", "Explicit relationships."]
+						]
+					},
+					"example": "class profile::web($package='nginx') {\n  package { $package: ensure => installed }\n}\ninclude profile::web"
+				},
+				{
+					"title": "Conditionals and selectors",
+					"description": "Branch logic and value selection.",
+					"table": {
+						"headers": ["Construct", "Example"],
+						"rows": [
+							["if", "if $facts['os']['family'] == 'Debian' { ... }"],
+							["case", "case $facts['os']['name'] { 'Ubuntu': { ... } default: { ... } }"],
+							["selector", "$pkg = $facts['os']['family'] ? { 'Debian' => 'nginx', default => 'httpd' }"],
+							["unless", "unless $facts['is_virtual'] { ... }" ]
+						]
+					},
+					"example": "$svc = $facts['os']['family'] ? {\n  'Debian' => 'nginx',\n  'RedHat' => 'httpd',\n  default  => 'nginx',\n}\nservice { $svc: ensure => running, enable => true }"
+				}
+			]
+		},
+		{
+			"title": "Modules and Code Layout",
+			"description": "Structure Puppet code for reuse and environment management.",
+			"items": [
+				{
+					"title": "Module layout",
+					"description": "Typical module directory structure.",
+					"table": {
+						"headers": ["Path", "Purpose"],
+						"rows": [
+							["modules/mymodule/manifests/", "Classes and defined types (Ruby-like DSL)."],
+							["modules/mymodule/templates/", "ERB/EPP templates."],
+							["modules/mymodule/files/", "Static files served to agents."],
+							["modules/mymodule/lib/facter/", "Custom facts."],
+							["modules/mymodule/lib/puppet/", "Custom types/providers/functions."],
+							["modules/mymodule/spec/", "RSpec-Puppet unit tests."],
+							["modules/mymodule/metadata.json", "Module metadata and dependencies."]
+						]
+					},
+					"example": "puppet module generate myorg-mymodule"
+				},
+				{
+					"title": "puppet module commands",
+					"description": "Manage modules installed on a node (or on the server in an environment).",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["puppet module list", "List installed modules."],
+							["puppet module search nginx", "Search Forge (if configured)."],
+							["puppet module install puppetlabs-stdlib", "Install a Forge module."],
+							["puppet module upgrade puppetlabs-stdlib", "Upgrade a module."],
+							["puppet module uninstall puppetlabs-stdlib", "Uninstall a module."]
+						]
+					},
+					"example": "puppet module install puppetlabs-stdlib"
+				}
+			]
+		},
+		{
+			"title": "Hiera Data",
+			"description": "Separate data from code using Hiera lookups.",
+			"items": [
+				{
+					"title": "Hiera basics",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning", "Tip"],
+						"rows": [
+							["hiera.yaml", "Defines hierarchy and data backends.", "Keep per-environment hiera.yaml consistent."],
+							["Hierarchy", "Ordered list of data sources.", "More specific (node) before less specific (common)."],
+							["Lookup", "Query data by key.", "Prefer automatic parameter lookup for class params."],
+							["Merge behavior", "How arrays/hashes merge.", "Set merge strategies explicitly when needed."],
+							["Secrets", "Use eyaml/external secret store.", "Avoid plaintext secrets in git."]
+						]
+					},
+					"example": "# Example lookup in Puppet code\n$port = lookup('profile::web::port', Integer, 'first', 80)"
+				},
+				{
+					"title": "hiera CLI",
+					"description": "Useful for troubleshooting what value is being selected.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["puppet lookup KEY --node node1 --environment production", "Resolve a key for a node."],
+							["puppet lookup KEY --explain", "Explain which hierarchy levels were checked."],
+							["puppet lookup KEY --render-as s", "Render as string (or json/yaml depending on version)."],
+							["puppet lookup KEY --merge unique", "Test merge behavior."]
+						]
+					},
+					"example": "puppet lookup profile::web::port --node web01 --environment production --explain"
+				}
+			]
+		},
+		{
+			"title": "Facts (Facter)",
+			"description": "Use facts for conditionals and reporting. Add custom facts when necessary.",
+			"items": [
+				{
+					"title": "Facter commands",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["facter", "Print all facts."],
+							["facter os", "Print a single structured fact."],
+							["facter -p", "Include Puppet facts (custom and external facts)."],
+							["facter --json", "Output JSON (version-dependent flags)."],
+							["puppet facts show", "Show facts (Puppet CLI; server/agent context depends)." ]
+						]
+					},
+					"example": "facter os\nfacter networking.ip"
+				},
+				{
+					"title": "Facts in Puppet code",
+					"description": "Modern Puppet uses `$facts` hash.",
+					"table": {
+						"headers": ["Pattern", "Example"],
+						"rows": [
+							["Access", "$facts['os']['family']"],
+							["Network", "$facts['networking']['ip']"],
+							["Hostname", "$facts['networking']['hostname']"],
+							["Boolean check", "if $facts['is_virtual'] { ... }" ]
+						]
+					},
+					"example": "if $facts['os']['family'] == 'Debian' {\n  package { 'apt-transport-https': ensure => installed }\n}"
+				}
+			]
+		},
+		{
+			"title": "Certificates and Trust",
+			"description": "Puppet commonly uses PKI with agent certs signed by the CA.",
+			"items": [
+				{
+					"title": "Cert lifecycle (common)",
+					"description": "Exact commands can differ by Puppet version; server-side CA management may be separate tooling.",
+					"table": {
+						"headers": ["Task", "Command", "Notes"],
+						"rows": [
+							["Agent request cert", "puppet agent -t --waitforcert 60", "Agent sends CSR; server must sign."],
+							["List cert requests", "puppetserver ca list", "Run on server (puppetserver CA CLI)."],
+							["Sign cert", "puppetserver ca sign --certname node1", "Approve CSR."],
+							["Clean cert", "puppetserver ca clean --certname node1", "Remove cert + revoke."],
+							["Agent clean SSL (last resort)", "rm -rf /etc/puppetlabs/puppet/ssl && puppet agent -t", "For rebuilds; be careful in prod."]
+						]
+					},
+					"example": "# On server\npuppetserver ca list\npuppetserver ca sign --certname web01\n\n# On agent\npuppet agent -t"
+				},
+				{
+					"title": "Common SSL problems",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Cause", "Fix"],
+						"rows": [
+							["certificate verify failed", "CA/cert mismatch, time skew", "Verify CA trust; check time sync; check correct server."],
+							["hostname mismatch", "certname/servername mismatch", "Fix certname and re-issue cert."],
+							["stale cert", "node rebuilt with same name", "Clean old cert on server; re-enroll."],
+							["cannot connect to 8140", "Firewall/DNS/service", "Check service status, ports, DNS."]
+						]
+					},
+					"example": "ss -lntp | grep 8140\npuppet config print server certname"
+				}
+			]
+		},
+		{
+			"title": "Puppet Server and Environments",
+			"description": "Manage code environments and compilation behavior.",
+			"items": [
+				{
+					"title": "Environment basics",
+					"description": "Environments separate code and data by branch.",
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["production", "Default environment in many setups."],
+							["environmentpath", "Where environments live on server."],
+							["site.pp", "Top-level manifest entry point in an environment."],
+							["r10k/Code Manager", "Deploy environments/modules from git (common patterns)."],
+							["Control repo", "Git repo defining environments, Puppetfile, hiera data."]
+						]
+					},
+					"example": "puppet config print environmentpath\npuppet config print manifest"
+				},
+				{
+					"title": "Server troubleshooting commands",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["journalctl -u puppetserver -n 200 --no-pager", "Server logs."],
+							["puppetserver --version", "Puppet Server version."],
+							["puppetserver ca list", "CA pending requests."],
+							["puppet config print codedir", "Code directory location."],
+							["puppet config print environment", "Default environment."]
+						]
+					},
+					"example": "puppetserver --version\npuppet config print codedir"
+				}
+			]
+		},
+		{
+			"title": "PuppetDB (Inventory and Query)",
+			"description": "Query facts, resources, and reports across your fleet.",
+			"items": [
+				{
+					"title": "Why PuppetDB",
+					"description": "Centralizes data for reporting, node inventory, and exported resources.",
+					"table": {
+						"headers": ["Feature", "Use"],
+						"rows": [
+							["Facts inventory", "Search nodes by OS, IP, custom facts."],
+							["Catalog storage", "Query resources and relationships."],
+							["Reports", "Track changes and failures."],
+							["Exported resources", "Share resources across nodes (advanced patterns)." ]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Typical checks",
+					"description": "Exact CLI/API tools differ by deployment; here are standard operational checks.",
+					"table": {
+						"headers": ["Check", "Command"],
+						"rows": [
+							["Service status", "systemctl status puppetdb"],
+							["Logs", "journalctl -u puppetdb -n 200 --no-pager"],
+							["Port listening", "ss -lntp | grep -E '8081|8080'"],
+							["Health endpoint (if enabled)", "curl -s http://localhost:8080/ | head" ]
+						]
+					},
+					"example": "systemctl status puppetdb\nss -lntp | grep 8081"
+				}
+			]
+		},
+		{
+			"title": "Testing and Quality",
+			"description": "Validate code before it hits production.",
+			"items": [
+				{
+					"title": "Common checks",
+					"description": "Tooling choices vary; these are common patterns.",
+					"table": {
+						"headers": ["Tool/Command", "Purpose"],
+						"rows": [
+							["puppet parser validate site.pp", "Validate Puppet syntax."],
+							["puppet parser dump site.pp", "Parse and dump AST-like structure (debug)."],
+							["puppet-lint", "Lint Puppet manifests (if installed)."],
+							["rake spec", "Run unit tests (RSpec-Puppet) in many module repos."],
+							["pdk validate", "Puppet Development Kit validation (if using PDK)."],
+							["pdk test unit", "Run unit tests with PDK."]
+						]
+					},
+					"example": "puppet parser validate manifests/init.pp\n# If using PDK:\n# pdk validate\n# pdk test unit"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting",
+			"description": "Fast triage for common Puppet failures.",
+			"items": [
+				{
+					"title": "Common errors and fixes",
+					"description": null,
+					"table": {
+						"headers": ["Symptom", "Likely cause", "Fix"],
+						"rows": [
+							["Agent can't fetch catalog", "Server down/DNS/SSL", "Check puppetserver service, port 8140, certs, time sync."],
+							["Could not retrieve catalog", "Compile error", "Check server logs; run `puppet parser validate` locally."],
+							["Resource not found", "Module missing or wrong class name", "Verify module path and class naming; check environment."],
+							["Changes every run", "Non-idempotent exec or file content drift", "Replace exec with proper types; control templates/files."],
+							["Hiera lookup returns wrong value", "Hierarchy order or wrong node facts", "Use `puppet lookup KEY --explain`."],
+							["Certificate mismatch", "Rebuilt host with old cert", "Clean cert on server and re-enroll agent."],
+							["Slow compiles", "Heavy catalogs or poor Ruby performance", "Enable caching, reduce catalog complexity, inspect server resources." ]
+						]
+					},
+					"example": "# Agent side\npuppet agent -t --debug\npuppet config print server certname environment\n\n# Server side\njournalctl -u puppetserver -n 200 --no-pager"
+				}
+			]
+		}
+	]
+}

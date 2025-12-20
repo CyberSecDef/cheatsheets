@@ -1,0 +1,659 @@
+{
+	"title": "Active Directory (AD)",
+	"description": "A practical cheatsheet for using and administering Microsoft Active Directory: objects, LDAP, PowerShell, replication, DNS, GPO, troubleshooting, and security operations.",
+	"language": "powershell",
+	"categories": [
+		{
+			"title": "Fundamentals and Concepts",
+			"description": "Core AD building blocks and terminology.",
+			"items": [
+				{
+					"title": "What AD is (quick map)",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Meaning"],
+						"rows": [
+							["Forest", "Top-level security boundary; contains one or more domains."],
+							["Domain", "Administrative boundary; users/computers/groups live here."],
+							["Domain Controller (DC)", "Server running AD DS; hosts directory + authentication."],
+							["OU (Organizational Unit)", "Container used for delegation and GPO targeting."],
+							["Objects", "Users, groups, computers, contacts, GMSA, etc."],
+							["Attributes", "Properties on objects (sAMAccountName, memberOf, userPrincipalName, etc.)."],
+							["Schema", "Defines object classes and attributes."],
+							["Global Catalog (GC)", "Partial attribute set for forest-wide searches and logons."],
+							["SID", "Security Identifier; immutable identity used in ACLs."],
+							["ACL/ACE", "Permissions: access control list / entry applied to objects."],
+							["FSMO roles", "Single-master roles: Schema, Domain Naming, RID, PDC, Infrastructure."],
+							["Sites/Subnets", "Topology for replication and client DC selection."],
+							["GPO", "Group Policy: config management for Windows devices/users."]
+						]
+					},
+					"example": null
+				},
+				{
+					"title": "Name formats",
+					"description": "Common identity and path formats used across tools.",
+					"table": {
+						"headers": ["Format", "Example", "Notes"],
+						"rows": [
+							["UPN", "user@corp.example.com", "Often used for sign-in; maps to userPrincipalName."],
+							["Down-level logon", "CORP\\user", "Domain NetBIOS name + sAMAccountName."],
+							["Distinguished Name (DN)", "CN=Alice Smith,OU=Users,DC=corp,DC=example,DC=com", "LDAP path; most directory APIs use DN."],
+							["Canonical name", "corp.example.com/Users/Alice Smith", "Human-friendly; not always accepted by cmdlets."],
+							["SPN", "HTTP/app.corp.example.com", "Service Principal Name for Kerberos service tickets."]
+						]
+					},
+					"example": "# Quick PowerShell: show key identity values\nGet-ADUser alice -Properties userPrincipalName,sAMAccountName,distinguishedName |\n  Select-Object sAMAccountName,userPrincipalName,distinguishedName"
+				}
+			]
+		},
+		{
+			"title": "Tools and Modules",
+			"description": "Install and verify common administration tools.",
+			"items": [
+				{
+					"title": "RSAT and AD PowerShell module",
+					"description": "Most administration tasks are easiest with the ActiveDirectory PowerShell module.",
+					"table": {
+						"headers": ["Platform", "Command", "Notes"],
+						"rows": [
+							["Windows 10/11", "Get-WindowsCapability -Online | Where-Object Name -like 'Rsat.ActiveDirectory*'", "Discover RSAT capabilities."],
+							["Windows 10/11", "Add-WindowsCapability -Online -Name 'Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0'", "Install AD DS/AD LDS tools."],
+							["Windows Server", "Install-WindowsFeature RSAT-AD-PowerShell", "Server feature name varies by version."],
+							["Any", "Import-Module ActiveDirectory", "Loads AD cmdlets (Get-ADUser, Get-ADComputer, etc.)."],
+							["Any", "Get-Command -Module ActiveDirectory", "List available cmdlets."],
+							["Any", "Get-Help Get-ADUser -Full", "Cmdlet help (may require Update-Help)."]
+						]
+					},
+					"example": "Import-Module ActiveDirectory\nGet-Command -Module ActiveDirectory | Select-Object -First 10"
+				},
+				{
+					"title": "Classic command-line tools",
+					"description": null,
+					"table": {
+						"headers": ["Tool", "Purpose", "Example"],
+						"rows": [
+							["dsquery/dsget/dsmod", "Query/get/modify AD objects", "dsquery user -name *alice*"],
+							["ldifde", "Import/export directory objects (LDIF)", "ldifde -f export.ldf -d 'DC=corp,DC=example,DC=com'"],
+							["csvde", "Import/export AD objects (CSV)", "csvde -f users.csv -r '(objectClass=user)'"],
+							["repadmin", "Replication diagnostics/maintenance", "repadmin /replsummary"],
+							["dcdiag", "Domain controller health checks", "dcdiag /v"],
+							["nltest", "Domain trust/DC discovery tests", "nltest /dsgetdc:corp.example.com"],
+							["setspn", "Manage SPNs (Kerberos)", "setspn -L svc_web"],
+							["klist", "Kerberos ticket cache", "klist"],
+							["netdom", "Domain membership/trust management", "netdom query fsmo"],
+							["gpupdate/gpresult", "Apply/view Group Policy", "gpresult /r"],
+							["whoami", "Identity/groups/privileges", "whoami /groups"],
+							["wevtutil", "Event log query/export", "wevtutil qe Security /c:5 /rd:true /f:text"]
+						]
+					},
+					"example": "repadmin /replsummary\ndcdiag /q\nnetdom query fsmo"
+				}
+			]
+		},
+		{
+			"title": "Directory Structure and Search (LDAP)",
+			"description": "Understand and query AD via LDAP concepts and filters.",
+			"items": [
+				{
+					"title": "Common LDAP bases",
+					"description": "Useful search bases and naming contexts.",
+					"table": {
+						"headers": ["Base DN", "What"],
+						"rows": [
+							["DC=corp,DC=example,DC=com", "Domain naming context (most objects)."],
+							["CN=Configuration,DC=corp,DC=example,DC=com", "Forest configuration (sites, services, partitions)."],
+							["CN=Schema,CN=Configuration,DC=corp,DC=example,DC=com", "Forest schema definitions."],
+							["CN=Partitions,CN=Configuration,...", "Naming contexts and crossRef objects."],
+							["CN=Sites,CN=Configuration,...", "AD Sites and Services objects."],
+							["CN=Domain Controllers,DC=corp,...", "DC computer accounts container."]
+						]
+					},
+					"example": "# PowerShell: fetch naming contexts from RootDSE\n([ADSI]'LDAP://RootDSE').namingContexts"
+				},
+				{
+					"title": "Useful LDAP filters",
+					"description": "Filters used by many tools (ldapsearch, AD cmdlets under the hood, etc.).",
+					"table": {
+						"headers": ["Goal", "LDAP filter"],
+						"rows": [
+							["All users", "(objectClass=user)"],
+							["Enabled users", "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))"],
+							["Groups", "(objectClass=group)"],
+							["Computers", "(objectClass=computer)"],
+							["Members of a group (by DN)", "(memberOf=CN=MyGroup,OU=Groups,DC=corp,DC=example,DC=com)"],
+							["Users with UPN suffix", "(userPrincipalName=*@corp.example.com)"],
+							["Accounts with SPNs", "(servicePrincipalName=*)"],
+							["Recently changed objects (approx)", "(whenChanged>=20250101000000.0Z)"],
+							["Locked out users", "(lockoutTime>=1)"],
+							["Password never expires", "(userAccountControl:1.2.840.113556.1.4.803:=65536)"],
+							["Pre-auth not required", "(userAccountControl:1.2.840.113556.1.4.803:=4194304)"]
+						]
+					},
+					"example": "# PowerShell: use LDAPFilter with AD cmdlets\nGet-ADUser -LDAPFilter '(servicePrincipalName=*)' -Properties servicePrincipalName |\n  Select-Object -First 10 SamAccountName,servicePrincipalName"
+				}
+			]
+		},
+		{
+			"title": "Discovery and Environment Info",
+			"description": "Quickly learn what domain you’re in and where to query.",
+			"items": [
+				{
+					"title": "Find domain/DC/roles",
+					"description": null,
+					"table": {
+						"headers": ["Command", "What it tells you"],
+						"rows": [
+							["whoami /fqdn", "Your logon name and domain suffix."],
+							["echo %LOGONSERVER%", "DC you authenticated to (may be cached)."],
+							["nltest /dsgetdc:[domain]", "Find a DC for a domain."],
+							["nltest /dclist:[domain]", "List DCs in a domain."],
+							["nltest /domain_trusts", "List domain trusts."],
+							["netdom query fsmo", "FSMO role owners."],
+							["Get-ADDomain", "Domain properties."],
+							["Get-ADForest", "Forest properties."],
+							["Get-ADDomainController -Filter *", "Enumerate DCs."],
+							["Get-ADReplicationSite -Filter *", "Sites in the forest."]
+						]
+					},
+					"example": "Import-Module ActiveDirectory\nGet-ADDomain | Select-Object DNSRoot,DomainMode,PDCEmulator\nGet-ADForest | Select-Object RootDomain,ForestMode,Domains"
+				},
+				{
+					"title": "RootDSE quick checks",
+					"description": "RootDSE exposes directory capabilities and naming contexts.",
+					"table": {
+						"headers": ["Property", "Meaning"],
+						"rows": [
+							["defaultNamingContext", "Default domain DN."],
+							["configurationNamingContext", "Configuration DN."],
+							["schemaNamingContext", "Schema DN."],
+							["dnsHostName", "DC hostname."],
+							["supportedLDAPVersion", "LDAP protocol versions supported."],
+							["supportedSASLMechanisms", "Auth mechanisms."]
+						]
+					},
+					"example": "$r = [ADSI]'LDAP://RootDSE'\n$r.defaultNamingContext\n$r.dnsHostName"
+				}
+			]
+		},
+		{
+			"title": "Users",
+			"description": "Create, query, and manage user accounts.",
+			"items": [
+				{
+					"title": "Common Get-ADUser patterns",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Get by sAMAccountName", "Get-ADUser alice"],
+							["Get by UPN", "Get-ADUser -Filter 'userPrincipalName -eq 'alice@corp.example.com'"],
+							["Search by name", "Get-ADUser -Filter 'Name -like '*alice*'"],
+							["Get with extra properties", "Get-ADUser alice -Properties mail,title,department,lastLogonDate"],
+							["List disabled users", "Get-ADUser -Filter 'Enabled -eq $false'"],
+							["List locked out users", "Search-ADAccount -LockedOut -UsersOnly"],
+							["List expiring passwords", "Search-ADAccount -PasswordExpiring -UsersOnly"],
+							["Show group membership", "Get-ADPrincipalGroupMembership alice | Select-Object Name"],
+							["List users in an OU", "Get-ADUser -SearchBase 'OU=Users,DC=corp,DC=example,DC=com' -Filter *"],
+							["Export users", "Get-ADUser -Filter * -Properties mail | Select-Object SamAccountName,mail | Export-Csv users.csv -NoTypeInformation"]
+						]
+					},
+					"example": "Get-ADUser alice -Properties * |\n  Select-Object SamAccountName,Enabled,LastLogonDate,PasswordLastSet,mail"
+				},
+				{
+					"title": "Create and update users",
+					"description": "Use secure strings for passwords and be mindful of required attributes.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create user", "New-ADUser -Name 'Alice Smith' -SamAccountName alice -UserPrincipalName 'alice@corp.example.com' -GivenName Alice -Surname Smith -Enabled $true -AccountPassword (Read-Host -AsSecureString)"],
+							["Set attributes", "Set-ADUser alice -Title 'Analyst' -Department 'IT' -EmailAddress 'alice@corp.example.com'"],
+							["Enable/disable", "Enable-ADAccount alice; Disable-ADAccount alice"],
+							["Reset password", "Set-ADAccountPassword alice -Reset -NewPassword (Read-Host -AsSecureString)"],
+							["Force password change", "Set-ADUser alice -ChangePasswordAtLogon $true"],
+							["Unlock", "Unlock-ADAccount alice"],
+							["Move user", "Move-ADObject (Get-ADUser alice).DistinguishedName -TargetPath 'OU=Users,DC=corp,DC=example,DC=com'"],
+							["Delete user", "Remove-ADUser alice"]
+						]
+					},
+					"example": "$pw = Read-Host -AsSecureString\nNew-ADUser -Name 'Alice Smith' -SamAccountName alice -UserPrincipalName 'alice@corp.example.com' -Enabled $true -AccountPassword $pw"
+				}
+			]
+		},
+		{
+			"title": "Groups",
+			"description": "Create groups, manage membership, and understand scopes.",
+			"items": [
+				{
+					"title": "Group scope and type",
+					"description": null,
+					"table": {
+						"headers": ["Setting", "Options", "Notes"],
+						"rows": [
+							["GroupScope", "DomainLocal | Global | Universal", "Impacts where the group can be used and membership rules."],
+							["GroupCategory", "Security | Distribution", "Security groups can be assigned permissions."],
+							["Nesting", "Group-in-group", "Common for RBAC: role groups inside resource groups."]
+						]
+					},
+					"example": "Get-ADGroup 'Domain Admins' -Properties GroupScope,GroupCategory |\n  Select-Object Name,GroupScope,GroupCategory"
+				},
+				{
+					"title": "Common group operations",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create security group", "New-ADGroup -Name 'APP-Readers' -GroupScope Global -GroupCategory Security -Path 'OU=Groups,DC=corp,DC=example,DC=com'"],
+							["Add member", "Add-ADGroupMember 'APP-Readers' -Members alice"],
+							["Remove member", "Remove-ADGroupMember 'APP-Readers' -Members alice -Confirm:$false"],
+							["List members", "Get-ADGroupMember 'APP-Readers' -Recursive"],
+							["List groups for a user", "Get-ADPrincipalGroupMembership alice"],
+							["Find empty groups", "Get-ADGroup -Filter * -Properties Members | Where-Object { -not $_.Members }"],
+							["Set group attributes", "Set-ADGroup 'APP-Readers' -Description 'Read-only app access'"],
+							["Delete group", "Remove-ADGroup 'APP-Readers'"]
+						]
+					},
+					"example": "Get-ADGroupMember 'APP-Readers' -Recursive | Select-Object Name,ObjectClass"
+				}
+			]
+		},
+		{
+			"title": "Computers and Domain Join",
+			"description": "Manage computer objects and domain membership.",
+			"items": [
+				{
+					"title": "Computer inventory",
+					"description": null,
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Get computer", "Get-ADComputer PC-001"],
+							["Search computers", "Get-ADComputer -Filter \"Name -like 'PC-*'\""],
+							["Get OS details", "Get-ADComputer PC-001 -Properties OperatingSystem,OperatingSystemVersion,LastLogonDate"],
+							["List disabled computers", "Get-ADComputer -Filter 'Enabled -eq $false'"],
+							["Find stale computers (90d)", "Search-ADAccount -AccountInactive -ComputersOnly -TimeSpan 90.00:00:00"],
+							["Delete old computers", "Search-ADAccount -AccountInactive -ComputersOnly -TimeSpan 180.00:00:00 | Remove-ADComputer -Confirm:$false"]
+						]
+					},
+					"example": "Get-ADComputer -Filter * -SearchBase 'OU=Workstations,DC=corp,DC=example,DC=com' -Properties LastLogonDate |\n  Sort-Object LastLogonDate | Select-Object -First 20 Name,LastLogonDate"
+				},
+				{
+					"title": "Domain join / secure channel",
+					"description": "Join a machine to a domain and troubleshoot trust relationship issues.",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Join domain (PowerShell)", "Add-Computer -DomainName 'corp.example.com' -Credential (Get-Credential) -Restart"],
+							["Unjoin (to workgroup)", "Remove-Computer -UnjoinDomaincredential (Get-Credential) -WorkgroupName 'WORKGROUP' -Restart"],
+							["Test secure channel", "Test-ComputerSecureChannel -Verbose"],
+							["Repair secure channel", "Test-ComputerSecureChannel -Repair -Credential (Get-Credential)"],
+							["Find a DC", "nltest /dsgetdc:corp.example.com"],
+							["Verify domain trust", "nltest /sc_query:corp.example.com"]
+						]
+					},
+					"example": "Test-ComputerSecureChannel -Verbose\nTest-ComputerSecureChannel -Repair -Credential (Get-Credential)"
+				}
+			]
+		},
+		{
+			"title": "OUs, Delegation, and Administration",
+			"description": "Design OU structure, delegate permissions, and perform safe bulk changes.",
+			"items": [
+				{
+					"title": "OU operations",
+					"description": null,
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["Create OU", "New-ADOrganizationalUnit -Name 'Workstations' -Path 'DC=corp,DC=example,DC=com'"],
+							["Get OU", "Get-ADOrganizationalUnit -Filter \"Name -like 'Work*'\""],
+							["Protect from accidental deletion", "Set-ADOrganizationalUnit 'OU=Workstations,DC=corp,DC=example,DC=com' -ProtectedFromAccidentalDeletion $true"],
+							["Move an object", "Move-ADObject 'CN=PC-001,OU=Staging,DC=corp,DC=example,DC=com' -TargetPath 'OU=Workstations,DC=corp,DC=example,DC=com'"],
+							["Find objects under an OU", "Get-ADObject -SearchBase 'OU=Workstations,DC=corp,DC=example,DC=com' -LDAPFilter '(objectClass=computer)'"],
+							["Bulk move by filter", "Get-ADComputer -Filter \"Name -like 'PC-*'\" -SearchBase 'OU=Staging,DC=corp,DC=example,DC=com' | Move-ADObject -TargetPath 'OU=Workstations,DC=corp,DC=example,DC=com'"]
+						]
+					},
+					"example": "New-ADOrganizationalUnit -Name 'Servers' -Path 'DC=corp,DC=example,DC=com'\nSet-ADOrganizationalUnit 'OU=Servers,DC=corp,DC=example,DC=com' -ProtectedFromAccidentalDeletion $true"
+				},
+				{
+					"title": "Service accounts (basics)",
+					"description": "Prefer Group Managed Service Accounts (gMSA) when possible.",
+					"table": {
+						"headers": ["Concept", "Command", "Notes"],
+						"rows": [
+							["gMSA prerequisites", "Add-KdsRootKey -EffectiveImmediately", "Do once per forest (plan carefully)."],
+							["Create gMSA", "New-ADServiceAccount -Name gmsa_web -DNSHostName 'gmsa_web.corp.example.com' -PrincipalsAllowedToRetrieveManagedPassword 'WEB-SERVERS$'", "Allows specific computers to use it."],
+							["Install gMSA on a server", "Install-ADServiceAccount gmsa_web", "Run on the member server."],
+							["Test gMSA", "Test-ADServiceAccount gmsa_web", "Validates configuration."],
+							["Classic service account check", "Get-ADUser -LDAPFilter '(servicePrincipalName=*)' -Properties servicePrincipalName", "Find accounts used for services."]
+						]
+					},
+					"example": "# On DC/management box\nAdd-KdsRootKey -EffectiveImmediately\nNew-ADServiceAccount -Name gmsa_web -DNSHostName 'gmsa_web.corp.example.com' -PrincipalsAllowedToRetrieveManagedPassword 'WEB-SERVERS$'"
+				}
+			]
+		},
+		{
+			"title": "Group Policy (GPO)",
+			"description": "Create, link, and troubleshoot Group Policy.",
+			"items": [
+				{
+					"title": "Common GPO commands",
+					"description": "Requires GroupPolicy module (often installed with RSAT).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List GPOs", "Get-GPO -All"],
+							["Get one GPO", "Get-GPO -Name 'Workstation Baseline'"],
+							["Create GPO", "New-GPO -Name 'Workstation Baseline'"],
+							["Link GPO to OU", "New-GPLink -Name 'Workstation Baseline' -Target 'OU=Workstations,DC=corp,DC=example,DC=com' -LinkEnabled Yes"],
+							["Enforce link", "Set-GPLink -Name 'Workstation Baseline' -Target 'OU=Workstations,DC=corp,DC=example,DC=com' -Enforced Yes"],
+							["Backup GPO", "Backup-GPO -Name 'Workstation Baseline' -Path C:\\GPOBackups"],
+							["Restore GPO", "Restore-GPO -Name 'Workstation Baseline' -Path C:\\GPOBackups"],
+							["Report GPO", "Get-GPOReport -Name 'Workstation Baseline' -ReportType Html -Path baseline.html"],
+							["Force update", "gpupdate /force"],
+							["View applied policy", "gpresult /r"]
+						]
+					},
+					"example": "Import-Module GroupPolicy\nGet-GPO -All | Select-Object DisplayName,Id | Sort-Object DisplayName | Select-Object -First 20"
+				},
+				{
+					"title": "GPO troubleshooting",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["gpresult /h report.html", "Generate an HTML Resultant Set of Policy report."],
+							["rsop.msc", "GUI: Resultant Set of Policy snap-in."],
+							["wevtutil qe Microsoft-Windows-GroupPolicy/Operational /c:20 /rd:true /f:text", "Group Policy operational logs."],
+							["nltest /sc_verify:[domain]", "Verify secure channel if GP fails due to auth."],
+							["w32tm /query /status", "Time sync (Kerberos + GP depend on time)."],
+							["klist", "Confirm Kerberos tickets exist."]
+						]
+					},
+					"example": "gpresult /h gp.html\nstart gp.html"
+				}
+			]
+		},
+		{
+			"title": "DNS (AD-Integrated)",
+			"description": "AD relies heavily on DNS (SRV records, DC discovery).",
+			"items": [
+				{
+					"title": "DC discovery records",
+					"description": "Key SRV records used for locating DCs and services.",
+					"table": {
+						"headers": ["Record", "Used for"],
+						"rows": [
+							["_ldap._tcp.dc._msdcs.[domain]", "Locate domain controllers."],
+							["_kerberos._tcp.[domain]", "Locate Kerberos KDCs."],
+							["_gc._tcp.[forestRoot]", "Locate global catalog servers."],
+							["_kpasswd._tcp.[domain]", "Kerberos password change."]
+						]
+					},
+					"example": "nslookup -type=SRV _ldap._tcp.dc._msdcs.corp.example.com\nnslookup -type=SRV _kerberos._tcp.corp.example.com"
+				},
+				{
+					"title": "DNS cmdlets (Windows DNS Server)",
+					"description": "When the DNS role is present (often on DCs).",
+					"table": {
+						"headers": ["Task", "Command"],
+						"rows": [
+							["List zones", "Get-DnsServerZone"],
+							["List records", "Get-DnsServerResourceRecord -ZoneName 'corp.example.com'"],
+							["Find a record", "Get-DnsServerResourceRecord -ZoneName 'corp.example.com' | Where-Object HostName -eq 'dc1'"],
+							["Add A record", "Add-DnsServerResourceRecordA -ZoneName 'corp.example.com' -Name 'app1' -IPv4Address '10.0.0.10'"],
+							["Remove record", "Remove-DnsServerResourceRecord -ZoneName 'corp.example.com' -RRType 'A' -Name 'app1' -RecordData '10.0.0.10' -Force"]
+						]
+					},
+					"example": "Get-DnsServerResourceRecord -ZoneName 'corp.example.com' | Select-Object -First 10"
+				}
+			]
+		},
+		{
+			"title": "Authentication (Kerberos/NTLM) and Tickets",
+			"description": "Operational commands to inspect Kerberos and common auth dependencies.",
+			"items": [
+				{
+					"title": "Kerberos quick commands",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["klist", "List Kerberos tickets for current logon session."],
+							["klist purge", "Purge Kerberos tickets (forces re-auth)."],
+							["setspn -L [account]", "List SPNs on an account."],
+							["setspn -Q [spn]", "Search for an SPN in the domain."],
+							["w32tm /query /status", "Time skew can break Kerberos."],
+							["nltest /sc_query:[domain]", "Secure channel state."],
+							["whoami /groups", "Shows token groups (may differ from full membership due to filtering)."]
+						]
+					},
+					"example": "klist\nsetspn -Q HTTP/app.corp.example.com"
+				},
+				{
+					"title": "Account flags that affect auth",
+					"description": "Some common userAccountControl flags and related attributes.",
+					"table": {
+						"headers": ["Setting", "Where", "Effect"],
+						"rows": [
+							["Account disabled", "userAccountControl bit 2", "Cannot log on."],
+							["Password never expires", "userAccountControl bit 65536", "Password policy bypass for expiry (not recommended broadly)."],
+							["Smartcard required", "userAccountControl bit 262144", "Requires smartcard/certificate logon."],
+							["Pre-auth not required", "userAccountControl bit 4194304", "Weakens Kerberos posture; avoid unless necessary."],
+							["Password last set", "pwdLastSet", "Used for rotations and audits."],
+							["Last logon", "lastLogonDate (computed)", "Helpful for stale account cleanup."]
+						]
+					},
+					"example": "Get-ADUser alice -Properties pwdLastSet,lastLogonDate,userAccountControl |\n  Select-Object SamAccountName,pwdLastSet,lastLogonDate,userAccountControl"
+				}
+			]
+		},
+		{
+			"title": "Replication, Health, and FSMO",
+			"description": "Keep DCs healthy: replication, DNS, time, and core checks.",
+			"items": [
+				{
+					"title": "Health checks",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["dcdiag /q", "Quick health summary (quiet)."],
+							["dcdiag /v", "Verbose DC diagnostics."],
+							["repadmin /replsummary", "Replication health summary."],
+							["repadmin /showrepl", "Inbound replication partners and status."],
+							["repadmin /queue", "Replication queue length."],
+							["repadmin /syncall /AdeP", "Force sync across all naming contexts."],
+							["netdom query fsmo", "FSMO owners."],
+							["Get-ADReplicationFailure -Scope Forest", "Replication failures via AD cmdlets."],
+							["Get-ADDomainController -Filter * | Select-Object HostName,IsGlobalCatalog,IPv4Address", "Inventory DC roles."],
+							["w32tm /monitor", "Time service across DCs (critical for Kerberos)."]
+						]
+					},
+					"example": "dcdiag /q\nrepadmin /replsummary\nnetdom query fsmo"
+				},
+				{
+					"title": "Replication troubleshooting tips",
+					"description": "Common triage steps: DNS, time, secure channel, connectivity, event logs.",
+					"table": {
+						"headers": ["Area", "Checks"],
+						"rows": [
+							["DNS", "Verify SRV records; confirm DCs resolve each other; check client DNS settings."],
+							["Time", "Ensure PDC emulator is authoritative; validate w32time."],
+							["Ports", "LDAP/LDAPS, Kerberos, RPC dynamic range, DNS, SMB as needed."],
+							["Auth", "Secure channel/trust healthy; SPNs correct for services."],
+							["Logs", "Directory Service, DNS Server, System, and Replication events."]
+						]
+					},
+					"example": "# Examples\nrepadmin /showrepl\nwevtutil qe 'Directory Service' /c:20 /rd:true /f:text"
+				}
+			]
+		},
+		{
+			"title": "Trusts and Forest/Domain Relationships",
+			"description": "Inspect and manage trusts safely.",
+			"items": [
+				{
+					"title": "Trust discovery",
+					"description": null,
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nltest /domain_trusts", "List trusts from this machine."],
+							["Get-ADTrust -Filter *", "List trusts via AD module."],
+							["Get-ADForest | Select-Object Domains", "Domains in this forest."],
+							["netdom trust [domain] /d:[trustedDomain] /verify", "Verify a trust (classic tool)."],
+							["Get-ADDomain | Select-Object NetBIOSName,DNSRoot", "Domain naming info."]
+						]
+					},
+					"example": "Get-ADTrust -Filter * | Select-Object Name,Direction,TrustType,ForestTransitive"
+				}
+			]
+		},
+		{
+			"title": "Scripting and Bulk Operations",
+			"description": "Safe patterns for automation: filters, pipeline, CSV import/export.",
+			"items": [
+				{
+					"title": "CSV: create users in bulk",
+					"description": "Common pattern: import CSV, loop, create/update. Always test in a lab/OU first.",
+					"table": {
+						"headers": ["CSV Columns", "Notes"],
+						"rows": [
+							["SamAccountName", "Unique logon name."],
+							["GivenName", "First name."],
+							["Surname", "Last name."],
+							["UPN", "userPrincipalName."],
+							["OU", "Target OU DN (Path)."],
+							["Department/Title/Mail", "Optional attributes."]
+						]
+					},
+					"example": "$users = Import-Csv .\\new_users.csv\nforeach ($u in $users) {\n  $pw = ConvertTo-SecureString $u.Password -AsPlainText -Force\n  New-ADUser -Name ($u.GivenName + ' ' + $u.Surname) -SamAccountName $u.SamAccountName -UserPrincipalName $u.UPN -GivenName $u.GivenName -Surname $u.Surname -Path $u.OU -Enabled $true -AccountPassword $pw\n}"
+				},
+				{
+					"title": "Bulk group membership from CSV",
+					"description": null,
+					"table": {
+						"headers": ["CSV Columns", "Example"],
+						"rows": [
+							["Group", "APP-Readers"],
+							["Member", "alice"],
+							["MemberType", "User|Computer (optional)"]
+						]
+					},
+					"example": "$rows = Import-Csv .\\group_members.csv\nforeach ($r in $rows) {\n  Add-ADGroupMember -Identity $r.Group -Members $r.Member\n}"
+				},
+				{
+					"title": "Find and report stale accounts",
+					"description": "Useful for hygiene projects.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["Inactive users (90d)", "Search-ADAccount -AccountInactive -UsersOnly -TimeSpan 90.00:00:00"],
+							["Inactive computers (90d)", "Search-ADAccount -AccountInactive -ComputersOnly -TimeSpan 90.00:00:00"],
+							["Export inactive users", "Search-ADAccount -AccountInactive -UsersOnly -TimeSpan 90.00:00:00 | Get-ADUser -Properties lastLogonDate | Select-Object SamAccountName,lastLogonDate | Export-Csv inactive_users.csv -NoTypeInformation"]
+						]
+					},
+					"example": "Search-ADAccount -AccountInactive -UsersOnly -TimeSpan 90.00:00:00 |\n  Get-ADUser -Properties lastLogonDate |\n  Select-Object SamAccountName,Enabled,lastLogonDate"
+				}
+			]
+		},
+		{
+			"title": "Security Operations and Auditing (Admin-Focused)",
+			"description": "Operational hardening and auditing checks commonly used by admins (not exploitation).",
+			"items": [
+				{
+					"title": "Common admin security checks",
+					"description": null,
+					"table": {
+						"headers": ["Check", "Command", "Why"],
+						"rows": [
+							["Who are admins?", "Get-ADGroupMember 'Domain Admins' -Recursive", "Validate privileged access."],
+							["Accounts with SPNs", "Get-ADUser -LDAPFilter '(servicePrincipalName=*)' -Properties servicePrincipalName", "Inventory service accounts."],
+							["Users never expire passwords", "Get-ADUser -LDAPFilter '(userAccountControl:1.2.840.113556.1.4.803:=65536)'", "Reduce long-lived passwords."],
+							["Users with no pre-auth", "Get-ADUser -LDAPFilter '(userAccountControl:1.2.840.113556.1.4.803:=4194304)'", "Avoid unless required."],
+							["Stale accounts", "Search-ADAccount -AccountInactive -UsersOnly -TimeSpan 90.00:00:00", "Reduce attack surface and clutter."],
+							["Kerberos policy dependencies", "w32tm /query /status", "Time skew breaks Kerberos."],
+							["GPO changes audit", "wevtutil qe Security /q:'*[System[(EventID=5136)]]' /c:10 /rd:true /f:text", "Directory Service changes (if auditing enabled)."],
+							["Password policy", "Get-ADDefaultDomainPasswordPolicy", "Review min length, lockout, etc."]
+						]
+					},
+					"example": "Get-ADDefaultDomainPasswordPolicy |\n  Select-Object MinPasswordLength,LockoutThreshold,MaxPasswordAge"
+				},
+				{
+					"title": "Event logs worth knowing",
+					"description": "Availability depends on configured audit policies.",
+					"table": {
+						"headers": ["Event log", "What it’s used for"],
+						"rows": [
+							["Security", "Logons, account management, policy changes (varies by auditing)."],
+							["Directory Service", "AD DS events on DCs."],
+							["DNS Server", "DNS events when role installed."],
+							["System", "Service failures, replication/time issues."],
+							["Microsoft-Windows-GroupPolicy/Operational", "GPO processing on clients."]
+						]
+					},
+					"example": "wevtutil qe Security /c:5 /rd:true /f:text"
+				}
+			]
+		},
+		{
+			"title": "Backup/Restore and Disaster Recovery (High-Level)",
+			"description": "AD recovery is sensitive; these are safe starting points, not step-by-step rebuild guides.",
+			"items": [
+				{
+					"title": "Key concepts",
+					"description": null,
+					"table": {
+						"headers": ["Concept", "Notes"],
+						"rows": [
+							["System State backup", "Required for authoritative restores; should be part of DC backup strategy."],
+							["AD recycle bin", "Allows object recovery when enabled (forest functional level requirements)."],
+							["Tombstone lifetime", "Impacts replication of deletes and lingering objects."],
+							["Authoritative vs non-authoritative restore", "Determines which changes win after restore."],
+							["Snapshots", "Helpful for forensics/testing but not a replacement for System State."]
+						]
+					},
+					"example": "# Check Recycle Bin feature state\nGet-ADOptionalFeature -Filter \"Name -like 'Recycle Bin Feature'\" | Select-Object Name,EnabledScopes"
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting Playbook",
+			"description": "Fast triage steps for common AD issues.",
+			"items": [
+				{
+					"title": "Login/auth issues",
+					"description": "Most issues reduce to DNS, time, connectivity, or account state.",
+					"table": {
+						"headers": ["Symptom", "Checks"],
+						"rows": [
+							["Cannot log on", "Is account disabled/locked? Is password expired? Is DC reachable?"],
+							["Slow logon", "DNS misconfig, DC selection/site mismatch, GPO delays."],
+							["Kerberos errors", "Time skew, SPN issues, DC/KDC reachability."],
+							["GPO not applying", "gpresult/GroupPolicy logs; secure channel; DNS/time."],
+							["Trust relationship failed", "Test-ComputerSecureChannel; rejoin; check machine account."]
+						]
+					},
+					"example": "# Common triage\nwhoami /groups\nklist\nw32tm /query /status\nnltest /dsgetdc:corp.example.com"
+				},
+				{
+					"title": "Replication/DNS issues",
+					"description": null,
+					"table": {
+						"headers": ["Command", "When to use"],
+						"rows": [
+							["repadmin /replsummary", "High-level replication health."],
+							["repadmin /showrepl", "Identify failing partners and error codes."],
+							["dcdiag /test:dns /v", "DNS health checks on a DC."],
+							["nslookup -type=SRV _ldap._tcp.dc._msdcs.[domain]", "Verify DC discovery records."],
+							["ipconfig /all", "Ensure clients use correct DNS servers."],
+							["wevtutil qe 'DNS Server' /c:20 /rd:true /f:text", "Review DNS events."]
+						]
+					},
+					"example": "repadmin /showrepl\ndcdiag /test:dns /v"
+				}
+			]
+		}
+	]
+}
