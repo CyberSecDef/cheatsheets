@@ -1,0 +1,715 @@
+{
+	"title": "Vim (vi)",
+	"description": "A practical vi/Vim quick reference covering fundamentals, navigation, editing, search/replace, buffers/windows/tabs, registers/macros, configuration, scripting (Vimscript), administration/troubleshooting, and advanced features. Commands apply to vi/Vim unless noted.",
+	"language": "vim",
+	"categories": [
+		{
+			"title": "Fundamentals and Help",
+			"description": "How to get help fast and understand modes.",
+			"items": [
+				{
+					"title": "Modes (mental model)",
+					"description": "Vim is modal: you usually navigate in Normal mode and type text in Insert mode.",
+					"table": {
+						"headers": ["Mode", "Enter", "Exit"],
+						"rows": [
+							["Normal", "<Esc>", "(default)"],
+							["Insert", "i/I/a/A/o/O", "<Esc>"],
+							["Visual", "v/V/<C-v>", "<Esc>"],
+							["Command-line", ":", "<Esc>"],
+							["Replace", "R", "<Esc>" ]
+						]
+					},
+					"example": "# If you're lost, press <Esc> a few times to return to Normal mode."
+				},
+				{
+					"title": "Help system",
+					"description": "Use :help with keywords, commands, and key notation.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":help", "Open help"],
+							[":help :write", "Help for Ex command"],
+							[":help i_CTRL-R", "Help for Insert-mode key chord"],
+							[":help 'number'", "Help for an option"],
+							[":helpgrep pattern", "Search help tags"],
+							[":help notation", "Key notation reference" ]
+						]
+					},
+					"example": ":help\n:help :s\n:help i_CTRL-R"
+				},
+				{
+					"title": "Open, save, quit (the essentials)",
+					"description": "Common Ex commands for file operations.",
+					"table": {
+						"headers": ["Command", "Meaning"],
+						"rows": [
+							[":e file", "Edit/open file"],
+							[":w", "Write/save"],
+							[":w file", "Write to file"],
+							[":q", "Quit (fails if modified)"],
+							[":q!", "Quit without saving"],
+							[":wq", "Write and quit"],
+							[":x", "Write if changed, then quit"],
+							[":qa", "Quit all"],
+							[":qa!", "Quit all without saving" ]
+						]
+					},
+					"example": ":w\n:q\n:wq"
+				}
+			]
+		},
+		{
+			"title": "Navigation and Motions",
+			"description": "Move efficiently by characters, words, lines, paragraphs, and matches.",
+			"items": [
+				{
+					"title": "Basic movement",
+					"description": "Use hjkl, but also jump by words/lines and use search.",
+					"table": {
+						"headers": ["Keys", "Action"],
+						"rows": [
+							["h j k l", "Left / down / up / right"],
+							["w b e", "Next word / previous word / end of word"],
+							["0 ^ $", "Start of line / first non-blank / end of line"],
+							["gg G", "Top / bottom of file"],
+							["{ }", "Prev/next paragraph"],
+							["%", "Jump to matching (), {}, []" ]
+						]
+					},
+					"example": "# Try: gg, G, w, b, %, {, }"
+				},
+				{
+					"title": "Line/Screen movement",
+					"description": "Move relative to viewport and by display lines.",
+					"table": {
+						"headers": ["Keys", "Action"],
+						"rows": [
+							["H M L", "Top/middle/bottom of screen"],
+							["<C-f> <C-b>", "Page forward/back"],
+							["<C-d> <C-u>", "Half-page down/up"],
+							["zz zt zb", "Center/top/bottom cursor line"],
+							["gj gk", "Move by display lines (wrap-aware)" ]
+						]
+					},
+					"example": "# Center the current line:\nzz"
+				},
+				{
+					"title": "Marks and jumps",
+					"description": "Set marks to return later; jump list tracks navigation.",
+					"table": {
+						"headers": ["Command", "Action"],
+						"rows": [
+							["ma", "Set mark a at cursor"],
+							["'a", "Jump to line of mark a"],
+							["`a", "Jump to exact position of mark a"],
+							["mA", "File mark (uppercase)"],
+							["<C-o> / <C-i>", "Jump back/forward in jump list"],
+							[":jumps", "Show jump list"],
+							[":marks", "List marks" ]
+						]
+					},
+					"example": "ma\n# ... move around ...\n'a"
+				}
+			]
+		},
+		{
+			"title": "Editing Essentials",
+			"description": "Insert, change, delete, copy/paste, text objects, and repeating.",
+			"items": [
+				{
+					"title": "Insert and append",
+					"description": "Enter Insert mode in the right place.",
+					"table": {
+						"headers": ["Key", "Action"],
+						"rows": [
+							["i", "Insert before cursor"],
+							["a", "Append after cursor"],
+							["I", "Insert at start of line"],
+							["A", "Append at end of line"],
+							["o", "Open new line below"],
+							["O", "Open new line above" ]
+						]
+					},
+					"example": "# Common workflow:\nciwnew_word<Esc>"
+				},
+				{
+					"title": "Delete/change/yank (operator + motion)",
+					"description": "Most editing uses an operator followed by a motion (or text object).",
+					"table": {
+						"headers": ["Pattern", "Meaning"],
+						"rows": [
+							["d{motion}", "Delete"],
+							["c{motion}", "Change (delete + insert)"],
+							["y{motion}", "Yank (copy)"],
+							["dd / cc / yy", "Operate on whole line"],
+							["D / C", "To end of line"],
+							["x", "Delete character under cursor" ]
+						]
+					},
+					"example": "dw      # delete word\nci(     # change inside parentheses\nyy      # yank line\np       # paste after cursor"
+				},
+				{
+					"title": "Text objects",
+					"description": "Operate on semantic units like words, quotes, parentheses.",
+					"table": {
+						"headers": ["Object", "Inside", "Around"],
+						"rows": [
+							["Word", "iw", "aw"],
+							["Sentence", "is", "as"],
+							["Paragraph", "ip", "ap"],
+							["Quotes", "i\" / i' / i`", "a\" / a' / a`"],
+							["Parens/brackets/braces", "i( i[ i{", "a( a[ a{"],
+							["Tag (HTML)", "it", "at" ]
+						]
+					},
+					"example": "ci\"    # change inside double quotes\nva{     # select around braces"
+				},
+				{
+					"title": "Undo, redo, repeat",
+					"description": "Repeat your last change; undo/redo in a tree.",
+					"table": {
+						"headers": ["Key/Command", "Action"],
+						"rows": [
+							["u", "Undo"],
+							["<C-r>", "Redo"],
+							[".", "Repeat last change"],
+							[":undo 5", "Undo to change number"],
+							[":undolist", "Show undo tree" ]
+						]
+					},
+					"example": "# Make a change, then repeat it:\n."
+				}
+			]
+		},
+		{
+			"title": "Search, Replace, and Regex",
+			"description": "Find text quickly, use incremental search, and perform substitutions.",
+			"items": [
+				{
+					"title": "Search",
+					"description": "Use / and ? for forward/backward search; n/N repeat.",
+					"table": {
+						"headers": ["Key", "Action"],
+						"rows": [
+							["/pattern", "Search forward"],
+							["?pattern", "Search backward"],
+							["n / N", "Next / previous match"],
+							["* / #", "Search word under cursor forward/back"],
+							[":set hlsearch", "Highlight matches"],
+							[":set incsearch", "Incremental search"],
+							[":noh", "Clear highlight" ]
+						]
+					},
+					"example": "/TODO\nn\n:noh"
+				},
+				{
+					"title": "Substitution (:s)",
+					"description": "Substitute in line, range, or entire file. Add flags like g/c/i.",
+					"table": {
+						"headers": ["Command", "Meaning"],
+						"rows": [
+							[":s/old/new/", "First match on current line"],
+							[":s/old/new/g", "All matches on current line"],
+							[":%s/old/new/g", "All matches in file"],
+							[":%s/old/new/gc", "Confirm each replacement"],
+							[":%s/\\<word\\>/new/g", "Whole word (use \\< and \\>)"],
+							[":%s/old/new/gi", "Case-insensitive" ]
+						]
+					},
+					"example": ":%s/foo/bar/gc"
+				},
+				{
+					"title": "Very magic mode (\\v)",
+					"description": "\\v makes most characters special (reduces escaping) in Vim regex.",
+					"table": {
+						"headers": ["Example", "Notes"],
+						"rows": [
+							["/\\v(foo|bar)", "Alternation"],
+							["/\\v^\"?\\w+\"?$", "Example: optional quotes + word"],
+							[":%s/\\v\\s+/ /g", "Collapse whitespace" ]
+						]
+					},
+					"example": ":%s/\\v\\s+/ /g"
+				},
+				{
+					"title": "Search history and quickfix",
+					"description": "Navigate search history and use quickfix for lists of locations.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["q/", "Open search command-line window"],
+							[":vimgrep /pat/ **/*.txt", "Search files into quickfix"],
+							[":copen / :cclose", "Open/close quickfix window"],
+							[":cnext / :cprev", "Next/prev quickfix entry"],
+							[":cfirst / :clast", "First/last quickfix entry" ]
+						]
+					},
+					"example": ":vimgrep /TODO/ **/*.md\n:copen"
+				}
+			]
+		},
+		{
+			"title": "Visual Mode",
+			"description": "Select text, operate on it, and do block/column edits.",
+			"items": [
+				{
+					"title": "Visual selections",
+					"description": "Characterwise, linewise, and blockwise selection.",
+					"table": {
+						"headers": ["Key", "Selection"],
+						"rows": [
+							["v", "Characterwise"],
+							["V", "Linewise"],
+							["<C-v>", "Blockwise (column)"],
+							["gv", "Reselect last visual" ]
+						]
+					},
+					"example": "# Visual select and indent:\nVjj>"
+				},
+				{
+					"title": "Indenting and formatting",
+					"description": "Indent selection and autoformat.",
+					"table": {
+						"headers": ["Command", "Action"],
+						"rows": [
+							["> / <", "Indent right/left (Visual)"],
+							["=", "Reindent (Visual or motion)"],
+							["gq", "Format text (depends on 'formatprg'/'textwidth')"],
+							["gg=G", "Reindent whole file" ]
+						]
+					},
+					"example": "gg=G"
+				},
+				{
+					"title": "Blockwise edits",
+					"description": "Edit columns (add/remove prefixes) with blockwise selection.",
+					"table": {
+						"headers": ["Workflow", "Meaning"],
+						"rows": [
+							["<C-v> select then Itext<Esc>", "Insert text on each selected line"],
+							["<C-v> select then Atext<Esc>", "Append text on each selected line"],
+							["<C-v> select then d", "Delete block" ]
+						]
+					},
+					"example": "# Comment multiple lines with \"# \" prefix:\n<C-v>jjI# <Esc>"
+				}
+			]
+		},
+		{
+			"title": "Registers, Clipboard, and Macros",
+			"description": "Yank/paste, named registers, system clipboard, and recording macros.",
+			"items": [
+				{
+					"title": "Registers (overview)",
+					"description": "Vim stores yanks/deletes in registers; select with \"{reg}.",
+					"table": {
+						"headers": ["Register", "Meaning"],
+						"rows": [
+							["\"\"", "Unnamed register"],
+							["\"0", "Last yank"],
+							["\"1..\"9", "Delete history"],
+							["\"a..\"z", "Named registers"],
+							["\"+ / \"*", "System clipboard (if compiled with clipboard support)"],
+							["\"_", "Black hole (discard)" ]
+						]
+					},
+					"example": "\"ayiw   # yank inner word into register a\n\"ap     # paste from register a"
+				},
+				{
+					"title": "Paste and put",
+					"description": "p/P paste after/before; gp/gP leave cursor after pasted text.",
+					"table": {
+						"headers": ["Key", "Action"],
+						"rows": [
+							["p / P", "Put after / before"],
+							["gp / gP", "Put and move cursor to end"],
+							[":set paste", "Paste mode (avoid autoindent)"],
+							[":set nopaste", "Disable paste mode" ]
+						]
+					},
+					"example": ":set paste\n\"+p\n:set nopaste"
+				},
+				{
+					"title": "Macros",
+					"description": "Record with q{reg}, stop with q, play with @{reg}. Repeat with @@.",
+					"table": {
+						"headers": ["Command", "Meaning"],
+						"rows": [
+							["qa", "Start recording into register a"],
+							["q", "Stop recording"],
+							["@a", "Play macro a"],
+							["@@", "Repeat last macro"],
+							["10@a", "Run macro 10 times"],
+							[":reg a", "Inspect register a" ]
+						]
+					},
+					"example": "qa0f,lr)q\n# then run on next lines:\nj@@"
+				}
+			]
+		},
+		{
+			"title": "Buffers, Windows, and Tabs",
+			"description": "Work with multiple files and splits efficiently.",
+			"items": [
+				{
+					"title": "Buffers",
+					"description": "A buffer is a file loaded into memory. You can have many buffers.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":ls", "List buffers"],
+							[":bnext / :bprev", "Next/previous buffer"],
+							[":b {N}", "Go to buffer N"],
+							[":bd", "Delete buffer (close)"],
+							[":e #", "Edit alternate file" ]
+						]
+					},
+					"example": ":ls\n:bnext\n:bd"
+				},
+				{
+					"title": "Splits (windows)",
+					"description": "Split the screen and move between windows.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":split / :vsplit", "Horizontal/vertical split"],
+							["<C-w>h/j/k/l", "Move to split"],
+							["<C-w>c", "Close current window"],
+							["<C-w>o", "Keep only this window"],
+							["<C-w>=", "Equalize sizes"],
+							["<C-w>_ / <C-w>|", "Max height / max width" ]
+						]
+					},
+					"example": ":vsplit\n<C-w>l\n<C-w>o"
+				},
+				{
+					"title": "Tabs",
+					"description": "Tabs are collections of windows; many workflows prefer buffers + splits.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":tabnew", "New tab"],
+							[":tabclose", "Close tab"],
+							["gt / gT", "Next/previous tab"],
+							[":tabs", "List tabs" ]
+						]
+					},
+					"example": ":tabnew\ngt"
+				}
+			]
+		},
+		{
+			"title": "Files, Sessions, and Recovery",
+			"description": "Work with files safely, recover from crashes, and persist sessions.",
+			"items": [
+				{
+					"title": "Open files and wildcards",
+					"description": "Edit files, use wildmenu, and open files relative to current working directory.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":pwd", "Show current directory"],
+							[":cd path", "Change directory"],
+							[":lcd path", "Change directory for current window"],
+							[":e %", "Edit current file"],
+							[":e .", "Open file browser (netrw)"],
+							[":set wildmenu", "Command-line completion" ]
+						]
+					},
+					"example": ":set wildmenu\n:e ."
+				},
+				{
+					"title": "Swap files and recovery",
+					"description": "Swap files help recovery after crashes but can cause warnings if a swap already exists.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":swapname", "Show swap file name"],
+							["vim -r file", "Recover a file (CLI)"],
+							[":recover", "Recover from swap"],
+							[":set directory?", "Where swap files are stored" ]
+						]
+					},
+					"example": "vim -r myfile.txt"
+				},
+				{
+					"title": "Sessions",
+					"description": "Sessions can persist window/tab/buffer layout.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":mksession! Session.vim", "Write a session"],
+							[":source Session.vim", "Load a session"],
+							[":set sessionoptions?", "What gets saved" ]
+						]
+					},
+					"example": ":mksession! Session.vim\n:qa\n# later\n:source Session.vim"
+				}
+			]
+		},
+		{
+			"title": "Command-Line Mode and Ex Commands",
+			"description": "Ex commands for ranges, shells, editing, and automation.",
+			"items": [
+				{
+					"title": "Ranges",
+					"description": "Many Ex commands accept ranges (lines) like ., %, 1,10, 'a,'b.",
+					"table": {
+						"headers": ["Range", "Meaning"],
+						"rows": [
+							[".", "Current line"],
+							["%", "Entire file"],
+							["1,10", "Lines 1 through 10"],
+							["'a,'b", "From mark a to mark b"],
+							["'<,'>", "Current visual selection" ]
+						]
+					},
+					"example": ":1,10s/foo/bar/g"
+				},
+				{
+					"title": "Shell integration",
+					"description": "Run shell commands and read/write via external tools.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":!cmd", "Run shell command"],
+							[":r !cmd", "Read command output into buffer"],
+							[":w !cmd", "Pipe buffer/range to command"],
+							["!!", "Repeat last :! command"],
+							[":terminal", "Open terminal (Vim 8+; depends on build)" ]
+						]
+					},
+					"example": ":%!python3 -m json.tool"
+				},
+				{
+					"title": "Editing multiple files",
+					"description": "Argument list and window commands help with multi-file edits.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":args *.txt", "Set argument list"],
+							[":argdo %s/old/new/g | update", "Run command across args"],
+							[":windo normal gg=G", "Run normal command in each window"],
+							[":bufdo bd", "Run across buffers" ]
+						]
+					},
+					"example": ":args **/*.md\n:argdo %s/TODO/DONE/g | update"
+				}
+			]
+		},
+		{
+			"title": "Configuration and Startup",
+			"description": "Configure Vim with vimrc, options, mappings, and plugins.",
+			"items": [
+				{
+					"title": "Where config lives",
+					"description": "Common locations; depends on OS and Vim build.",
+					"table": {
+						"headers": ["File", "Purpose"],
+						"rows": [
+							["~/.vimrc", "Main user config"],
+							["~/.vim/", "Runtime files (plugins, ftplugin, colors)"],
+							[":version", "Show build features and system vimrc paths"],
+							[":scriptnames", "List sourced scripts" ]
+						]
+					},
+					"example": ":version\n:scriptnames"
+				},
+				{
+					"title": "Common options",
+					"description": "Frequently used settings.",
+					"table": {
+						"headers": ["Option", "Meaning"],
+						"rows": [
+							[":set number", "Show line numbers"],
+							[":set relativenumber", "Relative line numbers"],
+							[":set expandtab", "Insert spaces for <Tab>"],
+							[":set shiftwidth=4", "Indent size"],
+							[":set ignorecase smartcase", "Smarter searching"],
+							[":set clipboard=unnamedplus", "Use system clipboard (if available)"],
+							[":set mouse=a", "Enable mouse" ]
+						]
+					},
+					"example": ":set number relativenumber\n:set ignorecase smartcase"
+				},
+				{
+					"title": "Mappings",
+					"description": "Create key mappings for Normal/Insert/Visual/Command-line modes.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":nmap lhs rhs", "Normal-mode mapping"],
+							[":imap lhs rhs", "Insert-mode mapping"],
+							[":vmap lhs rhs", "Visual-mode mapping"],
+							[":nnoremap", "Non-recursive mapping (preferred)"],
+							[":mapclear", "Clear mappings" ]
+						]
+					},
+					"example": "nnoremap <leader>w :w<CR>\nnnoremap <leader>q :q<CR>"
+				},
+				{
+					"title": "Plugin management (built-in packages)",
+					"description": "Vim 8+ supports packages without a plugin manager.",
+					"table": {
+						"headers": ["Path", "Purpose"],
+						"rows": [
+							["~/.vim/pack/{name}/start/{plugin}", "Loaded on startup"],
+							["~/.vim/pack/{name}/opt/{plugin}", "Optional (use :packadd)"],
+							[":packadd plugin", "Load optional plugin" ]
+						]
+					},
+					"example": ":packadd someplugin"
+				}
+			]
+		},
+		{
+			"title": "Scripting (Vimscript)",
+			"description": "Write functions, autocommands, and simple automation. (Vim9script exists in newer Vim; this focuses on classic Vimscript for compatibility.)",
+			"items": [
+				{
+					"title": "Variables and scopes",
+					"description": "Scopes include global (g:), buffer (b:), window (w:), tab (t:), script-local (s:), local (l:).",
+					"table": {
+						"headers": ["Scope", "Example"],
+						"rows": [
+							["Global", "let g:foo = 1"],
+							["Buffer", "let b:foo = 1"],
+							["Window", "let w:foo = 1"],
+							["Script", "let s:foo = 1"],
+							["Local", "let l:foo = 1" ]
+						]
+					},
+					"example": "let mapleader = \" \""
+				},
+				{
+					"title": "Functions",
+					"description": "Define functions and call them from mappings or commands.",
+					"table": {
+						"headers": ["Snippet", "Meaning"],
+						"rows": [
+							["function! MyFn(arg) abort", "Define function (bang overwrites)"],
+							["return", "Return value"],
+							[":call MyFn(\"x\")", "Call function"],
+							["command! MyCmd call MyFn(\"x\")", "Define user command" ]
+						]
+					},
+					"example": "function! TrimTrailingWS() abort\n  %s/\\s\\+$//e\nendfunction\ncommand! TrimWS call TrimTrailingWS()"
+				},
+				{
+					"title": "Autocommands",
+					"description": "Run actions on events (BufWritePre, FileType, etc.). Use augroup to avoid duplicates.",
+					"table": {
+						"headers": ["Concept", "Example"],
+						"rows": [
+							["Define group", "augroup MyGroup | autocmd! | augroup END"],
+							["On save", "autocmd BufWritePre * %s/\\s\\+$//e"],
+							["On filetype", "autocmd FileType python setlocal tabstop=4" ]
+						]
+					},
+					"example": "augroup TrimWS\n  autocmd!\n  autocmd BufWritePre * %s/\\s\\+$//e\naugroup END"
+				}
+			]
+		},
+		{
+			"title": "Advanced Topics",
+			"description": "Folding, diff, sessions, registers, and power-user patterns.",
+			"items": [
+				{
+					"title": "Folding",
+					"description": "Fold large files for navigation and focus.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["zf{motion}", "Create fold"],
+							["zo / zc", "Open/close fold"],
+							["zR / zM", "Open/close all folds"],
+							[":set foldmethod=indent", "Fold by indent"],
+							[":set foldmethod=syntax", "Fold by syntax" ]
+						]
+					},
+					"example": ":set foldmethod=indent\nzM\nzR"
+				},
+				{
+					"title": "Diff mode",
+					"description": "Compare files and merge changes.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["vim -d a b", "Start Vim in diff mode"],
+							[":diffthis / :diffoff", "Enable/disable diff for window"],
+							["]c / [c", "Next/prev change"],
+							["do / dp", "Diff obtain / put" ]
+						]
+					},
+					"example": "vim -d file1 file2"
+				},
+				{
+					"title": "Performance tips",
+					"description": "Options that can help with very large files or slow terminals.",
+					"table": {
+						"headers": ["Option", "Effect"],
+						"rows": [
+							[":set lazyredraw", "Do not redraw during macros"],
+							[":set regexpengine=1", "Sometimes faster regex (version-dependent)"],
+							[":set ttyfast", "Hint faster terminal"],
+							[":syntax off", "Disable syntax highlighting" ]
+						]
+					},
+					"example": ":set lazyredraw\n:syntax off"
+				}
+			]
+		},
+		{
+			"title": "Administration and Troubleshooting",
+			"description": "Diagnose behavior, inspect settings, and handle common problems.",
+			"items": [
+				{
+					"title": "Inspect options and mappings",
+					"description": "Figure out why a key behaves a certain way.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							[":set option?", "Show current value"],
+							[":verbose set option?", "Show where it was last set"],
+							[":map", "List mappings"],
+							[":verbose map <key>", "Show mapping and where defined"],
+							[":messages", "Show recent messages" ]
+						]
+					},
+					"example": ":verbose set clipboard?\n:verbose map <leader>w"
+				},
+				{
+					"title": "Encoding and fileformat",
+					"description": "Handle line endings and encodings.",
+					"table": {
+						"headers": ["Option", "Meaning"],
+						"rows": [
+							[":set fileencoding?", "Encoding used for the file"],
+							[":set encoding?", "Internal encoding"],
+							[":set fileformat?", "Line endings: unix/dos/mac"],
+							[":set list", "Show whitespace characters"],
+							[":set nolist", "Hide whitespace characters" ]
+						]
+					},
+					"example": ":set fileformat=unix\n:w"
+				},
+				{
+					"title": "Common gotchas",
+					"description": "Quick fixes for common issues.",
+					"table": {
+						"headers": ["Symptom", "Fix"],
+						"rows": [
+							["Stuck in insert/visual", "Press <Esc>"],
+							["Search highlight won’t go away", ":noh"],
+							["Pasting messes indentation", ":set paste before paste, then :set nopaste"],
+							["Backspace weirdness", ":set backspace=indent,eol,start"],
+							["Tabs vs spaces", ":set expandtab shiftwidth=4 tabstop=4" ]
+						]
+					},
+					"example": ":noh\n:set paste"
+				}
+			]
+		}
+	]
+}
