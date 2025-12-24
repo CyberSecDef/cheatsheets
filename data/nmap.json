@@ -403,6 +403,233 @@
 					"example": "sudo nmap -sS -sV --top-ports 200 -oA quick 192.0.2.10"
 				}
 			]
+		},
+		{
+			"title": "Command Structure and Targeting",
+			"description": "How Nmap commands are composed: targets, ports, scan types, output, and common modifiers.",
+			"items": [
+				{
+					"title": "General syntax",
+					"description": "Nmap typically follows: nmap [Scan Type(s)] [Options] {target specification}.",
+					"table": {
+						"headers": ["Component", "Examples"],
+						"rows": [
+							["Targets", "192.0.2.10, 192.0.2.0/24, example.com, -iL targets.txt"],
+							["Scan type", "-sS (SYN), -sT (connect), -sU (UDP)"],
+							["Ports", "-p 22,80,443; -p 1-1024; -p-; --top-ports 100"],
+							["Detection", "-sV (versions), -O (OS), -sC (default scripts)"],
+							["Output", "-oA base, -oN file, -oX file, -v, --reason" ]
+						]
+					},
+					"example": "sudo nmap -sS -sV -p 22,80,443 --reason -oA host 192.0.2.10"
+				},
+				{
+					"title": "Port specification tips",
+					"description": "Explicit port selection improves speed and interpretability.",
+					"table": {
+						"headers": ["Need", "Example"],
+						"rows": [
+							["All TCP ports", "-p-"],
+							["Only these ports", "-p 22,80,443"],
+							["Range + single", "-p 1-1024,8080"],
+							["Only open results", "--open"],
+							["Exclude ports", "--exclude-ports 25,135,139,445" ]
+						]
+					},
+					"example": "sudo nmap -sS -p- --open -oA alltcp 192.0.2.10"
+				},
+				{
+					"title": "Name resolution controls",
+					"description": "DNS resolution can slow scans; disable if you only need IPs.",
+					"table": {
+						"headers": ["Option", "Meaning"],
+						"rows": [
+							["-n", "Never do DNS resolution"],
+							["-R", "Always do DNS resolution"],
+							["--system-dns", "Use OS resolver"],
+							["--dns-servers 8.8.8.8", "Use specific DNS servers" ]
+						]
+					},
+					"example": "sudo nmap -n -sS -p 22,80,443 192.0.2.0/24"
+				}
+			]
+		},
+		{
+			"title": "IPv6",
+			"description": "Scanning IPv6 targets and common considerations.",
+			"items": [
+				{
+					"title": "IPv6 basics",
+					"description": "Use -6 to enable IPv6. Discovery differs from IPv4; local link can use neighbor discovery.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nmap -6 2001:db8::1", "Scan a single IPv6 host"],
+							["nmap -6 -p 22,80,443 2001:db8::1", "Scan selected ports"],
+							["nmap -6 -sn fe80::/64%eth0", "Local link discovery (interface scope syntax varies)" ]
+						]
+					},
+					"example": "sudo nmap -6 -sS -sV -p 22,80,443 2001:db8::1"
+				},
+				{
+					"title": "Dual-stack workflows",
+					"description": "Scan IPv4 and IPv6 separately and keep outputs distinct.",
+					"table": {
+						"headers": ["Goal", "Command"],
+						"rows": [
+							["IPv4 scan", "sudo nmap -sS -sV -oA v4 192.0.2.10"],
+							["IPv6 scan", "sudo nmap -6 -sS -sV -oA v6 2001:db8::1" ]
+						]
+					},
+					"example": "sudo nmap -sS -sV -oA host-v4 192.0.2.10\nsudo nmap -6 -sS -sV -oA host-v6 2001:db8::1"
+				}
+			]
+		},
+		{
+			"title": "Automation and Scripting",
+			"description": "Repeatable scanning with files, diffs, and simple shell pipelines (authorized environments only).",
+			"items": [
+				{
+					"title": "Keep a scan manifest",
+					"description": "In operational environments, record: scope, authorization ticket, command line, timing, and outputs.",
+					"table": {
+						"headers": ["Item", "Why"],
+						"rows": [
+							["Target list", "Reproducibility"],
+							["Exact command", "Auditability"],
+							["Nmap version", "Behavior changes across versions"],
+							["Output base name", "Track artifacts (-oA)" ]
+						]
+					},
+					"example": "nmap --version\n# store the full command line in a README alongside scan outputs"
+				},
+				{
+					"title": "Diff scan results over time (ndiff)",
+					"description": "ndiff compares Nmap XML outputs to show changes between runs.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ndiff old.xml new.xml", "Show differences"],
+							["ndiff --xml old.xml new.xml > diff.xml", "Machine-friendly diff output" ]
+						]
+					},
+					"example": "# Example: compare weekly scans\nndiff week1.xml week2.xml | less"
+				},
+				{
+					"title": "Use --open to reduce noise",
+					"description": "For inventories, output only open ports to keep reports concise.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nmap --open -p 22,80,443 [target]", "Only open ports"],
+							["nmap --open -p- [target]", "Only open ports across all TCP" ]
+						]
+					},
+					"example": "sudo nmap -sS -p- --open -oA open-only 192.0.2.10"
+				}
+			]
+		},
+		{
+			"title": "Tool Suite (Ncat, Nping, Ndiff, Zenmap)",
+			"description": "Nmap often ships with companion tools for connectivity testing, packet generation, and diffing.",
+			"items": [
+				{
+					"title": "ncat (connectivity and simple listeners)",
+					"description": "ncat is Netcat-like. Use for authorized connectivity testing and debugging.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["ncat -nv 192.0.2.10 443", "Connect (verbose, no DNS)"],
+							["ncat -l 8080", "Listen on TCP port 8080"],
+							["ncat -lk 8080", "Listen and keep accepting"],
+							["ncat -u -nv 192.0.2.10 53", "UDP connectivity test" ]
+						]
+					},
+					"example": "# Check if a port is reachable\nncat -nv 192.0.2.10 22"
+				},
+				{
+					"title": "nping (probe and measure)",
+					"description": "nping sends probes for troubleshooting latency/loss and validating firewall paths.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["nping --tcp -p 443 192.0.2.10", "TCP probe"],
+							["nping --udp -p 53 192.0.2.10", "UDP probe"],
+							["nping --icmp 192.0.2.10", "ICMP probe"],
+							["nping --rate 10 --tcp -p 22 192.0.2.10", "Control probe rate" ]
+						]
+					},
+					"example": "nping --tcp -p 443 192.0.2.10"
+				},
+				{
+					"title": "ndiff (compare scans)",
+					"description": "Compare two Nmap XML files and report differences.",
+					"table": {
+						"headers": ["Command", "Use"],
+						"rows": [
+							["ndiff a.xml b.xml", "Show differences"],
+							["ndiff --xml a.xml b.xml > diff.xml", "Write XML diff" ]
+						]
+					},
+					"example": "ndiff baseline.xml current.xml | less"
+				},
+				{
+					"title": "Zenmap (GUI)",
+					"description": "Zenmap is a GUI frontend for Nmap (availability depends on OS packages).",
+					"table": {
+						"headers": ["Tip", "Notes"],
+						"rows": [
+							["Save profiles", "Store common scan configurations"],
+							["View topology", "Visualize traceroute-based topology" ]
+						]
+					},
+					"example": null
+				}
+			]
+		},
+		{
+			"title": "Troubleshooting and Common Errors",
+			"description": "Common failure modes, what they usually mean, and how to proceed safely.",
+			"items": [
+				{
+					"title": "Host seems down",
+					"description": "If discovery probes are blocked, Nmap may report hosts as down.",
+					"table": {
+						"headers": ["Symptom", "Next step"],
+						"rows": [
+							["Host seems down", "Try -Pn or adjust discovery probes (-PS/-PA/-PE)"],
+							["0 hosts up", "Validate routing/DNS; test with ping/curl/ncat"],
+							["Filtered everywhere", "Confirm firewall policy and scan scope" ]
+						]
+					},
+					"example": "sudo nmap -Pn -sS -p 22,80,443 --reason 192.0.2.10"
+				},
+				{
+					"title": "Need privileges (raw sockets)",
+					"description": "Some scan types require elevated privileges.",
+					"table": {
+						"headers": ["If you see", "Try"],
+						"rows": [
+							["Permission denied / raw socket errors", "Run with sudo or switch to -sT"],
+							["SYN scan fails", "Use -sT (connect scan) without privileges" ]
+						]
+					},
+					"example": "nmap -sT -sV -p 80,443 192.0.2.10"
+				},
+				{
+					"title": "Unreliable results (timeouts/rate limits)",
+					"description": "Back off timing when dealing with WAN links, rate-limited devices, or IDS/IPS.",
+					"table": {
+						"headers": ["Symptom", "Mitigation"],
+						"rows": [
+							["Many ports show filtered", "Use --reason and traceroute; confirm firewall behavior"],
+							["Missed open ports", "Reduce rate: -T2, --max-rate, increase retries"],
+							["Scan takes too long", "Reduce scope/ports; use --host-timeout" ]
+						]
+					},
+					"example": "sudo nmap -sS -T2 --max-rate 100 --max-retries 3 --host-timeout 10m 192.0.2.0/24"
+				}
+			]
 		}
 	]
 }
